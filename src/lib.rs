@@ -42,10 +42,13 @@ fn parse_args() -> Result<AppArgs, pico_args::Error> {
 }
 
 fn parse_mod_list(input: &str) -> Result<Vec<ModIdentifier>, String> {
-    let results: Result<Vec<ModIdentifier>, String> = input
+    // TODO: Throw error on illegal characters detected
+    // Legal characters are [a-zA-Z0-9_\- ]
+    input
         .split('|')
         .map(|mod_identifier| {
             let parts: Vec<&str> = mod_identifier.split('@').collect();
+            // TODO: qualify mod name somehow
             match parts[..] {
                 [mod_name] => Ok(ModIdentifier::Latest(mod_name.to_string())),
                 [mod_name, mod_version] => Ok(ModIdentifier::Versioned(
@@ -55,9 +58,7 @@ fn parse_mod_list(input: &str) -> Result<Vec<ModIdentifier>, String> {
                 _ => Err("Invalid mod identifier format".to_string()),
             }
         })
-        .collect();
-
-    results
+        .collect::<Result<Vec<ModIdentifier>, String>>()
 }
 
 pub fn run() -> Result<(), Box<dyn Error>> {
