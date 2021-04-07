@@ -7,6 +7,7 @@ USAGE:
     fmm [SUBCOMMAND] [OPTIONS]
 ";
 
+#[derive(Debug)]
 enum ModIdentifier {
     Latest(String),
     Versioned(String, String),
@@ -14,9 +15,9 @@ enum ModIdentifier {
 
 #[derive(Debug)]
 struct AppArgs {
-    enable: Option<Vec<String>>,
+    enable: Option<Vec<ModIdentifier>>,
     enable_all: bool,
-    disable: Option<Vec<String>>,
+    disable: Option<Vec<ModIdentifier>>,
     disable_all: bool,
     mods_path: String,
 }
@@ -40,13 +41,23 @@ fn parse_args() -> Result<AppArgs, pico_args::Error> {
     Ok(args)
 }
 
-fn parse_mod_list(input: &str) -> Result<Vec<String>, String> {
-    // TODO: Actually handle errors
-    // TODO: Handle mod version (`ModIdentifier` enum)
-    Ok(input
+fn parse_mod_list(input: &str) -> Result<Vec<ModIdentifier>, String> {
+    let results: Result<Vec<ModIdentifier>, String> = input
         .split('|')
-        .map(|mod_identifier| mod_identifier.to_string())
-        .collect())
+        .map(|mod_identifier| {
+            let parts: Vec<&str> = mod_identifier.split('@').collect();
+            match parts[..] {
+                [mod_name] => Ok(ModIdentifier::Latest(mod_name.to_string())),
+                [mod_name, mod_version] => Ok(ModIdentifier::Versioned(
+                    mod_name.to_string(),
+                    mod_version.to_string(),
+                )),
+                _ => Err("Invalid mod identifier format".to_string()),
+            }
+        })
+        .collect();
+
+    results
 }
 
 pub fn run() -> Result<(), Box<dyn Error>> {
