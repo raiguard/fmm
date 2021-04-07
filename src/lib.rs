@@ -7,37 +7,17 @@ USAGE:
     fmm [SUBCOMMAND] [OPTIONS]
 ";
 
-#[derive(Debug)]
-enum Command {
-    DisableAll,
-    Disable(Vec<String>),
-    EnableAll,
-    Enable(Vec<String>),
-    Help,
-    // Download,
-    // Upload,
-    // Update,
-}
-
-impl Command {
-    fn new(input: Option<String>) -> Command {
-        match input {
-            Some(raw) => match raw.as_str() {
-                "disable-all" => Command::DisableAll,
-                "disable" => Command::Disable(vec!["RecipeBook".to_string()]),
-                "enable-all" => Command::EnableAll,
-                "enable" => Command::Enable(vec!["RecipeBook".to_string()]),
-                "help" => Command::Help,
-                _ => Command::Help,
-            },
-            None => Command::Help,
-        }
-    }
+enum ModIdentifier {
+    Latest(String),
+    Versioned(String, String),
 }
 
 #[derive(Debug)]
 struct AppArgs {
-    command: Command,
+    enable: Option<Vec<String>>,
+    enable_all: bool,
+    disable: Option<Vec<String>>,
+    disable_all: bool,
     mods_path: String,
 }
 
@@ -50,11 +30,23 @@ fn parse_args() -> Result<AppArgs, pico_args::Error> {
     };
 
     let args = AppArgs {
-        command: Command::new(pargs.subcommand()?),
+        disable_all: pargs.opt_value_from_str("--disable-all")?.unwrap_or(false),
+        disable: pargs.opt_value_from_fn("--disable", parse_mod_list)?,
+        enable_all: pargs.opt_value_from_str("--enable-all")?.unwrap_or(false),
+        enable: pargs.opt_value_from_fn("--enable", parse_mod_list)?,
         mods_path: pargs.value_from_str("--modspath")?,
     };
 
     Ok(args)
+}
+
+fn parse_mod_list(input: &str) -> Result<Vec<String>, String> {
+    // TODO: Actually handle errors
+    // TODO: Handle mod version (`ModIdentifier` enum)
+    Ok(input
+        .split('|')
+        .map(|mod_identifier| mod_identifier.to_string())
+        .collect())
 }
 
 pub fn run() -> Result<(), Box<dyn Error>> {
