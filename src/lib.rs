@@ -3,19 +3,6 @@ use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 
-const HELP: &str = "\
-fmm
-
-USAGE:
-    fmm [SUBCOMMAND] [OPTIONS]
-";
-
-#[derive(Debug, PartialEq)]
-enum ModIdentifier {
-    Latest(String),
-    Versioned(String, String),
-}
-
 #[derive(Debug)]
 struct AppArgs {
     enable: Option<Vec<ModIdentifier>>,
@@ -25,11 +12,43 @@ struct AppArgs {
     mods_path: String,
 }
 
+impl AppArgs {
+    fn new(mut pargs: pico_args::Arguments) -> Result<AppArgs, pico_args::Error> {
+        Ok(AppArgs {
+            disable_all: pargs.opt_value_from_str("--disable-all")?.unwrap_or(false),
+            disable: pargs.opt_value_from_fn("--disable", parse_mod_input)?,
+            enable_all: pargs.opt_value_from_str("--enable-all")?.unwrap_or(false),
+            enable: pargs.opt_value_from_fn("--enable", parse_mod_input)?,
+            mods_path: pargs.value_from_str("--modspath")?,
+        })
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum ModIdentifier {
+    Latest(String),
+    Versioned(String, String),
+}
+
 #[derive(Debug, Deserialize, Serialize)]
-struct ModsCollection {
+struct ModsDirectory {
     mods: Vec<ModData>,
     #[serde(skip)]
     path: PathBuf,
+}
+
+impl ModsDirectory {
+    fn new(directory: &str) -> Result<ModsDirectory, Box<dyn Error>> {
+        let mut path: PathBuf = PathBuf::new();
+        path.push(directory);
+        path.push("mod-list.json");
+
+        let mut collection: ModsDirectory = serde_json::from_str(&fs::read_to_string(&path)?)?;
+
+        collection.path = path;
+
+        Ok(collection)
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -37,25 +56,6 @@ struct ModData {
     name: String,
     enabled: bool,
     version: Option<String>,
-}
-
-fn parse_args() -> Result<AppArgs, pico_args::Error> {
-    let mut pargs = pico_args::Arguments::from_env();
-
-    if pargs.contains(["-h", "--help"]) {
-        print!("{}", HELP);
-        std::process::exit(0);
-    };
-
-    let args = AppArgs {
-        disable_all: pargs.opt_value_from_str("--disable-all")?.unwrap_or(false),
-        disable: pargs.opt_value_from_fn("--disable", parse_mod_input)?,
-        enable_all: pargs.opt_value_from_str("--enable-all")?.unwrap_or(false),
-        enable: pargs.opt_value_from_fn("--enable", parse_mod_input)?,
-        mods_path: pargs.value_from_str("--modspath")?,
-    };
-
-    Ok(args)
 }
 
 fn parse_mod_input(input: &str) -> Result<Vec<ModIdentifier>, String> {
@@ -79,22 +79,10 @@ fn parse_mod_input(input: &str) -> Result<Vec<ModIdentifier>, String> {
         .collect::<Result<Vec<ModIdentifier>, String>>()
 }
 
-fn parse_mod_list(directory: &str) -> Result<ModsCollection, Box<dyn Error>> {
-    let mut path: PathBuf = PathBuf::new();
-    path.push(directory);
-    path.push("mod-list.json");
+pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
+    let args = AppArgs::new(pargs)?;
 
-    let mut collection: ModsCollection = serde_json::from_str(&fs::read_to_string(&path)?)?;
-
-    collection.path = path;
-
-    Ok(collection)
-}
-
-pub fn run() -> Result<(), Box<dyn Error>> {
-    let args = parse_args()?;
-
-    let collection = parse_mod_list(&args.mods_path)?;
+    let collection = ModsDirectory::new(&args.mods_path)?;
 
     println!("{:#?}", collection);
 
