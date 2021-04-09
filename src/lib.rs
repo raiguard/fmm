@@ -1,30 +1,33 @@
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::error::Error;
 use std::fs;
 use std::ops::Deref;
 use std::path::PathBuf;
 
-#[derive(Debug)]
-struct AppArgs {
-    // TODO: `enable` and `disable` can be combined
-    enable: Option<ModsInputList>,
-    enable_all: bool,
-    disable: Option<ModsInputList>,
-    disable_all: bool,
-    mods_path: String,
-}
-
 impl AppArgs {
     fn new(mut pargs: pico_args::Arguments) -> Result<AppArgs, pico_args::Error> {
         Ok(AppArgs {
-            disable_all: pargs.opt_value_from_str("--disable-all")?.unwrap_or(false),
+            dedup: pargs.contains("--dedup"),
+            disable_all: pargs.contains("--disable-all"),
             disable: pargs
                 .opt_value_from_fn("--disable", |value| ModsInputList::new(value, false))?,
-            enable_all: pargs.opt_value_from_str("--enable-all")?.unwrap_or(false),
+            enable_all: pargs.contains("--enable-all"),
             enable: pargs.opt_value_from_fn("--enable", |value| ModsInputList::new(value, true))?,
             mods_path: pargs.value_from_str("--modspath")?,
         })
     }
+}
+
+#[derive(Debug)]
+struct AppArgs {
+    // TODO: `enable` and `disable` can be combined
+    dedup: bool,
+    disable_all: bool,
+    disable: Option<ModsInputList>,
+    enable_all: bool,
+    enable: Option<ModsInputList>,
+    mods_path: String,
 }
 
 #[derive(Debug)]
@@ -70,7 +73,7 @@ impl Deref for ModsInputList {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct ModsDirectory {
     mods: Vec<ModData>,
     #[serde(skip)]
@@ -91,23 +94,89 @@ impl ModsDirectory {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct ModData {
     name: String,
     enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     version: Option<String>,
 }
+
+impl PartialOrd for ModData {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.name.cmp(&other.name))
+    }
+}
+
+impl Ord for ModData {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
+    }
+}
+
+impl PartialEq for ModData {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for ModData {}
 
 pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     let args = AppArgs::new(pargs)?;
 
-    let collection = ModsDirectory::new(&args.mods_path)?;
+    let mut dir = ModsDirectory::new(&args.mods_path)?;
 
-    println!("{:#?}", collection);
+    // TODO: Is this really needed?
+    if args.disable_all && args.enable_all {
+        return Err("Disabling all and enabling all makes no sense.".into());
+    }
 
-    print!("{:#?}", args);
+    if args.disable_all {
+        for mod_data in dir.mods.iter_mut() {
+            mod_data.enabled = false;
+        }
+    }
+    if args.enable_all {
+        for mod_data in dir.mods.iter_mut() {
+            mod_data.enabled = true;
+        }
+    }
+
+    if let Some(mods) = args.disable {
+        update_mods(&mut dir, &mods);
+    }
+
+    if let Some(mods) = args.enable {
+        update_mods(&mut dir, &mods);
+    }
+
+    if args.dedup {
+        dir.mods.dedup();
+    }
+
+    // Write to mod-list.json
+    fs::write(&dir.path, serde_json::to_string_pretty(&dir)?)?;
 
     Ok(())
+}
+
+fn update_mods(dir: &mut ModsDirectory, mods: &ModsInputList) {
+    for mod_data in mods.iter() {
+        println!("{}", mod_data.name);
+        match dir.mods.binary_search(mod_data) {
+            Ok(index) => {
+                println!("Updating");
+                let mut saved_mod_data = &mut dir.mods[index];
+                saved_mod_data.enabled = mod_data.enabled;
+                saved_mod_data.version = mod_data.version.clone();
+            }
+            Err(index) => {
+                println!("Adding");
+                dir.mods.insert(index, mod_data.clone())
+            }
+        }
+    }
 }
 
 #[cfg(test)]
