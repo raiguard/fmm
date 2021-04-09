@@ -89,6 +89,9 @@ impl ModsDirectory {
 
         let mut collection: ModsDirectory = serde_json::from_str(&fs::read_to_string(&path)?)?;
 
+        // `binary_search()` depends on a sorted vector
+        collection.mods.sort();
+
         collection.path = path;
 
         Ok(collection)
@@ -145,7 +148,8 @@ fn update_mods(dir: &mut ModsDirectory, mods: &ModsInputList) {
                 saved_mod_data.enabled = mod_data.enabled;
                 saved_mod_data.version = mod_data.version.clone();
             }
-            Err(index) => dir.mods.insert(index, mod_data.clone()),
+            Err(index) if mod_data.enabled => dir.mods.insert(index, mod_data.clone()),
+            Err(_) => (),
         }
     }
 }
@@ -185,7 +189,6 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
 
     if args.dedup {
         println!("Sorting and deduplicating entries");
-        dir.mods.sort();
         dir.mods.dedup();
     }
 
@@ -234,7 +237,20 @@ mod tests {
     }
 
     #[test]
-    fn simple_mod_list() {}
+    fn simple_mod_list() {
+        let dir = ModsDirectory::new(
+            "/home/rai/dev/projects/personal/factorio_mod_manager/demo_mods_dir",
+        )
+        .unwrap();
+
+        let mod_data = ModData {
+            name: "aai-industry".to_string(),
+            enabled: false,
+            version: None,
+        };
+
+        assert!(dir.mods.binary_search(&mod_data).is_ok());
+    }
 
     // TODO: Write tests to use a fake mod-list.json and compare the results
     // TODO: There is some weirdness around version-specific queries
