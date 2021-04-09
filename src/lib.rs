@@ -5,11 +5,23 @@ use std::fs;
 use std::ops::Deref;
 use std::path::PathBuf;
 
+#[derive(Debug)]
+struct AppArgs {
+    dedup: bool,
+    disable_all: bool,
+    disable_base: bool,
+    disable: Option<ModsInputList>,
+    enable_all: bool,
+    enable: Option<ModsInputList>,
+    mods_path: String,
+}
+
 impl AppArgs {
     fn new(mut pargs: pico_args::Arguments) -> Result<AppArgs, pico_args::Error> {
         Ok(AppArgs {
             dedup: pargs.contains("--dedup"),
             disable_all: pargs.contains("--disable-all"),
+            disable_base: pargs.contains("--disable-base"),
             disable: pargs
                 .opt_value_from_fn("--disable", |value| ModsInputList::new(value, false))?,
             enable_all: pargs.contains("--enable-all"),
@@ -17,17 +29,6 @@ impl AppArgs {
             mods_path: pargs.value_from_str("--modspath")?,
         })
     }
-}
-
-#[derive(Debug)]
-struct AppArgs {
-    // TODO: `enable` and `disable` can be combined
-    dedup: bool,
-    disable_all: bool,
-    disable: Option<ModsInputList>,
-    enable_all: bool,
-    enable: Option<ModsInputList>,
-    mods_path: String,
 }
 
 #[derive(Debug)]
@@ -104,7 +105,7 @@ struct ModData {
 
 impl PartialOrd for ModData {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.name.cmp(&other.name))
+        self.name.partial_cmp(&other.name)
     }
 }
 
@@ -124,18 +125,27 @@ impl Eq for ModData {}
 
 fn update_mods(dir: &mut ModsDirectory, mods: &ModsInputList) {
     for mod_data in mods.iter() {
-        println!("{}", mod_data.name);
+        println!(
+            "{} {}{}",
+            if mod_data.enabled {
+                "Enabling"
+            } else {
+                "Disabling"
+            },
+            mod_data.name,
+            if let Some(version) = &mod_data.version {
+                format!(" v{}", version)
+            } else {
+                "".to_string()
+            }
+        );
         match dir.mods.binary_search(mod_data) {
             Ok(index) => {
-                println!("Updating");
                 let mut saved_mod_data = &mut dir.mods[index];
                 saved_mod_data.enabled = mod_data.enabled;
                 saved_mod_data.version = mod_data.version.clone();
             }
-            Err(index) => {
-                println!("Adding");
-                dir.mods.insert(index, mod_data.clone())
-            }
+            Err(index) => dir.mods.insert(index, mod_data.clone()),
         }
     }
 }
@@ -151,11 +161,15 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     }
 
     if args.disable_all {
+        println!("Disabling all");
         for mod_data in dir.mods.iter_mut() {
-            mod_data.enabled = false;
+            if args.disable_base || mod_data.name != "base" {
+                mod_data.enabled = false;
+            }
         }
     }
     if args.enable_all {
+        println!("Enabling all");
         for mod_data in dir.mods.iter_mut() {
             mod_data.enabled = true;
         }
@@ -170,12 +184,15 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     }
 
     if args.dedup {
+        println!("Sorting and deduplicating entries");
         dir.mods.sort();
         dir.mods.dedup();
     }
 
     // Write to mod-list.json
     fs::write(&dir.path, serde_json::to_string_pretty(&dir)?)?;
+
+    println!("Finished");
 
     Ok(())
 }
@@ -218,4 +235,7 @@ mod tests {
 
     #[test]
     fn simple_mod_list() {}
+
+    // TODO: Write tests to use a fake mod-list.json and compare the results
+    // TODO: There is some weirdness around version-specific queries
 }
