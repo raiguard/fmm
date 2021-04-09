@@ -1,0 +1,13 @@
+{
+    "mods": [
+        {
+            "name": "EditorExtensions",
+            "enabled": true
+        },
+        {
+            "name": "aai-industry",
+            "enabled": true,
+            "version": "0.0.1"
+        }
+    ]
+}

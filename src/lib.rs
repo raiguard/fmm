@@ -13,7 +13,7 @@ struct AppArgs {
     disable: Option<ModsInputList>,
     enable_all: bool,
     enable: Option<ModsInputList>,
-    mods_path: String,
+    mods_path: PathBuf,
 }
 
 impl AppArgs {
@@ -82,9 +82,8 @@ struct ModsDirectory {
 }
 
 impl ModsDirectory {
-    fn new(directory: &str) -> Result<ModsDirectory, Box<dyn Error>> {
-        let mut path: PathBuf = PathBuf::new();
-        path.push(directory);
+    fn new(directory: &PathBuf) -> Result<ModsDirectory, Box<dyn Error>> {
+        let mut path = directory.clone();
         path.push("mod-list.json");
 
         let mut collection: ModsDirectory = serde_json::from_str(&fs::read_to_string(&path)?)?;
@@ -204,6 +203,14 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
 mod tests {
     use super::*;
 
+    fn tests_path(suffix: &str) -> PathBuf {
+        let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push("resources/tests");
+        d.push(suffix);
+        println!("{:?}", d);
+        d
+    }
+
     #[test]
     fn one_latest() {
         let mods = ModsInputList::new("RecipeBook", true).unwrap();
@@ -238,10 +245,7 @@ mod tests {
 
     #[test]
     fn simple_mod_list() {
-        let dir = ModsDirectory::new(
-            "/home/rai/dev/projects/personal/factorio_mod_manager/demo_mods_dir",
-        )
-        .unwrap();
+        let dir = ModsDirectory::new(&tests_path("mods_dir_1")).unwrap();
 
         let mod_data = ModData {
             name: "aai-industry".to_string(),
@@ -251,7 +255,4 @@ mod tests {
 
         assert!(dir.mods.binary_search(&mod_data).is_ok());
     }
-
-    // TODO: Write tests to use a fake mod-list.json and compare the results
-    // TODO: There is some weirdness around version-specific queries
 }
