@@ -122,6 +122,24 @@ impl PartialEq for ModData {
 
 impl Eq for ModData {}
 
+fn update_mods(dir: &mut ModsDirectory, mods: &ModsInputList) {
+    for mod_data in mods.iter() {
+        println!("{}", mod_data.name);
+        match dir.mods.binary_search(mod_data) {
+            Ok(index) => {
+                println!("Updating");
+                let mut saved_mod_data = &mut dir.mods[index];
+                saved_mod_data.enabled = mod_data.enabled;
+                saved_mod_data.version = mod_data.version.clone();
+            }
+            Err(index) => {
+                println!("Adding");
+                dir.mods.insert(index, mod_data.clone())
+            }
+        }
+    }
+}
+
 pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     let args = AppArgs::new(pargs)?;
 
@@ -152,6 +170,7 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     }
 
     if args.dedup {
+        dir.mods.sort();
         dir.mods.dedup();
     }
 
@@ -159,24 +178,6 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     fs::write(&dir.path, serde_json::to_string_pretty(&dir)?)?;
 
     Ok(())
-}
-
-fn update_mods(dir: &mut ModsDirectory, mods: &ModsInputList) {
-    for mod_data in mods.iter() {
-        println!("{}", mod_data.name);
-        match dir.mods.binary_search(mod_data) {
-            Ok(index) => {
-                println!("Updating");
-                let mut saved_mod_data = &mut dir.mods[index];
-                saved_mod_data.enabled = mod_data.enabled;
-                saved_mod_data.version = mod_data.version.clone();
-            }
-            Err(index) => {
-                println!("Adding");
-                dir.mods.insert(index, mod_data.clone())
-            }
-        }
-    }
 }
 
 #[cfg(test)]
