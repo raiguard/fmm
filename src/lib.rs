@@ -78,32 +78,37 @@ struct ModsDirectory {
     path: PathBuf,
 }
 
-fn read_info_json(entry: DirEntry) -> Result<Value, Box<dyn Error>> {
+#[derive(Debug, Deserialize)]
+struct InfoJson {
+    name: String,
+    version: String,
+}
+
+fn read_info_json<'a>(entry: &'a DirEntry) -> Result<InfoJson, Box<dyn Error>> {
     let metadata = entry.metadata()?;
     if metadata.is_dir() || metadata.file_type().is_symlink() {
         let mut path = entry.path();
         path.push("info.json");
         let contents = fs::read_to_string(path)?;
-        let json: Value = serde_json::from_str(&contents)?;
+        let json: InfoJson = serde_json::from_str(&contents)?;
         Ok(json)
     } else if Some(OsStr::new("zip")) == Path::new(&entry.file_name()).extension() {
         let file = std::fs::File::open(entry.path())?;
         let mut archive = ZipArchive::new(file)?;
-        // This is a stupid API to find the correct file, but it works
-        // There will be a more ergonomic iterator API in the future
+        // My hand is forced due to the lack of a proper iterator API in the `zip` crate
+        // Thus, we need to use a bare `for` loop and iterate the indices, then return the file we find
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
             if file.name().contains("info.json") {
                 let mut contents = String::new();
                 file.read_to_string(&mut contents)?;
-
-                let json: Value = serde_json::from_str(&contents)?;
+                let json: InfoJson = serde_json::from_str(&contents)?;
                 return Ok(json);
             }
         }
-        Err("Mod ZIP does not contain an info.json".into())
+        Err("Mod ZIP does not contain an info.json file".into())
     } else {
-        Err("Could not open directory or zip file".into())
+        Err("Is not a directory or zip file".into())
     }
 }
 
@@ -116,22 +121,15 @@ impl ModsDirectory {
         mods_list.sort();
 
         let mut mods: HashMap<String, Vec<String>> = HashMap::new();
+
         let entries = fs::read_dir(&directory).ok()?;
         for entry in entries {
-            let entry = entry.ok()?;
-            if entry.file_name() != "mod-list.json" && entry.file_name() != "mod-settings.dat" {
-                if let Ok(info_json) = read_info_json(entry) {
-                    let name = info_json["name"].to_string();
-                    let version = info_json["version"].to_string();
-                    // TODO: Trim quotes off of both ends
-                    match mods.entry(name.clone()) {
-                        Entry::Occupied(mut versions) => {
-                            versions.get_mut().push(version);
-                        }
-                        Entry::Vacant(_) => {
-                            mods.insert(name, vec![version]);
-                        }
-                    };
+            if let Ok(entry) = entry {
+                if entry.file_name() != "mod-list.json" && entry.file_name() != "mod-settings.dat" {
+                    if let Ok(json) = read_info_json(&entry) {
+                        let versions = mods.entry(json.name).or_insert(vec![]);
+                        versions.push(json.version);
+                    }
                 }
             }
         }
@@ -147,6 +145,8 @@ impl ModsDirectory {
 pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     let args = AppArgs::new(pargs)?;
 
+    let directory = ModsDirectory::new(args.mods_path);
+
     Ok(())
 }
 
@@ -158,14 +158,13 @@ mod tests {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("resources/tests");
         d.push(suffix);
-        println!("{:?}", d);
         d
     }
 
     #[test]
+    // let directory = tests_path("mods_dir_1");
     fn mods_directory() {
-        // let directory = tests_path("mods_dir_1");
-        let directory = PathBuf::from("/home/rai/dev/factorio/linked/mods");
+        let directory = PathBuf::from("/home/rai/.factorio/mods");
 
         let directory = ModsDirectory::new(directory).unwrap();
 
