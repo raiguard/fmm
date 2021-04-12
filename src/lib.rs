@@ -1,6 +1,4 @@
-// mod version;
-
-use semver::Version;
+use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
@@ -46,8 +44,8 @@ struct ModsListJson {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ModsListJsonMod {
-    name: String,
     enabled: bool,
+    name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     version: Option<Version>,
 }
@@ -60,6 +58,7 @@ struct ModsDirectory {
 
 #[derive(Deserialize, Debug)]
 struct InfoJson {
+    dependencies: Option<Vec<String>>,
     name: String,
     version: Version,
 }
@@ -67,7 +66,7 @@ struct InfoJson {
 #[derive(Debug)]
 struct Mod {
     name: String,
-    versions: Vec<Version>,
+    versions: Vec<ModVersion>,
     enabled: ModEnabledType,
 }
 
@@ -76,6 +75,28 @@ enum ModEnabledType {
     Disabled,
     Latest,
     Version(Version),
+}
+
+#[derive(Debug)]
+struct ModVersion {
+    dependencies: Option<Vec<ModDependency>>,
+    version: Version,
+}
+
+#[derive(Debug)]
+struct ModDependency {
+    dep_type: ModDependencyType,
+    name: String,
+    version_req: VersionReq,
+}
+
+#[derive(Debug)]
+enum ModDependencyType {
+    Incompatible,
+    NoLoadOrder,
+    Optional,
+    OptionalHidden,
+    Required,
 }
 
 fn read_info_json(entry: DirEntry) -> Result<InfoJson, Box<dyn Error>> {
@@ -120,13 +141,15 @@ impl ModsDirectory {
                     file.read_to_string(&mut mod_list_json)?;
                 } else if entry.file_name() != "mod-settings.dat" {
                     if let Ok(json) = read_info_json(entry) {
-                        // TODO: This clone is bad
                         let mod_entry = mods.entry(json.name.clone()).or_insert(Mod {
                             name: json.name,
                             versions: vec![],
                             enabled: ModEnabledType::Disabled,
                         });
-                        mod_entry.versions.push(json.version);
+                        mod_entry.versions.push(ModVersion {
+                            dependencies: None,
+                            version: json.version,
+                        });
                     }
                 }
             }
