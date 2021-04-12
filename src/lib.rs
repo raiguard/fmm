@@ -1,7 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::cmp::Ordering;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::OsStr;
@@ -38,6 +35,11 @@ impl AppArgs {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct ModsListJson {
+    mods: Vec<ModsListJsonMod>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct ModsListJsonMod {
     name: String,
@@ -46,45 +48,33 @@ struct ModsListJsonMod {
     version: Option<String>,
 }
 
-impl PartialOrd for ModsListJsonMod {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.name.partial_cmp(&other.name)
-    }
-}
-
-impl Ord for ModsListJsonMod {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.name.cmp(&other.name)
-    }
-}
-
-impl PartialEq for ModsListJsonMod {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-    }
-}
-
-impl Eq for ModsListJsonMod {}
-
-#[derive(Serialize, Deserialize)]
-struct ModsListJson {
-    mods: Vec<ModsListJsonMod>,
-}
-
 #[derive(Debug)]
 struct ModsDirectory {
-    mods: HashMap<String, Vec<String>>,
-    mods_list: Vec<ModsListJsonMod>,
+    mods: HashMap<String, Mod>,
     path: PathBuf,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize, Debug)]
 struct InfoJson {
     name: String,
     version: String,
 }
 
-fn read_info_json<'a>(entry: &'a DirEntry) -> Result<InfoJson, Box<dyn Error>> {
+#[derive(Debug)]
+struct Mod {
+    name: String,
+    versions: Vec<String>,
+    enabled: ModEnabledType,
+}
+
+#[derive(Debug)]
+enum ModEnabledType {
+    Disabled,
+    Latest,
+    Version(String),
+}
+
+fn read_info_json(entry: DirEntry) -> Result<InfoJson, Box<dyn Error>> {
     let metadata = entry.metadata()?;
     if metadata.is_dir() || metadata.file_type().is_symlink() {
         let mut path = entry.path();
@@ -96,7 +86,7 @@ fn read_info_json<'a>(entry: &'a DirEntry) -> Result<InfoJson, Box<dyn Error>> {
         let file = std::fs::File::open(entry.path())?;
         let mut archive = ZipArchive::new(file)?;
         // My hand is forced due to the lack of a proper iterator API in the `zip` crate
-        // Thus, we need to use a bare `for` loop and iterate the indices, then return the file we find
+        // Thus, we need to use a bare `for` loop and iterate the indices, then act on the file if we find it
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
             if file.name().contains("info.json") {
@@ -113,30 +103,50 @@ fn read_info_json<'a>(entry: &'a DirEntry) -> Result<InfoJson, Box<dyn Error>> {
 }
 
 impl ModsDirectory {
-    fn new(directory: PathBuf) -> Option<Self> {
-        let mut mods_list_path = directory.clone();
-        mods_list_path.push("mod-list.json");
-        let mods_list = fs::read_to_string(mods_list_path).ok()?;
-        let mut mods_list = serde_json::from_str::<ModsListJson>(&mods_list).ok()?.mods;
-        mods_list.sort();
+    fn new(directory: PathBuf) -> Result<Self, Box<dyn Error>> {
+        let mut mod_list_json = String::new();
+        let mut mods: HashMap<String, Mod> = HashMap::new();
 
-        let mut mods: HashMap<String, Vec<String>> = HashMap::new();
-
-        let entries = fs::read_dir(&directory).ok()?;
+        // Iterate files and directories to assemble mods
+        let entries = fs::read_dir(&directory)?;
         for entry in entries {
             if let Ok(entry) = entry {
-                if entry.file_name() != "mod-list.json" && entry.file_name() != "mod-settings.dat" {
-                    if let Ok(json) = read_info_json(&entry) {
-                        let versions = mods.entry(json.name).or_insert(vec![]);
-                        versions.push(json.version);
+                if entry.file_name() == "mod-list.json" {
+                    let mut file = fs::File::open(entry.path())?;
+                    file.read_to_string(&mut mod_list_json)?;
+                } else if entry.file_name() != "mod-settings.dat" {
+                    if let Ok(json) = read_info_json(entry) {
+                        // TODO: This clone is bad
+                        let mod_entry = mods.entry(json.name.clone()).or_insert(Mod {
+                            name: json.name,
+                            versions: vec![],
+                            enabled: ModEnabledType::Disabled,
+                        });
+                        mod_entry.versions.push(json.version);
                     }
                 }
             }
         }
 
-        Some(Self {
+        if mod_list_json.is_empty() {
+            return Err("Unable to read mod-list.json".into());
+        }
+
+        // Parse mod-list.json to get active mod versions
+        let mod_list = serde_json::from_str::<ModsListJson>(&mod_list_json)?.mods;
+        for mod_data in mod_list {
+            if mod_data.enabled {
+                if let Some(mod_entry) = mods.get_mut(&mod_data.name) {
+                    mod_entry.enabled = match mod_data.version {
+                        Some(version) => ModEnabledType::Version(version),
+                        None => ModEnabledType::Latest,
+                    }
+                }
+            }
+        }
+
+        Ok(Self {
             mods,
-            mods_list,
             path: directory,
         })
     }
