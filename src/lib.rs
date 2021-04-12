@@ -1,9 +1,13 @@
+// mod version;
+
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fs;
 use std::fs::DirEntry;
+use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
@@ -45,7 +49,7 @@ struct ModsListJsonMod {
     name: String,
     enabled: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    version: Option<String>,
+    version: Option<Version>,
 }
 
 #[derive(Debug)]
@@ -57,13 +61,13 @@ struct ModsDirectory {
 #[derive(Deserialize, Debug)]
 struct InfoJson {
     name: String,
-    version: String,
+    version: Version,
 }
 
 #[derive(Debug)]
 struct Mod {
     name: String,
-    versions: Vec<String>,
+    versions: Vec<Version>,
     enabled: ModEnabledType,
 }
 
@@ -71,7 +75,7 @@ struct Mod {
 enum ModEnabledType {
     Disabled,
     Latest,
-    Version(String),
+    Version(Version),
 }
 
 fn read_info_json(entry: DirEntry) -> Result<InfoJson, Box<dyn Error>> {
@@ -83,7 +87,7 @@ fn read_info_json(entry: DirEntry) -> Result<InfoJson, Box<dyn Error>> {
         let json: InfoJson = serde_json::from_str(&contents)?;
         Ok(json)
     } else if Some(OsStr::new("zip")) == Path::new(&entry.file_name()).extension() {
-        let file = std::fs::File::open(entry.path())?;
+        let file = File::open(entry.path())?;
         let mut archive = ZipArchive::new(file)?;
         // My hand is forced due to the lack of a proper iterator API in the `zip` crate
         // Thus, we need to use a bare `for` loop and iterate the indices, then act on the file if we find it
@@ -112,7 +116,7 @@ impl ModsDirectory {
         for entry in entries {
             if let Ok(entry) = entry {
                 if entry.file_name() == "mod-list.json" {
-                    let mut file = fs::File::open(entry.path())?;
+                    let mut file = File::open(entry.path())?;
                     file.read_to_string(&mut mod_list_json)?;
                 } else if entry.file_name() != "mod-settings.dat" {
                     if let Ok(json) = read_info_json(entry) {
