@@ -1,14 +1,13 @@
+use regex::{Captures, Regex};
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fs;
-use std::fs::DirEntry;
-use std::fs::File;
+use std::fs::{DirEntry, File};
 use std::io::Read;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use zip::read::ZipArchive;
 
 #[derive(Debug)]
@@ -50,12 +49,6 @@ struct ModsListJsonMod {
     version: Option<Version>,
 }
 
-#[derive(Debug)]
-struct ModsDirectory {
-    mods: HashMap<String, Mod>,
-    path: PathBuf,
-}
-
 #[derive(Deserialize, Debug)]
 struct InfoJson {
     dependencies: Option<Vec<String>>,
@@ -83,14 +76,49 @@ struct ModVersion {
     version: Version,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct ModDependency {
     dep_type: ModDependencyType,
     name: String,
-    version_req: VersionReq,
+    version_req: Option<VersionReq>,
 }
 
-#[derive(Debug)]
+impl ModDependency {
+    fn new(input: &str) -> Result<Self, Box<dyn Error>> {
+        // TODO: Externalize so it's not created repeatedly?
+        let dep_matcher = Regex::new(
+            r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=? *(?:\d+\.){1,2}\d+))?$",
+        )?;
+
+        let captures = dep_matcher
+            .captures(input)
+            .ok_or("Invalid dependency string")?;
+
+        Ok(Self {
+            dep_type: match captures.name("type").map(|mtch| mtch.as_str()) {
+                None => ModDependencyType::Required,
+                Some("!") => ModDependencyType::Incompatible,
+                Some("~") => ModDependencyType::NoLoadOrder,
+                Some("?") => ModDependencyType::Optional,
+                Some("(?)") => ModDependencyType::OptionalHidden,
+                Some(str) => return Err(format!("Unknown dependency modifier: {}", str).into()),
+            },
+            name: match captures.name("name") {
+                Some(mtch) => mtch.as_str().to_string(),
+                None => return Err("Name was not parseable".into()),
+            },
+            version_req: match captures.name("version_req") {
+                Some(mtch) => match VersionReq::parse(mtch.as_str()) {
+                    Ok(version_req) => Some(version_req),
+                    Err(err) => return Err(err.into()),
+                },
+                None => None,
+            },
+        })
+    }
+}
+
+#[derive(Debug, PartialEq)]
 enum ModDependencyType {
     Incompatible,
     NoLoadOrder,
@@ -99,32 +127,10 @@ enum ModDependencyType {
     Required,
 }
 
-fn read_info_json(entry: DirEntry) -> Result<InfoJson, Box<dyn Error>> {
-    let metadata = entry.metadata()?;
-    if metadata.is_dir() || metadata.file_type().is_symlink() {
-        let mut path = entry.path();
-        path.push("info.json");
-        let contents = fs::read_to_string(path)?;
-        let json: InfoJson = serde_json::from_str(&contents)?;
-        Ok(json)
-    } else if Some(OsStr::new("zip")) == Path::new(&entry.file_name()).extension() {
-        let file = File::open(entry.path())?;
-        let mut archive = ZipArchive::new(file)?;
-        // My hand is forced due to the lack of a proper iterator API in the `zip` crate
-        // Thus, we need to use a bare `for` loop and iterate the indices, then act on the file if we find it
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i)?;
-            if file.name().contains("info.json") {
-                let mut contents = String::new();
-                file.read_to_string(&mut contents)?;
-                let json: InfoJson = serde_json::from_str(&contents)?;
-                return Ok(json);
-            }
-        }
-        Err("Mod ZIP does not contain an info.json file".into())
-    } else {
-        Err("Is not a directory or zip file".into())
-    }
+#[derive(Debug)]
+struct ModsDirectory {
+    mods: HashMap<String, Mod>,
+    path: PathBuf,
 }
 
 impl ModsDirectory {
@@ -147,7 +153,15 @@ impl ModsDirectory {
                             enabled: ModEnabledType::Disabled,
                         });
                         mod_entry.versions.push(ModVersion {
-                            dependencies: None,
+                            dependencies: if let Some(dependencies) = json.dependencies {
+                                if let Ok(dependencies) = parse_dependencies(dependencies) {
+                                    Some(dependencies)
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            },
                             version: json.version,
                         });
                     }
@@ -179,6 +193,43 @@ impl ModsDirectory {
     }
 }
 
+fn read_info_json(entry: DirEntry) -> Result<InfoJson, Box<dyn Error>> {
+    let metadata = entry.metadata()?;
+    if metadata.is_dir() || metadata.file_type().is_symlink() {
+        let mut path = entry.path();
+        path.push("info.json");
+        let contents = fs::read_to_string(path)?;
+        let json: InfoJson = serde_json::from_str(&contents)?;
+        Ok(json)
+    } else if Some(OsStr::new("zip")) == Path::new(&entry.file_name()).extension() {
+        let file = File::open(entry.path())?;
+        let mut archive = ZipArchive::new(file)?;
+        // My hand is forced due to the lack of a proper iterator API in the `zip` crate
+        // Thus, we need to use a bare `for` loop and iterate the indices, then act on the file if we find it
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            if file.name().contains("info.json") {
+                let mut contents = String::new();
+                file.read_to_string(&mut contents)?;
+                let json: InfoJson = serde_json::from_str(&contents)?;
+                return Ok(json);
+            }
+        }
+        Err("Mod ZIP does not contain an info.json file".into())
+    } else {
+        Err("Is not a directory or zip file".into())
+    }
+}
+
+fn parse_dependencies(dependencies: Vec<String>) -> Result<Vec<ModDependency>, Box<dyn Error>> {
+    let mut output = vec![];
+    for dependency in dependencies {
+        output.push(ModDependency::new(&dependency)?);
+    }
+
+    Ok(output)
+}
+
 pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     let args = AppArgs::new(pargs)?;
 
@@ -199,13 +250,46 @@ mod tests {
     }
 
     #[test]
-    // let directory = tests_path("mods_dir_1");
     fn mods_directory() {
+        // let directory = tests_path("mods_dir_1");
         let directory = PathBuf::from("/home/rai/.factorio/mods");
 
-        let directory = ModsDirectory::new(directory).unwrap();
+        ModsDirectory::new(directory).unwrap();
+    }
 
-        println!("{:#?}", directory.mods);
+    #[test]
+    fn dependency_regex() {
+        // TODO: Error case and other formats
+        let sets = vec![
+            (
+                "! bobs logistics >= 0.17.3",
+                ModDependency {
+                    dep_type: ModDependencyType::Incompatible,
+                    name: "bobs logistics".to_string(),
+                    version_req: Some(VersionReq::parse(">= 0.17.3").unwrap()),
+                },
+            ),
+            (
+                "? RecipeBook = 0.15",
+                ModDependency {
+                    dep_type: ModDependencyType::Optional,
+                    name: "RecipeBook".to_string(),
+                    version_req: Some(VersionReq::parse("0.15").unwrap()),
+                },
+            ),
+            (
+                "fufucuddlypoops",
+                ModDependency {
+                    dep_type: ModDependencyType::Required,
+                    name: "fufucuddlypoops".to_string(),
+                    version_req: None,
+                },
+            ),
+        ];
+
+        for set in sets {
+            assert_eq!(ModDependency::new(set.0).unwrap(), set.1);
+        }
     }
 }
 
