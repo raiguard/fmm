@@ -1,0 +1,260 @@
+use regex::Regex;
+use semver::{Version, VersionReq};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::error::Error;
+use std::ffi::OsStr;
+use std::fs;
+use std::fs::{DirEntry, File};
+use std::io::Read;
+use std::path::{Path, PathBuf};
+use zip::read::ZipArchive;
+
+#[derive(Debug)]
+pub struct ModsDirectory {
+    pub mods: HashMap<String, Mod>,
+    pub path: PathBuf,
+}
+
+impl ModsDirectory {
+    pub fn new(directory: PathBuf) -> Result<Self, Box<dyn Error>> {
+        let mut mod_list_json = String::new();
+        let mut mods: HashMap<String, Mod> = HashMap::new();
+
+        // Iterate files and directories to assemble mods
+        let entries = fs::read_dir(&directory)?;
+        for entry in entries {
+            if let Ok(entry) = entry {
+                if entry.file_name() == "mod-list.json" {
+                    let mut file = File::open(entry.path())?;
+                    file.read_to_string(&mut mod_list_json)?;
+                } else if entry.file_name() != "mod-settings.dat" {
+                    if let Ok(json) = read_info_json(entry) {
+                        let mod_entry = mods.entry(json.name.clone()).or_insert(Mod {
+                            name: json.name,
+                            versions: vec![],
+                            enabled: ModEnabledType::Disabled,
+                        });
+                        mod_entry.versions.push(ModVersion {
+                            dependencies: if let Some(dependencies) = json.dependencies {
+                                if let Ok(dependencies) = parse_dependencies(dependencies) {
+                                    Some(dependencies)
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            },
+                            version: json.version,
+                        });
+                    }
+                }
+            }
+        }
+
+        if mod_list_json.is_empty() {
+            return Err("Unable to read mod-list.json".into());
+        }
+
+        // Parse mod-list.json to get active mod versions
+        let mod_list = serde_json::from_str::<ModsListJson>(&mod_list_json)?.mods;
+        for mod_data in mod_list {
+            if mod_data.enabled {
+                if let Some(mod_entry) = mods.get_mut(&mod_data.name) {
+                    mod_entry.enabled = match mod_data.version {
+                        Some(version) => ModEnabledType::Version(version),
+                        None => ModEnabledType::Latest,
+                    }
+                }
+            }
+        }
+
+        Ok(Self {
+            mods,
+            path: directory,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct Mod {
+    pub name: String,
+    pub versions: Vec<ModVersion>,
+    pub enabled: ModEnabledType,
+}
+
+#[derive(Debug)]
+pub enum ModEnabledType {
+    Disabled,
+    Latest,
+    Version(Version),
+}
+
+#[derive(Debug)]
+pub struct ModVersion {
+    pub dependencies: Option<Vec<ModDependency>>,
+    pub version: Version,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ModDependency {
+    pub dep_type: ModDependencyType,
+    pub name: String,
+    pub version_req: Option<VersionReq>,
+}
+
+impl ModDependency {
+    pub fn new(input: &str) -> Result<Self, Box<dyn Error>> {
+        // TODO: Externalize so it's not created repeatedly?
+        let dep_matcher = Regex::new(
+            r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=? *(?:\d+\.){1,2}\d+))?$",
+        )?;
+
+        let captures = dep_matcher
+            .captures(input)
+            .ok_or("Invalid dependency string")?;
+
+        Ok(Self {
+            dep_type: match captures.name("type").map(|mtch| mtch.as_str()) {
+                None => ModDependencyType::Required,
+                Some("!") => ModDependencyType::Incompatible,
+                Some("~") => ModDependencyType::NoLoadOrder,
+                Some("?") => ModDependencyType::Optional,
+                Some("(?)") => ModDependencyType::OptionalHidden,
+                Some(str) => return Err(format!("Unknown dependency modifier: {}", str).into()),
+            },
+            name: match captures.name("name") {
+                Some(mtch) => mtch.as_str().to_string(),
+                None => return Err("Name was not parseable".into()),
+            },
+            version_req: match captures.name("version_req") {
+                Some(mtch) => match VersionReq::parse(mtch.as_str()) {
+                    Ok(version_req) => Some(version_req),
+                    Err(err) => return Err(err.into()),
+                },
+                None => None,
+            },
+        })
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ModDependencyType {
+    Incompatible,
+    NoLoadOrder,
+    Optional,
+    OptionalHidden,
+    Required,
+}
+
+#[derive(Deserialize, Debug)]
+struct InfoJson {
+    dependencies: Option<Vec<String>>,
+    name: String,
+    version: Version,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ModsListJson {
+    mods: Vec<ModsListJsonMod>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ModsListJsonMod {
+    enabled: bool,
+    name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<Version>,
+}
+
+fn read_info_json(entry: DirEntry) -> Result<InfoJson, Box<dyn Error>> {
+    let metadata = entry.metadata()?;
+    if metadata.is_dir() || metadata.file_type().is_symlink() {
+        let mut path = entry.path();
+        path.push("info.json");
+        let contents = fs::read_to_string(path)?;
+        let json: InfoJson = serde_json::from_str(&contents)?;
+        Ok(json)
+    } else if Some(OsStr::new("zip")) == Path::new(&entry.file_name()).extension() {
+        let file = File::open(entry.path())?;
+        let mut archive = ZipArchive::new(file)?;
+        // My hand is forced due to the lack of a proper iterator API in the `zip` crate
+        // Thus, we need to use a bare `for` loop and iterate the indices, then act on the file if we find it
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            if file.name().contains("info.json") {
+                let mut contents = String::new();
+                file.read_to_string(&mut contents)?;
+                let json: InfoJson = serde_json::from_str(&contents)?;
+                return Ok(json);
+            }
+        }
+        Err("Mod ZIP does not contain an info.json file".into())
+    } else {
+        Err("Is not a directory or zip file".into())
+    }
+}
+
+fn parse_dependencies(dependencies: Vec<String>) -> Result<Vec<ModDependency>, Box<dyn Error>> {
+    let mut output = vec![];
+    for dependency in dependencies {
+        output.push(ModDependency::new(&dependency)?);
+    }
+
+    Ok(output)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tests_path(suffix: &str) -> PathBuf {
+        let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push("resources/tests");
+        d.push(suffix);
+        d
+    }
+
+    #[test]
+    fn mods_directory() {
+        // let directory = tests_path("mods_dir_1");
+        let directory = PathBuf::from("/home/rai/.factorio/mods");
+
+        ModsDirectory::new(directory).unwrap();
+    }
+
+    #[test]
+    fn dependency_regex() {
+        // TODO: Error case and other formats
+        let sets = vec![
+            (
+                "! bobs logistics >= 0.17.3",
+                ModDependency {
+                    dep_type: ModDependencyType::Incompatible,
+                    name: "bobs logistics".to_string(),
+                    version_req: Some(VersionReq::parse(">= 0.17.3").unwrap()),
+                },
+            ),
+            (
+                "? RecipeBook = 0.15",
+                ModDependency {
+                    dep_type: ModDependencyType::Optional,
+                    name: "RecipeBook".to_string(),
+                    version_req: Some(VersionReq::parse("0.15").unwrap()),
+                },
+            ),
+            (
+                "fufucuddlypoops",
+                ModDependency {
+                    dep_type: ModDependencyType::Required,
+                    name: "fufucuddlypoops".to_string(),
+                    version_req: None,
+                },
+            ),
+        ];
+
+        for set in sets {
+            assert_eq!(ModDependency::new(set.0).unwrap(), set.1);
+        }
+    }
+}
