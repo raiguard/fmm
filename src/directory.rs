@@ -1,5 +1,5 @@
-use regex::Regex;
-use semver::{Version, VersionReq};
+use crate::dependency::ModDependency;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
@@ -96,57 +96,6 @@ pub struct ModVersion {
     pub version: Version,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct ModDependency {
-    pub dep_type: ModDependencyType,
-    pub name: String,
-    pub version_req: Option<VersionReq>,
-}
-
-impl ModDependency {
-    pub fn new(input: &str) -> Result<Self, Box<dyn Error>> {
-        // TODO: Externalize so it's not created repeatedly?
-        let dep_matcher = Regex::new(
-            r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=? *(?:\d+\.){1,2}\d+))?$",
-        )?;
-
-        let captures = dep_matcher
-            .captures(input)
-            .ok_or("Invalid dependency string")?;
-
-        Ok(Self {
-            dep_type: match captures.name("type").map(|mtch| mtch.as_str()) {
-                None => ModDependencyType::Required,
-                Some("!") => ModDependencyType::Incompatible,
-                Some("~") => ModDependencyType::NoLoadOrder,
-                Some("?") => ModDependencyType::Optional,
-                Some("(?)") => ModDependencyType::OptionalHidden,
-                Some(str) => return Err(format!("Unknown dependency modifier: {}", str).into()),
-            },
-            name: match captures.name("name") {
-                Some(mtch) => mtch.as_str().to_string(),
-                None => return Err("Name was not parseable".into()),
-            },
-            version_req: match captures.name("version_req") {
-                Some(mtch) => match VersionReq::parse(mtch.as_str()) {
-                    Ok(version_req) => Some(version_req),
-                    Err(err) => return Err(err.into()),
-                },
-                None => None,
-            },
-        })
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum ModDependencyType {
-    Incompatible,
-    NoLoadOrder,
-    Optional,
-    OptionalHidden,
-    Required,
-}
-
 #[derive(Deserialize, Debug)]
 struct InfoJson {
     dependencies: Option<Vec<String>>,
@@ -207,6 +156,8 @@ fn parse_dependencies(dependencies: Vec<String>) -> Result<Vec<ModDependency>, B
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dependency::ModDependencyType;
+    use semver::VersionReq;
 
     fn tests_path(suffix: &str) -> PathBuf {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

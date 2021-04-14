@@ -1,4 +1,5 @@
-mod types;
+mod dependency;
+mod directory;
 
 use std::error::Error;
 use std::path::PathBuf;
@@ -32,7 +33,7 @@ impl AppArgs {
 pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     let args = AppArgs::new(pargs)?;
 
-    let directory = types::ModsDirectory::new(args.mods_path);
+    let directory = directory::ModsDirectory::new(args.mods_path);
 
     Ok(())
 }
