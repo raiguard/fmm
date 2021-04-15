@@ -74,6 +74,9 @@ impl ModsDirectory {
             path: directory,
         })
     }
+    pub fn write(&self) -> Result<(), Box<dyn Error>> {
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
