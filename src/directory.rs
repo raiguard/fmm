@@ -76,8 +76,6 @@ impl ModsDirectory {
     }
 
     pub fn write(&self) -> Result<(), Box<dyn Error>> {
-        println!("Writing to mod-list.json");
-
         let mods: Vec<ModsListJsonMod> = self
             .mods
             .iter()
@@ -94,7 +92,9 @@ impl ModsDirectory {
             })
             .collect();
 
-        // TODO: write to file
+        let mut path = self.path.clone();
+        path.push("mod-list.json");
+        fs::write(path, serde_json::to_string_pretty(&ModsListJson { mods })?)?;
 
         Ok(())
     }

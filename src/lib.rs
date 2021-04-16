@@ -57,6 +57,8 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
         }
     }
 
+    directory.write()?;
+
     Ok(())
 }
 
