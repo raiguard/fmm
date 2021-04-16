@@ -41,12 +41,47 @@ impl Deref for ModsInputList {
 }
 
 pub struct ModsDirectory {
-    mods: HashMap<String, ModData>,
-    path: PathBuf,
+    pub mods: HashMap<String, ModData>,
+    pub path: PathBuf,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct ModData {
-    name: String,
-    version: Option<String>,
+    pub name: String,
+    pub version: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn one_latest() {
+        let mods = ModsInputList::new("RecipeBook").unwrap();
+        assert_eq!(
+            mods[0],
+            ModData {
+                name: "RecipeBook".to_string(),
+                version: None
+            }
+        );
+    }
+
+    #[test]
+    fn one_versioned() {
+        let mods = ModsInputList::new("RecipeBook@1.0.0").unwrap();
+        assert_eq!(
+            mods[0],
+            ModData {
+                name: "RecipeBook".to_string(),
+                version: Some("1.0.0".to_string()),
+            }
+        )
+    }
+
+    #[test]
+    fn invalid_format() {
+        let mods = ModsInputList::new("RecipeBook@1.0.0@foo");
+        assert!(mods.is_err());
+    }
 }

@@ -40,60 +40,28 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use input::ModData;
 
-//     fn tests_path(suffix: &str) -> PathBuf {
-//         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-//         d.push("resources/tests");
-//         d.push(suffix);
-//         println!("{:?}", d);
-//         d
-//     }
+    fn tests_path(suffix: &str) -> PathBuf {
+        let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push("resources/tests");
+        d.push(suffix);
+        println!("{:?}", d);
+        d
+    }
 
-//     #[test]
-//     fn one_latest() {
-//         let mods = ModsInputList::new("RecipeBook", true).unwrap();
-//         assert_eq!(
-//             mods[0],
-//             ModData {
-//                 name: "RecipeBook".to_string(),
-//                 enabled: true,
-//                 version: None
-//             }
-//         );
-//     }
+    #[test]
+    fn simple_mods_dir() {
+        let dir = ModsDirectory::new(tests_path("mods_dir_1")).unwrap();
 
-//     #[test]
-//     fn one_versioned() {
-//         let mods = ModsInputList::new("RecipeBook@1.0.0", true).unwrap();
-//         assert_eq!(
-//             mods[0],
-//             ModData {
-//                 name: "RecipeBook".to_string(),
-//                 enabled: true,
-//                 version: Some("1.0.0".to_string()),
-//             }
-//         )
-//     }
+        let mod_data = ModData {
+            name: "aai-industry".to_string(),
+            version: None,
+        };
 
-//     #[test]
-//     fn invalid_format() {
-//         let mods = ModsInputList::new("RecipeBook@1.0.0@foo", true);
-//         assert!(mods.is_err());
-//     }
-
-//     #[test]
-//     fn simple_mod_list() {
-//         let dir = ModsDirectory::new(&tests_path("mods_dir_1")).unwrap();
-
-//         let mod_data = ModData {
-//             name: "aai-industry".to_string(),
-//             enabled: false,
-//             version: None,
-//         };
-
-//         assert!(dir.mods.binary_search(&mod_data).is_ok());
-//     }
-// }
+        // assert!(dir.mods.binary_search(&mod_data).is_ok());
+    }
+}
