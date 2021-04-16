@@ -1,7 +1,6 @@
-use std::collections::HashMap;
+use semver::Version;
 use std::error::Error;
 use std::ops::Deref;
-use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct ModsInputList(Vec<ModData>);
@@ -18,7 +17,13 @@ impl ModsInputList {
                 }
 
                 let name = parts.get(0).unwrap();
-                let version = parts.get(1).map(|version| version.to_string());
+                let version: Option<Version> = match parts.get(1) {
+                    Some(version) => match Version::parse(version) {
+                        Ok(version) => Some(version),
+                        Err(_) => return Err("Could not parse version number".into()),
+                    },
+                    None => None,
+                };
 
                 Ok(ModData {
                     name: name.to_string(),
@@ -40,15 +45,10 @@ impl Deref for ModsInputList {
     }
 }
 
-pub struct ModsDirectory {
-    pub mods: HashMap<String, ModData>,
-    pub path: PathBuf,
-}
-
 #[derive(Debug, Eq, PartialEq)]
 pub struct ModData {
     pub name: String,
-    pub version: Option<String>,
+    pub version: Option<Version>,
 }
 
 #[cfg(test)]
@@ -74,7 +74,7 @@ mod tests {
             mods[0],
             ModData {
                 name: "RecipeBook".to_string(),
-                version: Some("1.0.0".to_string()),
+                version: Some(Version::parse("1.0.0").unwrap()),
             }
         )
     }

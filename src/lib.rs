@@ -35,7 +35,27 @@ impl AppArgs {
 pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     let args = AppArgs::new(pargs)?;
 
-    let directory = ModsDirectory::new(args.mods_path);
+    let mut directory = ModsDirectory::new(args.mods_path)?;
+
+    if args.disable_all {
+        directory.disable_all();
+    }
+
+    if args.enable_all {
+        directory.enable_all();
+    }
+
+    if let Some(mods) = args.disable {
+        for mod_data in mods.iter() {
+            directory.toggle_mod(mod_data, false)?;
+        }
+    }
+
+    if let Some(mods) = args.enable {
+        for mod_data in mods.iter() {
+            directory.toggle_mod(mod_data, true)?;
+        }
+    }
 
     Ok(())
 }
@@ -45,6 +65,7 @@ mod tests {
     use super::*;
     use input::ModData;
 
+    // TODO: Populate some mock mod directories
     fn tests_path(suffix: &str) -> PathBuf {
         let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         d.push("resources/tests");
@@ -56,11 +77,6 @@ mod tests {
     #[test]
     fn simple_mods_dir() {
         let dir = ModsDirectory::new(tests_path("mods_dir_1")).unwrap();
-
-        let mod_data = ModData {
-            name: "aai-industry".to_string(),
-            version: None,
-        };
 
         // assert!(dir.mods.binary_search(&mod_data).is_ok());
     }

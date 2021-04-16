@@ -74,8 +74,72 @@ impl ModsDirectory {
             path: directory,
         })
     }
+
     pub fn write(&self) -> Result<(), Box<dyn Error>> {
+        println!("Writing to mod-list.json");
+
+        let mods: Vec<ModsListJsonMod> = self
+            .mods
+            .iter()
+            .map(|(_, mod_data)| ModsListJsonMod {
+                enabled: match &mod_data.enabled {
+                    ModEnabledType::Disabled => false,
+                    _ => true,
+                },
+                name: mod_data.name.clone(),
+                version: match &mod_data.enabled {
+                    ModEnabledType::Version(version) => Some(version.clone()),
+                    _ => None,
+                },
+            })
+            .collect();
+
+        // TODO: write to file
+
         Ok(())
+    }
+
+    pub fn disable_all(&mut self) {
+        println!("Disabled all mods");
+        for (_, mod_data) in self.mods.iter_mut() {
+            mod_data.enabled = ModEnabledType::Disabled
+        }
+    }
+
+    pub fn enable_all(&mut self) {
+        println!("Enabled all mods");
+        for (_, mod_data) in self.mods.iter_mut() {
+            mod_data.enabled = ModEnabledType::Latest
+        }
+    }
+
+    pub fn toggle_mod(
+        &mut self,
+        mod_data: &crate::input::ModData,
+        to_state: bool,
+    ) -> Result<(), Box<dyn Error>> {
+        if let Some(mod_entry) = self.mods.get_mut(&mod_data.name) {
+            mod_entry.enabled = if to_state {
+                match &mod_data.version {
+                    // TODO: Remove clone?
+                    Some(version) => {
+                        println!("Enabled {} v{}", mod_data.name, version);
+                        ModEnabledType::Version(version.clone())
+                    }
+                    None => {
+                        println!("Enabled {}", mod_data.name);
+                        ModEnabledType::Latest
+                    }
+                }
+            } else {
+                println!("Disabled {}", mod_data.name);
+                ModEnabledType::Disabled
+            };
+
+            Ok(())
+        } else {
+            return Err(format!("Mod `{}` does not exist", mod_data.name).into());
+        }
     }
 }
 
