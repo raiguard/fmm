@@ -115,7 +115,7 @@ impl ModsDirectory {
 
     pub fn toggle_mod(
         &mut self,
-        mod_data: &crate::input::ModData,
+        mod_data: &crate::input::ModInputData,
         to_state: bool,
     ) -> Result<(), Box<dyn Error>> {
         if let Some(mod_entry) = self.mods.get_mut(&mod_data.name) {

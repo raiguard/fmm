@@ -3,7 +3,7 @@ use std::error::Error;
 use std::ops::Deref;
 
 #[derive(Debug)]
-pub struct ModsInputList(Vec<ModData>);
+pub struct ModsInputList(Vec<ModInputData>);
 
 impl ModsInputList {
     pub fn new(input: &str) -> Result<Self, Box<dyn Error>> {
@@ -25,12 +25,12 @@ impl ModsInputList {
                     None => None,
                 };
 
-                Ok(ModData {
+                Ok(ModInputData {
                     name: name.to_string(),
                     version,
                 })
             })
-            .collect::<Result<Vec<ModData>, String>>()?;
+            .collect::<Result<Vec<ModInputData>, String>>()?;
 
         Ok(ModsInputList(mods))
     }
@@ -38,7 +38,7 @@ impl ModsInputList {
 
 // Use the ModsInputList like a vector by dereferencing
 impl Deref for ModsInputList {
-    type Target = Vec<ModData>;
+    type Target = Vec<ModInputData>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -46,7 +46,7 @@ impl Deref for ModsInputList {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct ModData {
+pub struct ModInputData {
     pub name: String,
     pub version: Option<Version>,
 }
@@ -60,7 +60,7 @@ mod tests {
         let mods = ModsInputList::new("RecipeBook").unwrap();
         assert_eq!(
             mods[0],
-            ModData {
+            ModInputData {
                 name: "RecipeBook".to_string(),
                 version: None
             }
@@ -72,7 +72,7 @@ mod tests {
         let mods = ModsInputList::new("RecipeBook@1.0.0").unwrap();
         assert_eq!(
             mods[0],
-            ModData {
+            ModInputData {
                 name: "RecipeBook".to_string(),
                 version: Some(Version::parse("1.0.0").unwrap()),
             }
