@@ -151,30 +151,27 @@ impl ModsDirectory {
         for (_, mod_data) in &mut self.mods {
             if mod_data.versions.len() > 1 {
                 let mod_name = &mod_data.name;
-                mod_data
-                    .versions
-                    .drain(..(mod_data.versions.len() - 1))
-                    .for_each(|version| {
-                        let entry = version.dir_entry;
-                        if let Ok(metadata) = entry.metadata() {
-                            // This can be inlined to the second `if`, but it's less readable
-                            let res = if metadata.is_dir() {
-                                fs::remove_dir_all(entry.path())
-                            } else {
-                                fs::remove_file(entry.path())
-                            };
-                            if res.is_ok() {
-                                println!("Deleted {} v{}", mod_name, version.version);
-                            } else {
-                                eprintln!("Could not delete {} v{}", mod_name, version.version);
-                            }
+                for version in mod_data.versions.drain(..(mod_data.versions.len() - 1)) {
+                    let entry = version.dir_entry;
+                    if let Ok(metadata) = entry.metadata() {
+                        // This can be inlined to the second `if`, but it's less readable
+                        let res = if metadata.is_dir() {
+                            fs::remove_dir_all(entry.path())
                         } else {
-                            eprintln!(
-                                "Could not get metadata for {} v{}",
-                                mod_name, version.version
-                            );
+                            fs::remove_file(entry.path())
+                        };
+                        if res.is_ok() {
+                            println!("Deleted {} v{}", mod_name, version.version);
+                        } else {
+                            eprintln!("Could not delete {} v{}", mod_name, version.version);
                         }
-                    });
+                    } else {
+                        eprintln!(
+                            "Could not get metadata for {} v{}",
+                            mod_name, version.version
+                        );
+                    }
+                }
             }
         }
 
@@ -335,4 +332,6 @@ mod tests {
             assert_eq!(ModDependency::new(set.0).unwrap(), set.1);
         }
     }
+
+    // TODO: Test for dedup
 }
