@@ -18,6 +18,7 @@ struct AppArgs {
     disable: Option<ModsInputList>,
     enable_all: bool,
     enable: Option<ModsInputList>,
+    ignore_dependencies: bool,
     mods_path: PathBuf,
     // FOR THE FUTURE:
     // - Auto depencency activation
@@ -30,6 +31,7 @@ struct AppArgs {
 
 impl AppArgs {
     fn new(mut pargs: pico_args::Arguments) -> Result<AppArgs, pico_args::Error> {
+        // TODO: environment var and config file
         Ok(AppArgs {
             dedup: pargs.contains("--dedup"),
             disable_all: pargs.contains("--disable-all"),
@@ -37,7 +39,8 @@ impl AppArgs {
             disable: pargs.opt_value_from_fn("--disable", |value| ModsInputList::new(value))?,
             enable_all: pargs.contains("--enable-all"),
             enable: pargs.opt_value_from_fn("--enable", |value| ModsInputList::new(value))?,
-            mods_path: pargs.value_from_str("--modspath")?, // TODO: environment var and config file
+            ignore_dependencies: pargs.contains("--ignore-deps"),
+            mods_path: pargs.value_from_str("--modspath")?,
         })
     }
 }
@@ -52,18 +55,18 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     }
 
     if args.enable_all {
-        directory.enable_all();
+        directory.enable_all(args.ignore_dependencies);
     }
 
     if let Some(mods) = args.disable {
         for mod_data in mods.iter() {
-            directory.toggle_mod(mod_data, false)?;
+            directory.disable_mod(mod_data)?;
         }
     }
 
     if let Some(mods) = args.enable {
         for mod_data in mods.iter() {
-            directory.toggle_mod(mod_data, true)?;
+            directory.enable_mod(mod_data, args.ignore_dependencies)?;
         }
     }
 

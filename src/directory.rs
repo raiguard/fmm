@@ -113,39 +113,46 @@ impl ModsDirectory {
         }
     }
 
-    pub fn enable_all(&mut self) {
+    pub fn enable_all(&mut self, ignore_dependencies: bool) {
         println!("Enabled all mods");
         for (_, mod_data) in self.mods.iter_mut() {
             mod_data.enabled = ModEnabledType::Latest
         }
     }
 
-    pub fn toggle_mod(
+    pub fn disable_mod(
         &mut self,
         mod_data: &crate::input::ModInputData,
-        to_state: bool,
     ) -> Result<(), Box<dyn Error>> {
         if let Some(mod_entry) = self.mods.get_mut(&mod_data.name) {
-            mod_entry.enabled = if to_state {
-                match &mod_data.version {
-                    Some(version) => {
-                        println!("Enabled {} v{}", mod_data.name, version);
-                        // TODO: Remove clone?
-                        ModEnabledType::Version(version.clone())
-                    }
-                    None => {
-                        println!("Enabled {}", mod_data.name);
-                        ModEnabledType::Latest
-                    }
-                }
-            } else {
-                println!("Disabled {}", mod_data.name);
-                ModEnabledType::Disabled
-            };
-
+            mod_entry.enabled = ModEnabledType::Disabled;
+            println!("Disabled {}", mod_data.name);
             Ok(())
         } else {
-            return Err(format!("Mod `{}` does not exist", mod_data.name).into());
+            Err(format!("Mod `{}` does not exist", mod_data.name).into())
+        }
+    }
+
+    pub fn enable_mod(
+        &mut self,
+        mod_data: &crate::input::ModInputData,
+        ignore_dependencies: bool,
+    ) -> Result<(), Box<dyn Error>> {
+        if let Some(mod_entry) = self.mods.get_mut(&mod_data.name) {
+            mod_entry.enabled = match &mod_data.version {
+                Some(version) => {
+                    println!("Enabled {} v{}", mod_data.name, version);
+                    // TODO: Remove clone?
+                    ModEnabledType::Version(version.clone())
+                }
+                None => {
+                    println!("Enabled {}", mod_data.name);
+                    ModEnabledType::Latest
+                }
+            };
+            Ok(())
+        } else {
+            Err(format!("Mod `{}` does not exist", mod_data.name).into())
         }
     }
 
