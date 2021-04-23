@@ -48,7 +48,7 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     let mut directory = ModsDirectory::new(args.mods_path)?;
 
     if args.disable_all {
-        directory.disable_all();
+        directory.disable_all(args.disable_base);
     }
 
     if args.enable_all {

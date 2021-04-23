@@ -104,10 +104,12 @@ impl ModsDirectory {
         Ok(())
     }
 
-    pub fn disable_all(&mut self) {
+    pub fn disable_all(&mut self, disable_base: bool) {
         println!("Disabled all mods");
         for (_, mod_data) in self.mods.iter_mut() {
-            mod_data.enabled = ModEnabledType::Disabled
+            if disable_base || mod_data.name != "base" {
+                mod_data.enabled = ModEnabledType::Disabled
+            }
         }
     }
 
