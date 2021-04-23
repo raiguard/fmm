@@ -11,15 +11,14 @@ pub struct ModDependency {
 
 impl ModDependency {
     pub fn new(input: &str) -> Result<Self, Box<dyn Error>> {
-        // TODO: Externalize so it's not created repeatedly
-        // Use the lazy_static crate
-        let dep_matcher = Regex::new(
-            r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=? *(?:\d+\.){1,2}\d+))?$",
-        )?;
+        // Avoid creating the regex object every time
+        lazy_static! {
+            static ref RE: Regex = Regex::new(
+                r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=? *(?:\d+\.){1,2}\d+))?$",
+            ).unwrap();
+        }
 
-        let captures = dep_matcher
-            .captures(input)
-            .ok_or("Invalid dependency string")?;
+        let captures = RE.captures(input).ok_or("Invalid dependency string")?;
 
         Ok(Self {
             dep_type: match captures.name("type").map(|mtch| mtch.as_str()) {
