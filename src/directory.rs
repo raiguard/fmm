@@ -1,13 +1,13 @@
 use crate::dependency::ModDependency;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::{cmp::Ordering, collections::HashMap};
 use zip::read::ZipArchive;
 
 #[derive(Debug)]
@@ -29,13 +29,13 @@ impl ModsDirectory {
                     let mut file = File::open(entry.path())?;
                     file.read_to_string(&mut mod_list_json)?;
                 } else if entry.file_name() != "mod-settings.dat" {
-                    if let Ok(json) = read_info_json(entry) {
+                    if let Ok(json) = read_info_json(&entry) {
                         let mod_entry = mods.entry(json.name.clone()).or_insert(Mod {
                             name: json.name,
                             versions: vec![],
                             enabled: ModEnabledType::Disabled,
                         });
-                        mod_entry.versions.push(ModVersion {
+                        let version = ModVersion {
                             dependencies: if let Some(dependencies) = json.dependencies {
                                 if let Ok(dependencies) = parse_dependencies(dependencies) {
                                     Some(dependencies)
@@ -45,8 +45,13 @@ impl ModsDirectory {
                             } else {
                                 None
                             },
+                            dir_entry: entry,
                             version: json.version,
-                        });
+                        };
+                        mod_entry.versions.insert(
+                            mod_entry.versions.binary_search(&version).unwrap_err(),
+                            version,
+                        );
                     }
                 }
             }
@@ -121,9 +126,9 @@ impl ModsDirectory {
         if let Some(mod_entry) = self.mods.get_mut(&mod_data.name) {
             mod_entry.enabled = if to_state {
                 match &mod_data.version {
-                    // TODO: Remove clone?
                     Some(version) => {
                         println!("Enabled {} v{}", mod_data.name, version);
+                        // TODO: Remove clone?
                         ModEnabledType::Version(version.clone())
                     }
                     None => {
@@ -140,6 +145,40 @@ impl ModsDirectory {
         } else {
             return Err(format!("Mod `{}` does not exist", mod_data.name).into());
         }
+    }
+
+    pub fn dedup(&mut self) -> Result<(), Box<dyn Error>> {
+        for (_, mod_data) in &mut self.mods {
+            if mod_data.versions.len() > 1 {
+                let mod_name = &mod_data.name;
+                mod_data
+                    .versions
+                    .drain(..(mod_data.versions.len() - 1))
+                    .for_each(|version| {
+                        let entry = version.dir_entry;
+                        if let Ok(metadata) = entry.metadata() {
+                            // This can be inlined to the second `if`, but it's less readable
+                            let res = if metadata.is_dir() {
+                                fs::remove_dir_all(entry.path())
+                            } else {
+                                fs::remove_file(entry.path())
+                            };
+                            if let Ok(_) = res {
+                                println!("Deleted {} v{}", mod_name, version.version);
+                            } else {
+                                eprintln!("Could not delete {} v{}", mod_name, version.version);
+                            }
+                        } else {
+                            eprintln!(
+                                "Could not get metadata for {} v{}",
+                                mod_name, version.version
+                            );
+                        }
+                    });
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -160,8 +199,29 @@ pub enum ModEnabledType {
 #[derive(Debug)]
 pub struct ModVersion {
     pub dependencies: Option<Vec<ModDependency>>,
+    pub dir_entry: DirEntry,
     pub version: Version,
 }
+
+impl PartialOrd for ModVersion {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.version.partial_cmp(&other.version)
+    }
+}
+
+impl Ord for ModVersion {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.version.cmp(&other.version)
+    }
+}
+
+impl PartialEq for ModVersion {
+    fn eq(&self, other: &Self) -> bool {
+        self.version == other.version
+    }
+}
+
+impl Eq for ModVersion {}
 
 #[derive(Deserialize, Debug)]
 struct InfoJson {
@@ -183,7 +243,7 @@ struct ModsListJsonMod {
     version: Option<Version>,
 }
 
-fn read_info_json(entry: DirEntry) -> Result<InfoJson, Box<dyn Error>> {
+fn read_info_json(entry: &DirEntry) -> Result<InfoJson, Box<dyn Error>> {
     let metadata = entry.metadata()?;
     if metadata.is_dir() || metadata.file_type().is_symlink() {
         let mut path = entry.path();

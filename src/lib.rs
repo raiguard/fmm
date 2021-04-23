@@ -9,6 +9,7 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 struct AppArgs {
+    dedup: bool,
     disable_all: bool,
     disable_base: bool,
     disable: Option<ModsInputList>,
@@ -27,6 +28,7 @@ struct AppArgs {
 impl AppArgs {
     fn new(mut pargs: pico_args::Arguments) -> Result<AppArgs, pico_args::Error> {
         Ok(AppArgs {
+            dedup: pargs.contains("--dedup"),
             disable_all: pargs.contains("--disable-all"),
             disable_base: pargs.contains("--disable-base"),
             disable: pargs.opt_value_from_fn("--disable", |value| ModsInputList::new(value))?,
@@ -60,6 +62,10 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
         for mod_data in mods.iter() {
             directory.toggle_mod(mod_data, true)?;
         }
+    }
+
+    if args.dedup {
+        directory.dedup()?;
     }
 
     directory.write()?;
