@@ -163,7 +163,7 @@ impl ModsDirectory {
                             } else {
                                 fs::remove_file(entry.path())
                             };
-                            if let Ok(_) = res {
+                            if res.is_ok() {
                                 println!("Deleted {} v{}", mod_name, version.version);
                             } else {
                                 eprintln!("Could not delete {} v{}", mod_name, version.version);
