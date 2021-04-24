@@ -55,7 +55,7 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
     }
 
     if args.enable_all {
-        directory.enable_all(args.ignore_dependencies);
+        directory.enable_all();
     }
 
     if let Some(mods) = args.disable {

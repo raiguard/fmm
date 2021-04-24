@@ -117,7 +117,7 @@ impl ModsDirectory {
         }
     }
 
-    pub fn enable_all(&mut self, ignore_dependencies: bool) {
+    pub fn enable_all(&mut self) {
         println!("Enabled all mods");
         for (_, mod_data) in self.mods.iter_mut() {
             mod_data.enabled = ModEnabledType::Latest
