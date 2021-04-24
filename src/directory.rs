@@ -154,6 +154,24 @@ impl ModsDirectory {
                     ModEnabledType::Latest
                 }
             };
+
+            if !ignore_dependencies {
+                let version = mod_entry.get_matching_version(mod_data)?;
+
+                if let Some(dependencies) = &version.dependencies {
+                    for dependency in dependencies {
+                        // TODO: This doesn't work because it creates multiple mutable references
+                        // self.enable_mod(
+                        //     &crate::input::ModInputData {
+                        //         name: dependency.name.to_string(),
+                        //         version: None,
+                        //     },
+                        //     false,
+                        // );
+                    }
+                }
+            }
+
             Ok(())
         } else {
             Err(format!("Mod `{}` does not exist", mod_data.name).into())
@@ -199,6 +217,30 @@ pub struct Mod {
     pub enabled: ModEnabledType,
 }
 
+impl Mod {
+    pub fn get_matching_version(
+        &self,
+        mod_data: &crate::input::ModInputData,
+    ) -> Result<&ModVersion, Box<dyn Error>> {
+        match &mod_data.version {
+            Some(version) => {
+                let res = self
+                    .versions
+                    .binary_search_by(|entry| entry.version.cmp(version));
+                // TODO: Is this guaranteed to exist?
+                if let Ok(index) = res {
+                    // PANIC: This is guaranteed to exist
+                    let entry = self.versions.get(index).unwrap();
+                    Ok(entry)
+                } else {
+                    Err(format!("Missing mod version: {} v{}", self.name, version).into())
+                }
+            } // PANIC: This is guaranteed to exist
+            None => Ok(self.versions.last().unwrap()),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum ModEnabledType {
     Disabled,
@@ -219,6 +261,13 @@ impl PartialOrd for ModVersion {
     }
 }
 
+// TODO: Might not end up being used
+impl PartialOrd<Version> for ModVersion {
+    fn partial_cmp(&self, other: &Version) -> Option<Ordering> {
+        self.version.partial_cmp(other)
+    }
+}
+
 impl Ord for ModVersion {
     fn cmp(&self, other: &Self) -> Ordering {
         self.version.cmp(&other.version)
@@ -228,6 +277,13 @@ impl Ord for ModVersion {
 impl PartialEq for ModVersion {
     fn eq(&self, other: &Self) -> bool {
         self.version == other.version
+    }
+}
+
+// TODO: Might not end up being used
+impl PartialEq<Version> for ModVersion {
+    fn eq(&self, other: &Version) -> bool {
+        self.version == *other
     }
 }
 
