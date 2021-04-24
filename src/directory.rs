@@ -37,7 +37,11 @@ impl ModsDirectory {
                         });
                         let version = ModVersion {
                             dependencies: if let Some(dependencies) = json.dependencies {
-                                if let Ok(dependencies) = parse_dependencies(dependencies) {
+                                if let Ok(dependencies) = dependencies
+                                    .iter()
+                                    .map(|dependency| ModDependency::new(&dependency))
+                                    .collect()
+                                {
                                     Some(dependencies)
                                 } else {
                                     None
@@ -275,15 +279,6 @@ fn read_info_json(entry: &DirEntry) -> Result<InfoJson, Box<dyn Error>> {
     } else {
         Err("Is not a directory or zip file".into())
     }
-}
-
-fn parse_dependencies(dependencies: Vec<String>) -> Result<Vec<ModDependency>, Box<dyn Error>> {
-    let mut output = vec![];
-    for dependency in dependencies {
-        output.push(ModDependency::new(&dependency)?);
-    }
-
-    Ok(output)
 }
 
 #[cfg(test)]
