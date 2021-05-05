@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
-
 mod dependency;
 mod directory;
 mod input;
@@ -22,7 +19,6 @@ struct AppArgs {
     mods_path: PathBuf,
     // FOR THE FUTURE:
     // - Auto depencency activation
-    // - Deduplicate mod versions
     // - Download from the portal?
     // - Upload to the portal?
     // - Changelog bump
@@ -66,7 +62,7 @@ pub fn run(pargs: pico_args::Arguments) -> Result<(), Box<dyn Error>> {
 
     if let Some(mods) = args.enable {
         for mod_data in mods.iter() {
-            directory.enable_mod(mod_data, args.ignore_dependencies)?;
+            directory.enable_mod(mod_data)?;
         }
     }
 

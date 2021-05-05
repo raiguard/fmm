@@ -140,7 +140,6 @@ impl ModsDirectory {
     pub fn enable_mod(
         &mut self,
         mod_data: &crate::input::ModInputData,
-        ignore_dependencies: bool,
     ) -> Result<(), Box<dyn Error>> {
         if let Some(mod_entry) = self.mods.get_mut(&mod_data.name) {
             mod_entry.enabled = match &mod_data.version {
@@ -154,24 +153,6 @@ impl ModsDirectory {
                     ModEnabledType::Latest
                 }
             };
-
-            if !ignore_dependencies {
-                let version = mod_entry.get_matching_version(mod_data)?;
-
-                if let Some(dependencies) = &version.dependencies {
-                    for dependency in dependencies {
-                        // TODO: This doesn't work because it creates multiple mutable references
-                        // self.enable_mod(
-                        //     &crate::input::ModInputData {
-                        //         name: dependency.name.to_string(),
-                        //         version: None,
-                        //     },
-                        //     false,
-                        // );
-                    }
-                }
-            }
-
             Ok(())
         } else {
             Err(format!("Mod `{}` does not exist", mod_data.name).into())
