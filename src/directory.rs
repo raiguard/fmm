@@ -36,19 +36,13 @@ impl ModsDirectory {
                             enabled: ModEnabledType::Disabled,
                         });
                         let version = ModVersion {
-                            dependencies: if let Some(dependencies) = json.dependencies {
-                                if let Ok(dependencies) = dependencies
+                            dependencies: json.dependencies.and_then(|dependencies| {
+                                dependencies
                                     .iter()
                                     .map(|dependency| ModDependency::new(&dependency))
-                                    .collect()
-                                {
-                                    Some(dependencies)
-                                } else {
-                                    None
-                                }
-                            } else {
-                                None
-                            },
+                                    .collect::<Result<Vec<ModDependency>, Box<dyn Error>>>()
+                                    .ok()
+                            }),
                             dir_entry: entry,
                             version: json.version,
                         };
