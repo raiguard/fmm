@@ -12,23 +12,23 @@ use structopt::StructOpt;
 struct App {
     /// A list of mods to disable. TODO: explain format.
     #[structopt(short, long)]
-    disable: Vec<ModIdent>,
-    /// A list of mods to enable. TODO: explain format.
-    #[structopt(short, long)]
-    enable: Vec<ModIdent>,
+    disable: Vec<InputMod>,
     /// The path to the mods directory
     #[structopt(short = "f", long)]
     dir: Option<PathBuf>,
+    /// A list of mods to enable. TODO: explain format.
+    #[structopt(short, long)]
+    enable: Vec<InputMod>,
 }
 
 #[derive(Debug)]
-struct ModIdent {
+struct InputMod {
     name: String,
     version: ModVersion,
 }
 
-impl std::str::FromStr for ModIdent {
-    type Err = ModIdentErr;
+impl std::str::FromStr for InputMod {
+    type Err = InputModErr;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.split('@').collect();
@@ -40,10 +40,15 @@ impl std::str::FromStr for ModIdent {
             [name, version] => {
                 let parsed_version = Version::parse(version);
                 if let Ok(version) = parsed_version {
-                    Ok(Self {
-                        name: name.to_string(),
-                        version: ModVersion::Ver(version),
-                    })
+                    // Validate that the version does *not* have prerelease or build data
+                    if version.pre.len() > 0 || version.build.len() > 0 {
+                        Err(Self::Err::InvalidVersion(version.to_string()))
+                    } else {
+                        Ok(Self {
+                            name: name.to_string(),
+                            version: ModVersion::Ver(version),
+                        })
+                    }
                 } else {
                     Err(Self::Err::InvalidVersion(version.to_string()))
                 }
@@ -54,13 +59,13 @@ impl std::str::FromStr for ModIdent {
 }
 
 #[derive(Debug)]
-enum ModIdentErr {
+enum InputModErr {
     IncorrectArgCount(usize),
     InvalidVersion(String),
     // NonexistentMod(String),
 }
 
-impl fmt::Display for ModIdentErr {
+impl fmt::Display for InputModErr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -87,4 +92,6 @@ enum ModVersion {
 fn main() {
     #[allow(unused)]
     let app = App::from_args();
+
+    println!("{:#?}\n{:#?}\n{:#?}", app.enable, app.disable, app.dir)
 }
