@@ -46,7 +46,7 @@ impl std::str::FromStr for InputMod {
                     } else {
                         Ok(Self {
                             name: name.to_string(),
-                            version: ModVersion::Ver(version),
+                            version: ModVersion::Specific(version),
                         })
                     }
                 } else {
@@ -86,11 +86,10 @@ impl fmt::Display for InputModErr {
 #[derive(Debug)]
 enum ModVersion {
     Latest,
-    Ver(Version),
+    Specific(Version),
 }
 
 fn main() {
-    #[allow(unused)]
     let app = App::from_args();
 
     println!("{:#?}\n{:#?}\n{:#?}", app.enable, app.disable, app.dir)
