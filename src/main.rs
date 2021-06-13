@@ -11,16 +11,14 @@ use structopt::StructOpt;
 )]
 struct App {
     /// A list of mods to disable. TODO: explain format.
-    // TODO: This should be Vec<ModIdent> instead
     #[structopt(short, long)]
     disable: Vec<ModIdent>,
     /// A list of mods to enable. TODO: explain format.
-    // TODO: This should be Vec<ModIdent> instead
     #[structopt(short, long)]
     enable: Vec<ModIdent>,
-    // /// The path to the mods directory
-    // #[structopt(short = "-dir", long)]
-    // dir: PathBuf,
+    /// The path to the mods directory
+    #[structopt(short = "f", long)]
+    dir: Option<PathBuf>,
 }
 
 #[derive(Debug)]
