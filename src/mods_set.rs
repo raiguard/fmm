@@ -134,6 +134,15 @@ impl ModsSet {
         })
     }
 
+    pub fn disable_all(&mut self, include_base_mod: bool) {
+        println!("Disabling all mods");
+
+        self.mods
+            .iter_mut()
+            .filter(|(mod_name, _)| include_base_mod || mod_name.as_str() != "base")
+            .for_each(|(_, mod_data)| mod_data.enabled = ModEnabledType::Disabled);
+    }
+
     pub fn disable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
         println!("Disabling {}", mod_ident.name);
 
@@ -142,6 +151,14 @@ impl ModsSet {
         mod_data.enabled = ModEnabledType::Disabled;
 
         Ok(())
+    }
+
+    pub fn enable_all(&mut self) {
+        println!("Enabling latest versions of all mods");
+
+        self.mods
+            .iter_mut()
+            .for_each(|(_, mod_data)| mod_data.enabled = ModEnabledType::Latest);
     }
 
     pub fn enable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
