@@ -22,6 +22,7 @@ struct ModListJson {
 #[derive(Deserialize, Serialize)]
 struct ModListJsonMod {
     name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     version: Option<Version>,
     enabled: bool,
 }
@@ -194,6 +195,37 @@ impl ModsSet {
         Ok(())
     }
 
+    pub fn write(&mut self) -> Result<(), ModsSetErr> {
+        let info = ModListJson {
+            mods: self
+                .mods
+                .iter()
+                .map(|(_, mod_data)| {
+                    let (enabled, version) = match &mod_data.enabled {
+                        ModEnabledType::Disabled => (false, None),
+                        ModEnabledType::Latest => (true, None),
+                        ModEnabledType::Version(version) => (true, Some(version.clone())),
+                    };
+                    ModListJsonMod {
+                        enabled,
+                        name: mod_data.name.clone(),
+                        version,
+                    }
+                })
+                .collect(),
+        };
+
+        let mut path = self.dir.clone();
+        path.push("mod-list.json");
+        fs::write(
+            path,
+            serde_json::to_string_pretty(&info).map_err(|_| ModsSetErr::CouldNotWriteChanges)?,
+        )
+        .map_err(|_| ModsSetErr::CouldNotWriteChanges)?;
+
+        Ok(())
+    }
+
     fn get_mod(&mut self, mod_name: &str) -> Result<&mut Mod, ModsSetErr> {
         self.mods
             .get_mut(mod_name)
@@ -202,6 +234,7 @@ impl ModsSet {
 }
 
 pub enum ModsSetErr {
+    CouldNotWriteChanges,
     ModDoesNotExist,
     ModVersionDoesNotExist(Version),
 }
@@ -212,6 +245,7 @@ impl fmt::Display for ModsSetErr {
             f,
             "{}",
             match self {
+                Self::CouldNotWriteChanges => "Could not write changes".to_string(),
                 Self::ModDoesNotExist => "Mod does not exist".to_string(),
                 Self::ModVersionDoesNotExist(version) =>
                     format!("Version {} does not exist", version.to_string()),

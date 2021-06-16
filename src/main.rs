@@ -27,7 +27,7 @@ struct App {
     #[structopt(short, long)]
     disable: Vec<InputMod>,
     /// Enable the latest versions of all mods.
-    #[structopt(short = "i", long)]
+    #[structopt(short = "l", long)]
     enable_all: bool,
     /// A list of mods to enable. TODO: explain format.
     #[structopt(short, long)]
@@ -57,6 +57,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     for mod_ident in app.enable.iter() {
         set.enable(mod_ident)?;
     }
+
+    set.write();
 
     Ok(())
 }
