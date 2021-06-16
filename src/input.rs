@@ -3,8 +3,8 @@ use std::fmt;
 
 #[derive(Debug)]
 pub struct InputMod {
-    name: String,
-    version: InputModVersion,
+    pub name: String,
+    pub version: InputModVersion,
 }
 
 impl std::str::FromStr for InputMod {
@@ -22,7 +22,7 @@ impl std::str::FromStr for InputMod {
                 if let Ok(version) = parsed_version {
                     // Validate that the version does *not* have prerelease or build data
                     if version.pre.len() > 0 || version.build.len() > 0 {
-                        Err(Self::Err::InvalidVersion(version.to_string()))
+                        Err(InputModErr::InvalidVersion(version.to_string()))
                     } else {
                         Ok(Self {
                             name: name.to_string(),
@@ -30,10 +30,10 @@ impl std::str::FromStr for InputMod {
                         })
                     }
                 } else {
-                    Err(Self::Err::InvalidVersion(version.to_string()))
+                    Err(InputModErr::InvalidVersion(version.to_string()))
                 }
             }
-            _ => Err(Self::Err::IncorrectArgCount(parts.len())),
+            _ => Err(InputModErr::IncorrectArgCount(parts.len())),
         }
     }
 }
@@ -61,8 +61,10 @@ impl fmt::Display for InputModErr {
     }
 }
 
+impl std::error::Error for InputModErr {}
+
 #[derive(Debug)]
-enum InputModVersion {
+pub enum InputModVersion {
     Latest,
     Version(Version),
 }

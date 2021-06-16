@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::OsStr;
+use std::fmt;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
@@ -11,6 +12,7 @@ use std::path::PathBuf;
 use zip::ZipArchive;
 
 use crate::dependency::{ModDependency, ModDependencyResult};
+use crate::input::{InputMod, InputModVersion};
 
 #[derive(Deserialize, Serialize)]
 struct ModListJson {
@@ -32,13 +34,14 @@ struct InfoJson {
 }
 
 pub struct ModsSet {
+    #[allow(unused)]
     dir: PathBuf,
     mods: HashMap<String, Mod>,
 }
 
 impl ModsSet {
     // TODO: Better error formatting so the user knows which mod threw the error
-    pub fn new(path: &PathBuf) -> Result<(), Box<dyn Error>> {
+    pub fn new(path: &PathBuf) -> Result<Self, Box<dyn Error>> {
         // Read mod-list.json to a file
         let mut mlj_path = path.clone();
         mlj_path.push("mod-list.json");
@@ -125,11 +128,88 @@ impl ModsSet {
             }
         }
 
-        println!("{:#?}", mods);
+        Ok(Self {
+            dir: path.clone(),
+            mods,
+        })
+    }
+
+    pub fn disable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
+        println!("Disabling {}", mod_ident.name);
+
+        let mod_data = self.get_mod(&mod_ident.name)?;
+
+        mod_data.enabled = ModEnabledType::Disabled;
 
         Ok(())
     }
+
+    pub fn enable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
+        println!(
+            "Enabling {}{}",
+            mod_ident.name,
+            match &mod_ident.version {
+                InputModVersion::Latest => "".to_string(),
+                InputModVersion::Version(version) => format!(" v{}", version),
+            }
+        );
+
+        let mod_data = self.get_mod(&mod_ident.name)?;
+
+        mod_data.enabled = match &mod_ident.version {
+            InputModVersion::Latest => Ok(ModEnabledType::Latest),
+            // TODO: Remove clone?
+            InputModVersion::Version(version) => {
+                if mod_data
+                    .versions
+                    .binary_search_by(|stored_version| stored_version.version.cmp(version))
+                    .is_ok()
+                {
+                    Ok(ModEnabledType::Version(version.clone()))
+                } else {
+                    Err(ModsSetErr::ModVersionDoesNotExist(version.to_string()))
+                }
+            }
+        }?;
+
+        // TODO: Enable dependencies
+
+        Ok(())
+    }
+
+    fn get_mod(&mut self, mod_name: &str) -> Result<&mut Mod, ModsSetErr> {
+        self.mods
+            .get_mut(mod_name)
+            .ok_or(ModsSetErr::ModDoesNotExist)
+    }
 }
+
+pub enum ModsSetErr {
+    ModDoesNotExist,
+    ModVersionDoesNotExist(String),
+}
+
+impl fmt::Display for ModsSetErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::ModDoesNotExist => "Mod does not exist".to_string(),
+                Self::ModVersionDoesNotExist(version) =>
+                    format!("Version {} does not exist", version),
+            }
+        )
+    }
+}
+
+impl fmt::Debug for ModsSetErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        <Self as fmt::Display>::fmt(self, f)
+    }
+}
+
+impl Error for ModsSetErr {}
 
 fn find_info_json_in_zip(entry: DirEntry) -> Result<InfoJson, Box<dyn Error>> {
     let file = File::open(entry.path())?;
@@ -176,7 +256,6 @@ impl PartialOrd for ModVersion {
     }
 }
 
-// TODO: Might not end up being used
 // impl PartialOrd<Version> for ModVersion {
 //     fn partial_cmp(&self, other: &Version) -> Option<Ordering> {
 //         self.version.partial_cmp(other)
@@ -195,11 +274,10 @@ impl PartialEq for ModVersion {
     }
 }
 
-// TODO: Might not end up being used
-impl PartialEq<Version> for ModVersion {
-    fn eq(&self, other: &Version) -> bool {
-        self.version == *other
-    }
-}
+// impl PartialEq<Version> for ModVersion {
+//     fn eq(&self, other: &Version) -> bool {
+//         self.version == *other
+//     }
+// }
 
 impl Eq for ModVersion {}

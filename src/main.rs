@@ -31,7 +31,15 @@ struct App {
 fn main() -> Result<(), Box<dyn Error>> {
     let app = App::from_args();
 
-    let set = ModsSet::new(&app.dir)?;
+    let mut set = ModsSet::new(&app.dir)?;
+
+    for mod_ident in app.disable.iter() {
+        set.disable(mod_ident)?;
+    }
+
+    for mod_ident in app.enable.iter() {
+        set.enable(mod_ident)?;
+    }
 
     Ok(())
 }
