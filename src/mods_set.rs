@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use zip::ZipArchive;
 
 use crate::dependency::{ModDependency, ModDependencyResult};
-use crate::input::{InputMod, InputModVersion};
+use crate::input::InputMod;
 
 #[derive(Deserialize, Serialize)]
 struct ModListJson {
@@ -149,16 +149,15 @@ impl ModsSet {
             "Enabling {}{}",
             mod_ident.name,
             match &mod_ident.version {
-                InputModVersion::Latest => "".to_string(),
-                InputModVersion::Version(version) => format!(" v{}", version),
+                ModEnabledType::Version(version) => format!(" v{}", version),
+                _ => "".to_string(),
             }
         );
 
         let mod_data = self.get_mod(&mod_ident.name)?;
 
         mod_data.enabled = match &mod_ident.version {
-            InputModVersion::Latest => Ok(ModEnabledType::Latest),
-            InputModVersion::Version(version) => {
+            ModEnabledType::Version(version) => {
                 if mod_data
                     .versions
                     .binary_search_by(|stored_version| stored_version.version.cmp(version))
@@ -170,6 +169,7 @@ impl ModsSet {
                     Err(ModsSetErr::ModVersionDoesNotExist(version.clone()))
                 }
             }
+            _ => Ok(ModEnabledType::Latest),
         }?;
 
         // TODO: Enable dependencies
@@ -237,7 +237,7 @@ struct Mod {
 }
 
 #[derive(Debug)]
-enum ModEnabledType {
+pub enum ModEnabledType {
     Disabled,
     Latest,
     Version(Version),

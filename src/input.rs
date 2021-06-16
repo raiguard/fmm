@@ -1,10 +1,12 @@
 use semver::Version;
 use std::fmt;
 
+use crate::mods_set::ModEnabledType;
+
 #[derive(Debug)]
 pub struct InputMod {
     pub name: String,
-    pub version: InputModVersion,
+    pub version: ModEnabledType,
 }
 
 impl std::str::FromStr for InputMod {
@@ -15,7 +17,7 @@ impl std::str::FromStr for InputMod {
         match parts[..] {
             [name] => Ok(Self {
                 name: name.to_string(),
-                version: InputModVersion::Latest,
+                version: ModEnabledType::Latest,
             }),
             [name, version] => {
                 let parsed_version = Version::parse(version);
@@ -26,7 +28,7 @@ impl std::str::FromStr for InputMod {
                     } else {
                         Ok(Self {
                             name: name.to_string(),
-                            version: InputModVersion::Version(version),
+                            version: ModEnabledType::Version(version),
                         })
                     }
                 } else {
@@ -62,9 +64,3 @@ impl fmt::Display for InputModErr {
 }
 
 impl std::error::Error for InputModErr {}
-
-#[derive(Debug)]
-pub enum InputModVersion {
-    Latest,
-    Version(Version),
-}
