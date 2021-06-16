@@ -72,7 +72,6 @@ impl std::str::FromStr for InputMod {
 enum InputModErr {
     IncorrectArgCount(usize),
     InvalidVersion(String),
-    // NonexistentMod(String),
 }
 
 impl fmt::Display for InputModErr {
@@ -87,7 +86,6 @@ impl fmt::Display for InputModErr {
                 ),
                 Self::InvalidVersion(got_version) =>
                     format!("Invalid version identifier: {}", got_version),
-                // Self::NonexistentMod(mod_name) => format!("Mod `{}` does not exist", mod_name),
             }
         )
     }
@@ -257,6 +255,7 @@ impl PartialOrd for ModVersion {
     }
 }
 
+// TODO: Might not end up being used
 // impl PartialOrd<Version> for ModVersion {
 //     fn partial_cmp(&self, other: &Version) -> Option<Ordering> {
 //         self.version.partial_cmp(other)
