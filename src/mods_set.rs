@@ -195,7 +195,7 @@ impl ModsSet {
         Ok(())
     }
 
-    pub fn write(&mut self) -> Result<(), ModsSetErr> {
+    pub fn write_mod_list(&mut self) -> Result<(), ModsSetErr> {
         let info = ModListJson {
             mods: self
                 .mods

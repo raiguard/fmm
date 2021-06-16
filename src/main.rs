@@ -58,7 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         set.enable(mod_ident)?;
     }
 
-    set.write();
+    set.write_mod_list();
 
     Ok(())
 }
