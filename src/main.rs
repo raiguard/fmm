@@ -12,6 +12,10 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 use zip::ZipArchive;
 
+mod dependency;
+
+use crate::dependency::{ModDependency, ModDependencyResult};
+
 // TODO: Figure out why it's not coloring the help info.
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -193,10 +197,15 @@ impl ModsSet {
                 },
             });
 
+            println!("{:?}", info.name);
             let mod_version = ModVersion {
                 version: info.version,
-                // TODO: Parse dependencies
-                dependencies: vec![],
+                dependencies: info
+                    .dependencies
+                    .unwrap_or(vec![])
+                    .iter()
+                    .map(ModDependency::new)
+                    .collect::<ModDependencyResult>()?,
             };
 
             if let Err(index) = mod_data.versions.binary_search(&mod_version) {
@@ -282,12 +291,6 @@ impl PartialEq<Version> for ModVersion {
 }
 
 impl Eq for ModVersion {}
-
-#[derive(Debug)]
-struct ModDependency {
-    name: String,
-    version_req: VersionReq,
-}
 
 fn main() -> Result<(), Box<dyn Error>> {
     let app = App::from_args();
