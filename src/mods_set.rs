@@ -158,16 +158,16 @@ impl ModsSet {
 
         mod_data.enabled = match &mod_ident.version {
             InputModVersion::Latest => Ok(ModEnabledType::Latest),
-            // TODO: Remove clone?
             InputModVersion::Version(version) => {
                 if mod_data
                     .versions
                     .binary_search_by(|stored_version| stored_version.version.cmp(version))
                     .is_ok()
                 {
+                    // TODO: Remove clone?
                     Ok(ModEnabledType::Version(version.clone()))
                 } else {
-                    Err(ModsSetErr::ModVersionDoesNotExist(version.to_string()))
+                    Err(ModsSetErr::ModVersionDoesNotExist(version.clone()))
                 }
             }
         }?;
@@ -186,7 +186,7 @@ impl ModsSet {
 
 pub enum ModsSetErr {
     ModDoesNotExist,
-    ModVersionDoesNotExist(String),
+    ModVersionDoesNotExist(Version),
 }
 
 impl fmt::Display for ModsSetErr {
@@ -197,7 +197,7 @@ impl fmt::Display for ModsSetErr {
             match self {
                 Self::ModDoesNotExist => "Mod does not exist".to_string(),
                 Self::ModVersionDoesNotExist(version) =>
-                    format!("Version {} does not exist", version),
+                    format!("Version {} does not exist", version.to_string()),
             }
         )
     }
