@@ -126,6 +126,7 @@ struct InfoJson {
 }
 
 impl ModsSet {
+    // TODO: Better error formatting so the user knows which mod threw the error
     pub fn new(path: &PathBuf) -> Result<(), Box<dyn Error>> {
         // Read mod-list.json to a file
         let mut mlj_path = path.clone();
@@ -197,7 +198,7 @@ impl ModsSet {
                 },
             });
 
-            println!("{:?}", info.name);
+            // TODO: Optimize to not parse dependencies unless we need to insert the version
             let mod_version = ModVersion {
                 version: info.version,
                 dependencies: info
