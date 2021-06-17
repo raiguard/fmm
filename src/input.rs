@@ -1,5 +1,6 @@
 use semver::Version;
 use std::fmt;
+use std::str::FromStr;
 
 use crate::mods_set::ModEnabledType;
 
@@ -9,7 +10,7 @@ pub struct InputMod {
     pub version: ModEnabledType,
 }
 
-impl std::str::FromStr for InputMod {
+impl FromStr for InputMod {
     type Err = InputModErr;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -37,6 +38,20 @@ impl std::str::FromStr for InputMod {
             }
             _ => Err(InputModErr::IncorrectArgCount(parts.len())),
         }
+    }
+}
+
+impl fmt::Display for InputMod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{}",
+            self.name,
+            match &self.version {
+                ModEnabledType::Version(version) => format!(" v{}", version),
+                _ => "".to_string(),
+            }
+        )
     }
 }
 

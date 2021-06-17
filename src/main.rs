@@ -35,12 +35,19 @@ struct App {
     /// Include the base mod when calling `disable-all`.
     #[structopt(long)]
     include_base_mod: bool,
+    /// A list of mods to remove. If no version is provided, the latest version will be removed.
+    #[structopt(short, long)]
+    remove: Vec<InputMod>,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let app = App::from_args();
 
     let mut set = ModsSet::new(&app.dir)?;
+
+    for mod_ident in app.remove.iter() {
+        set.remove(mod_ident)?;
+    }
 
     if app.disable_all {
         set.disable_all(app.include_base_mod);
@@ -58,7 +65,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         set.enable(mod_ident)?;
     }
 
-    set.write_mod_list();
     set.write_mod_list()?;
 
     Ok(())

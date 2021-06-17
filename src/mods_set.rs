@@ -145,7 +145,7 @@ impl ModsSet {
     }
 
     pub fn disable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
-        println!("Disabling {}", mod_ident.name);
+        println!("Disabling {}", mod_ident);
 
         let mod_data = self.get_mod(&mod_ident.name)?;
 
@@ -163,14 +163,7 @@ impl ModsSet {
     }
 
     pub fn enable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
-        println!(
-            "Enabling {}{}",
-            mod_ident.name,
-            match &mod_ident.version {
-                ModEnabledType::Version(version) => format!(" v{}", version),
-                _ => "".to_string(),
-            }
-        );
+        println!("Enabling {}", mod_ident);
 
         let mod_data = self.get_mod(&mod_ident.name)?;
 
@@ -191,6 +184,20 @@ impl ModsSet {
         }?;
 
         // TODO: Enable dependencies
+
+        Ok(())
+    }
+
+    pub fn remove(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
+        println!("Removing {}", mod_ident);
+
+        let mod_data = self.get_mod(&mod_ident.name)?;
+
+        // Remove the version from the versions table
+        let version_index = mod_data.find_version(&mod_ident.version)?;
+        mod_data.versions.remove(version_index);
+
+        // TODO: Delete the actual mod folder / file
 
         Ok(())
     }
@@ -285,6 +292,18 @@ struct Mod {
     name: String,
     versions: Vec<ModVersion>,
     enabled: ModEnabledType,
+}
+
+impl Mod {
+    fn find_version(&self, version_ident: &ModEnabledType) -> Result<usize, ModsSetErr> {
+        match version_ident {
+            ModEnabledType::Version(version) => self
+                .versions
+                .binary_search_by(|stored_version| stored_version.version.cmp(version))
+                .map_err(|_| ModsSetErr::ModVersionDoesNotExist(version.clone())),
+            _ => Ok(self.versions.len() - 1),
+        }
+    }
 }
 
 #[derive(Debug)]
