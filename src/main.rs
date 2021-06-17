@@ -59,6 +59,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     set.write_mod_list();
+    set.write_mod_list()?;
 
     Ok(())
 }
