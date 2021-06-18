@@ -7,6 +7,7 @@ use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
 use std::fs::{DirEntry, File};
+use std::io;
 use std::io::Read;
 use std::path::PathBuf;
 use zip::ZipArchive;
@@ -84,7 +85,7 @@ impl ModsSet {
             let info: InfoJson = if extension.is_some() && extension.unwrap() == OsStr::new("zip") {
                 // WORKAROUND: The `zip` crate doesn't have nice iterator methods, so we need to
                 // early-return out of a `for` loop, necessitating a separate function
-                find_info_json_in_zip(entry)
+                find_info_json_in_zip(&entry)
             } else {
                 let file_type = entry.file_type()?;
                 if file_type.is_symlink() || file_type.is_dir() {
@@ -115,13 +116,14 @@ impl ModsSet {
 
             // TODO: Optimize to not parse dependencies unless we need to insert the version
             let mod_version = ModVersion {
-                version: info.version,
+                entry,
                 dependencies: info
                     .dependencies
                     .unwrap_or(vec![])
                     .iter()
                     .map(ModDependency::new)
                     .collect::<ModDependencyResult>()?,
+                version: info.version,
             };
 
             if let Err(index) = mod_data.versions.binary_search(&mod_version) {
@@ -193,11 +195,14 @@ impl ModsSet {
 
         let mod_data = self.get_mod(&mod_ident.name)?;
 
-        // Remove the version from the versions table
-        let version_index = mod_data.find_version(&mod_ident.version)?;
-        mod_data.versions.remove(version_index);
+        // Extract the matching version from the versions table
+        let version_data = mod_data
+            .versions
+            .remove(mod_data.find_version(&mod_ident.version)?);
 
-        // TODO: Delete the actual mod folder / file
+        version_data
+            .remove_from_disk()
+            .map_err(|_| ModsSetErr::CouldNotRemoveVersion(version_data.version))?;
 
         Ok(())
     }
@@ -242,6 +247,7 @@ impl ModsSet {
 
 pub enum ModsSetErr {
     CouldNotWriteChanges,
+    CouldNotRemoveVersion(Version),
     ModDoesNotExist,
     ModVersionDoesNotExist(Version),
 }
@@ -252,6 +258,8 @@ impl fmt::Display for ModsSetErr {
             f,
             "{}",
             match self {
+                Self::CouldNotRemoveVersion(version) =>
+                    format!("Could not delete version {}", version.to_string()),
                 Self::CouldNotWriteChanges => "Could not write changes".to_string(),
                 Self::ModDoesNotExist => "Mod does not exist".to_string(),
                 Self::ModVersionDoesNotExist(version) =>
@@ -269,7 +277,7 @@ impl fmt::Debug for ModsSetErr {
 
 impl Error for ModsSetErr {}
 
-fn find_info_json_in_zip(entry: DirEntry) -> Result<InfoJson, Box<dyn Error>> {
+fn find_info_json_in_zip(entry: &DirEntry) -> Result<InfoJson, Box<dyn Error>> {
     let file = File::open(entry.path())?;
     // My hand is forced due to the lack of a proper iterator API in the `zip` crate
     let mut archive = ZipArchive::new(file)?;
@@ -315,9 +323,22 @@ pub enum ModEnabledType {
 
 #[derive(Debug)]
 struct ModVersion {
+    entry: DirEntry,
     version: Version,
     // TODO: Use a HashSet for quick lookup?
     dependencies: Vec<ModDependency>,
+}
+
+impl ModVersion {
+    fn remove_from_disk(&self) -> io::Result<()> {
+        let entry = &self.entry;
+
+        if entry.metadata()?.is_dir() {
+            fs::remove_dir_all(entry.path())
+        } else {
+            fs::remove_file(entry.path())
+        }
+    }
 }
 
 impl PartialOrd for ModVersion {
