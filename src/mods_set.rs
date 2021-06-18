@@ -78,27 +78,25 @@ impl ModsSet {
                 None
             }
         }) {
-            let path = entry.path();
-            let extension = path.extension();
+            // Determine the mod's structure type
+            let mod_structure = ModVersionStructure::parse(&entry)?;
 
-            // Extract info.json from the zip file or from the directory/symlink
-            let info: InfoJson = if extension.is_some() && extension.unwrap() == OsStr::new("zip") {
-                // WORKAROUND: The `zip` crate doesn't have nice iterator methods, so we need to
-                // early-return out of a `for` loop, necessitating a separate function
-                find_info_json_in_zip(&entry)
-            } else {
-                let file_type = entry.file_type()?;
-                if file_type.is_symlink() || file_type.is_dir() {
-                    // FIXME: Handle the case where there are two levels of nesting
+            // Extract contents of info.json file
+            let info: InfoJson = match mod_structure {
+                ModVersionStructure::Zip => {
+                    // WORKAROUND: The `zip` crate doesn't have nice iterator methods, so we need to
+                    // early-return out of a `for` loop, necessitating a separate function
+                    // TODO: Make a method somewhere?
+                    find_info_json_in_zip(&entry)?
+                }
+                _ => {
                     let mut path = entry.path();
                     path.push("info.json");
                     let contents = fs::read_to_string(path)?;
                     let json: InfoJson = serde_json::from_str(&contents)?;
-                    Ok(json)
-                } else {
-                    Err("Could not find an info.json file".into())
+                    json
                 }
-            }?;
+            };
 
             // Retrive or create mod data
             let mod_data = mods.entry(info.name.clone()).or_insert(Mod {
@@ -246,8 +244,10 @@ impl ModsSet {
 }
 
 pub enum ModsSetErr {
-    CouldNotWriteChanges,
     CouldNotRemoveVersion(Version),
+    CouldNotWriteChanges,
+    FilesystemError,
+    InvalidModStructure,
     ModDoesNotExist,
     ModVersionDoesNotExist(Version),
 }
@@ -258,9 +258,11 @@ impl fmt::Display for ModsSetErr {
             f,
             "{}",
             match self {
+                Self::FilesystemError => "Could not get entry metadata".to_string(),
                 Self::CouldNotRemoveVersion(version) =>
                     format!("Could not delete version {}", version.to_string()),
                 Self::CouldNotWriteChanges => "Could not write changes".to_string(),
+                Self::InvalidModStructure => "Invalid mod structure".to_string(),
                 Self::ModDoesNotExist => "Mod does not exist".to_string(),
                 Self::ModVersionDoesNotExist(version) =>
                     format!("Version {} does not exist", version.to_string()),
@@ -324,9 +326,10 @@ pub enum ModEnabledType {
 #[derive(Debug)]
 struct ModVersion {
     entry: DirEntry,
-    version: Version,
     // TODO: Use a HashSet for quick lookup?
     dependencies: Vec<ModDependency>,
+    structure: ModVersionStructure,
+    version: Version,
 }
 
 impl ModVersion {
@@ -372,3 +375,34 @@ impl PartialEq for ModVersion {
 // }
 
 impl Eq for ModVersion {}
+
+#[derive(Debug)]
+enum ModVersionStructure {
+    Directory,
+    Symlink,
+    Zip,
+}
+
+impl ModVersionStructure {
+    fn parse(entry: &DirEntry) -> Result<Self, ModsSetErr> {
+        let path = entry.path();
+        let extension = path.extension();
+
+        if extension.is_some() && extension.unwrap() == OsStr::new("zip") {
+            return Ok(ModVersionStructure::Zip);
+        } else {
+            let file_type = entry.file_type().map_err(|_| ModsSetErr::FilesystemError)?;
+            if file_type.is_symlink() {
+                return Ok(ModVersionStructure::Symlink);
+            } else {
+                let mut path = entry.path();
+                path.push("info.json");
+                if path.exists() {
+                    return Ok(ModVersionStructure::Directory);
+                }
+            }
+        };
+
+        Err(ModsSetErr::InvalidModStructure)
+    }
+}
