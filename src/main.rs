@@ -16,6 +16,9 @@ use crate::mods_set::ModsSet;
     about = "Enable, disable, download, update, create, and delete Factorio mods."
 )]
 struct App {
+    /// Deduplicate zipped mod versions, leaving only the latest version
+    #[structopt(long)]
+    dedup: bool,
     /// The path to the mods directory
     // TODO: Make optional, introduce config file to specify default path
     #[structopt(short = "f", long)]
@@ -47,6 +50,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     for mod_ident in app.remove.iter() {
         set.remove(mod_ident)?;
+    }
+
+    if app.dedup {
+        set.dedup()?;
     }
 
     if app.disable_all {

@@ -121,6 +121,7 @@ impl ModsSet {
                     .iter()
                     .map(ModDependency::new)
                     .collect::<ModDependencyResult>()?,
+                structure: mod_structure,
                 version: info.version,
             };
 
@@ -133,6 +134,20 @@ impl ModsSet {
             dir: path.clone(),
             mods,
         })
+    }
+
+    pub fn dedup(&mut self) -> Result<(), ModsSetErr> {
+        println!("Deduplicating zipped mod versions");
+
+        for (_, mod_data) in self.mods.iter_mut() {
+            for version_data in mod_data.versions.drain(..(mod_data.versions.len() - 1)) {
+                if let ModVersionStructure::Zip = version_data.structure {
+                    version_data.remove_from_disk()?;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub fn disable_all(&mut self, include_base_mod: bool) {
@@ -198,9 +213,9 @@ impl ModsSet {
             .versions
             .remove(mod_data.find_version(&mod_ident.version)?);
 
-        version_data
-            .remove_from_disk()
-            .map_err(|_| ModsSetErr::CouldNotRemoveVersion(version_data.version))?;
+        version_data.remove_from_disk()?;
+
+        // TODO: Remove mod entry if there are no more versions
 
         Ok(())
     }
@@ -333,14 +348,19 @@ struct ModVersion {
 }
 
 impl ModVersion {
-    fn remove_from_disk(&self) -> io::Result<()> {
+    fn remove_from_disk(&self) -> Result<(), ModsSetErr> {
         let entry = &self.entry;
 
-        if entry.metadata()?.is_dir() {
+        if entry
+            .metadata()
+            .map_err(|_| ModsSetErr::FilesystemError)?
+            .is_dir()
+        {
             fs::remove_dir_all(entry.path())
         } else {
             fs::remove_file(entry.path())
         }
+        .map_err(|_| ModsSetErr::CouldNotRemoveVersion(self.version.clone()))
     }
 }
 
