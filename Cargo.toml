@@ -5,6 +5,7 @@ authors = ["raiguard <caleb.heuer@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+itertools = "0.10.1"
 json = "0.12.4"
 once_cell = "1.7.2"
 regex = "1.4.5"

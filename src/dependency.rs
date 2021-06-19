@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use semver::VersionReq;
@@ -13,11 +14,11 @@ pub struct ModDependency {
 impl ModDependency {
     pub fn new(input: &String) -> Result<Self, ModDependencyErr> {
         // Avoid creating the regex object every time
-        static RE: OnceCell<Regex> = OnceCell::new();
-        let captures = RE
+        static DEP_STRING_REGEX: OnceCell<Regex> = OnceCell::new();
+        let captures = DEP_STRING_REGEX
             .get_or_init(|| {
                 Regex::new(
-                    r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=? *(?:\d+\.){1,2}\d+))?$",
+                    r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=? *(?P<version>(?:\d+\.){1,2}\d+)))?$",
                 ).unwrap()
             })
             .captures(input)
@@ -37,15 +38,32 @@ impl ModDependency {
                 None => return Err(ModDependencyErr::NameIsUnparsable(input.clone())),
             },
             version_req: match captures.name("version_req") {
-                // FIXME: Format version number first to remove leading zeroes to prevent an error. Will need to use a regex replace.
-                Some(mtch) => match VersionReq::parse(mtch.as_str()) {
-                    Ok(version_req) => Some(version_req),
-                    Err(_) => {
-                        return Err(ModDependencyErr::InvalidVersionReq(
-                            mtch.as_str().to_string(),
-                        ))
+                Some(mtch) => {
+                    // Factorio does not sanitize leading zeros, so we must do it ourselves
+                    // PANIC: We can safely assume that the version capture is valid if version_req exists
+                    let version_str = captures.name("version").unwrap().as_str();
+                    let sanitized = version_str
+                        .split('.')
+                        .map(|sub| {
+                            Ok(sub
+                                .parse::<usize>()
+                                .map_err(|_| {
+                                    ModDependencyErr::InvalidDependencyString(input.clone())
+                                })?
+                                .to_string())
+                        })
+                        .intersperse(Ok(".".to_string()))
+                        .collect::<Result<String, ModDependencyErr>>()?;
+
+                    match VersionReq::parse(&sanitized) {
+                        Ok(version_req) => Some(version_req),
+                        Err(_) => {
+                            return Err(ModDependencyErr::InvalidVersionReq(
+                                mtch.as_str().to_string(),
+                            ))
+                        }
                     }
-                },
+                }
                 None => None,
             },
         })
@@ -63,7 +81,7 @@ pub enum ModDependencyType {
 
 pub type ModDependencyResult = Result<Vec<ModDependency>, ModDependencyErr>;
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum ModDependencyErr {
     #[error("Invalid dependency string: `{0}`")]
     InvalidDependencyString(String),
