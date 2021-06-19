@@ -26,13 +26,13 @@ struct App {
     /// Disable all mods.
     #[structopt(short = "o", long)]
     disable_all: bool,
-    /// A list of mods to disable. TODO: explain format.
+    /// A list of mods to disable. Format is `mod_name` or `mod_name@version`.
     #[structopt(short, long)]
     disable: Vec<InputMod>,
     /// Enable the latest versions of all mods.
     #[structopt(short = "l", long)]
     enable_all: bool,
-    /// A list of mods to enable. TODO: explain format.
+    /// A list of mods to enable. Format is `mod_name` or `mod_name@version`.
     #[structopt(short, long)]
     enable: Vec<InputMod>,
     /// Include the base mod when calling `disable-all`.
