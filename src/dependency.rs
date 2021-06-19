@@ -1,7 +1,8 @@
-use anyhow::Result;
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use semver::VersionReq;
+use std::error::Error;
+use std::fmt;
 use thiserror::Error;
 
 #[derive(Debug, PartialEq)]
@@ -62,7 +63,9 @@ pub enum ModDependencyType {
     Required,
 }
 
-#[derive(Debug, Error)]
+pub type ModDependencyResult = Result<Vec<ModDependency>, ModDependencyErr>;
+
+#[derive(Error)]
 pub enum ModDependencyErr {
     #[error("Invalid dependency string: `{0}`")]
     InvalidDependencyString(String),

@@ -1,8 +1,8 @@
-use anyhow::{anyhow, Result};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::error::Error;
 use std::ffi::OsStr;
 use std::fs;
 use std::fs::{DirEntry, File};
@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use thiserror::Error;
 use zip::ZipArchive;
 
-use crate::dependency::{ModDependency, ModDependencyErr};
+use crate::dependency::{ModDependency, ModDependencyResult};
 use crate::input::InputMod;
 
 #[derive(Deserialize, Serialize)]
@@ -42,7 +42,7 @@ pub struct ModsSet {
 
 impl ModsSet {
     // TODO: Better error formatting so the user knows which mod threw the error
-    pub fn new(path: &PathBuf) -> Result<Self> {
+    pub fn new(path: &PathBuf) -> Result<Self, Box<dyn Error>> {
         // Read mod-list.json to a file
         let mut mlj_path = path.clone();
         mlj_path.push("mod-list.json");
@@ -111,17 +111,15 @@ impl ModsSet {
                 },
             });
 
-            let dependencies = info
-                .dependencies
-                .unwrap_or(vec![])
-                .iter()
-                .map(ModDependency::new)
-                .collect::<Result<Vec<ModDependency>, ModDependencyErr>>()?;
-
             // TODO: Optimize to not parse dependencies unless we need to insert the version
             let mod_version = ModVersion {
                 entry,
-                dependencies,
+                dependencies: info
+                    .dependencies
+                    .unwrap_or(vec![])
+                    .iter()
+                    .map(ModDependency::new)
+                    .collect::<ModDependencyResult>()?,
                 structure: mod_structure,
                 version: info.version,
             };
@@ -137,7 +135,7 @@ impl ModsSet {
         })
     }
 
-    pub fn dedup(&mut self) -> Result<()> {
+    pub fn dedup(&mut self) -> Result<(), ModsSetErr> {
         println!("Deduplicating zipped mod versions");
 
         for (_, mod_data) in self.mods.iter_mut() {
@@ -161,7 +159,7 @@ impl ModsSet {
             .for_each(|(_, mod_data)| mod_data.enabled = ModEnabledType::Disabled);
     }
 
-    pub fn disable(&mut self, mod_ident: &InputMod) -> Result<()> {
+    pub fn disable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
         println!("Disabling {}", mod_ident);
 
         let mod_data = self.get_mod(&mod_ident.name)?;
@@ -179,7 +177,7 @@ impl ModsSet {
             .for_each(|(_, mod_data)| mod_data.enabled = ModEnabledType::Latest);
     }
 
-    pub fn enable(&mut self, mod_ident: &InputMod) -> Result<()> {
+    pub fn enable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
         println!("Enabling {}", mod_ident);
 
         let mod_data = self.get_mod(&mod_ident.name)?;
@@ -205,7 +203,7 @@ impl ModsSet {
         Ok(())
     }
 
-    pub fn remove(&mut self, mod_ident: &InputMod) -> Result<()> {
+    pub fn remove(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
         println!("Removing {}", mod_ident);
 
         let mod_data = self.get_mod(&mod_ident.name)?;
@@ -222,7 +220,7 @@ impl ModsSet {
         Ok(())
     }
 
-    pub fn write_mod_list(&mut self) -> Result<()> {
+    pub fn write_mod_list(&mut self) -> Result<(), ModsSetErr> {
         let info = ModListJson {
             mods: self
                 .mods
@@ -253,7 +251,7 @@ impl ModsSet {
         Ok(())
     }
 
-    fn get_mod(&mut self, mod_name: &str) -> anyhow::Result<&mut Mod, ModsSetErr> {
+    fn get_mod(&mut self, mod_name: &str) -> Result<&mut Mod, ModsSetErr> {
         self.mods
             .get_mut(mod_name)
             .ok_or(ModsSetErr::ModDoesNotExist)
@@ -291,7 +289,7 @@ fn find_info_json_in_zip(entry: &DirEntry) -> Result<InfoJson> {
             return Ok(json);
         }
     }
-    Err(anyhow!("Mod ZIP does not contain an info.json file"))
+    Err("Mod ZIP does not contain an info.json file".into())
 }
 
 #[derive(Debug)]
