@@ -18,7 +18,7 @@ impl ModDependency {
         let captures = DEP_STRING_REGEX
             .get_or_init(|| {
                 Regex::new(
-                    r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=? *(?P<version>(?:\d+\.){1,2}\d+)))?$",
+                    r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=?) *(?P<version>(?:\d+\.){1,2}\d+))?$",
                 ).unwrap()
             })
             .captures(input)
@@ -37,11 +37,10 @@ impl ModDependency {
                 Some(mtch) => mtch.as_str().to_string(),
                 None => return Err(ModDependencyErr::NameIsUnparsable(input.clone())),
             },
-            version_req: match captures.name("version_req") {
-                Some(mtch) => {
+            version_req: match [captures.name("version_req"), captures.name("version")] {
+                [Some(req_match), Some(version_match)] => {
                     // Factorio does not sanitize leading zeros, so we must do it ourselves
-                    // PANIC: We can safely assume that the version capture is valid if version_req exists
-                    let version_str = captures.name("version").unwrap().as_str();
+                    let version_str = version_match.as_str();
                     let sanitized = version_str
                         .split('.')
                         .map(|sub| {
@@ -55,16 +54,22 @@ impl ModDependency {
                         .intersperse(Ok(".".to_string()))
                         .collect::<Result<String, ModDependencyErr>>()?;
 
-                    match VersionReq::parse(&sanitized) {
+                    // Assemble version req from parts
+                    let mut version_req = String::new();
+                    version_req.push_str(req_match.as_str());
+                    version_req.push(' ');
+                    version_req.push_str(&sanitized);
+
+                    match VersionReq::parse(&version_req) {
                         Ok(version_req) => Some(version_req),
                         Err(_) => {
                             return Err(ModDependencyErr::InvalidVersionReq(
-                                mtch.as_str().to_string(),
+                                req_match.as_str().to_string(),
                             ))
                         }
                     }
                 }
-                None => None,
+                _ => None,
             },
         })
     }
