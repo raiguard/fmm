@@ -1,6 +1,7 @@
 use semver::Version;
 use std::fmt;
 use std::str::FromStr;
+use thiserror::Error;
 
 use crate::mods_set::ModEnabledType;
 
@@ -55,27 +56,10 @@ impl fmt::Display for InputMod {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum InputModErr {
+    #[error("Incorrect argument count: expected 1 or 2, got {0}")]
     IncorrectArgCount(usize),
+    #[error("Invalid version identifier: `{0}`")]
     InvalidVersion(String),
 }
-
-impl fmt::Display for InputModErr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::IncorrectArgCount(arg_count) => format!(
-                    "Incorrect argument count: Expected 1 or 2, got {}",
-                    arg_count
-                ),
-                Self::InvalidVersion(got_version) =>
-                    format!("Invalid version identifier: {}", got_version),
-            }
-        )
-    }
-}
-
-impl std::error::Error for InputModErr {}

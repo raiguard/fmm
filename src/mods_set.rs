@@ -4,12 +4,11 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::OsStr;
-use std::fmt;
 use std::fs;
 use std::fs::{DirEntry, File};
-use std::io;
 use std::io::Read;
 use std::path::PathBuf;
+use thiserror::Error;
 use zip::ZipArchive;
 
 use crate::dependency::{ModDependency, ModDependencyResult};
@@ -142,6 +141,7 @@ impl ModsSet {
         for (_, mod_data) in self.mods.iter_mut() {
             for version_data in mod_data.versions.drain(..(mod_data.versions.len() - 1)) {
                 if let ModVersionStructure::Zip = version_data.structure {
+                    // TODO: Print the removal
                     version_data.remove_from_disk()?;
                 }
             }
@@ -258,41 +258,21 @@ impl ModsSet {
     }
 }
 
+#[derive(Debug, Error)]
 pub enum ModsSetErr {
+    #[error("Could not remove version {0}")]
     CouldNotRemoveVersion(Version),
+    #[error("Could not write changes to mod-list.json")]
     CouldNotWriteChanges,
+    #[error("Filesystem error")]
     FilesystemError,
+    #[error("Invalid mod structure")]
     InvalidModStructure,
+    #[error("Mod does not exist")]
     ModDoesNotExist,
+    #[error("Version {0} does not exist")]
     ModVersionDoesNotExist(Version),
 }
-
-impl fmt::Display for ModsSetErr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::FilesystemError => "Could not get entry metadata".to_string(),
-                Self::CouldNotRemoveVersion(version) =>
-                    format!("Could not delete version {}", version.to_string()),
-                Self::CouldNotWriteChanges => "Could not write changes".to_string(),
-                Self::InvalidModStructure => "Invalid mod structure".to_string(),
-                Self::ModDoesNotExist => "Mod does not exist".to_string(),
-                Self::ModVersionDoesNotExist(version) =>
-                    format!("Version {} does not exist", version.to_string()),
-            }
-        )
-    }
-}
-
-impl fmt::Debug for ModsSetErr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <Self as fmt::Display>::fmt(self, f)
-    }
-}
-
-impl Error for ModsSetErr {}
 
 fn find_info_json_in_zip(entry: &DirEntry) -> Result<InfoJson, Box<dyn Error>> {
     let file = File::open(entry.path())?;

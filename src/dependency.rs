@@ -3,6 +3,7 @@ use regex::Regex;
 use semver::VersionReq;
 use std::error::Error;
 use std::fmt;
+use thiserror::Error;
 
 #[derive(Debug, PartialEq)]
 pub struct ModDependency {
@@ -64,36 +65,14 @@ pub enum ModDependencyType {
 
 pub type ModDependencyResult = Result<Vec<ModDependency>, ModDependencyErr>;
 
+#[derive(Error)]
 pub enum ModDependencyErr {
+    #[error("Invalid dependency string: `{0}`")]
     InvalidDependencyString(String),
+    #[error("Invalid dependency version requirement: `{0}`")]
     InvalidVersionReq(String),
+    #[error("Dependency name could not be parsed: `{0}`")]
     NameIsUnparsable(String),
+    #[error("Unknown dependency modifier: `{0}`")]
     UnknownModifier(String),
 }
-
-impl fmt::Display for ModDependencyErr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::InvalidDependencyString(input) =>
-                    format!("Invalid dependency string: `{}`", input),
-                Self::InvalidVersionReq(version) =>
-                    format!("Invalid dependency version requirement: `{}`", version),
-                Self::NameIsUnparsable(input) =>
-                    format!("Dependency name could not be parsed: `{}`", input),
-                Self::UnknownModifier(modifier) =>
-                    format!("Unknown dependency modifier: `{}`", modifier),
-            }
-        )
-    }
-}
-
-impl fmt::Debug for ModDependencyErr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        <Self as fmt::Display>::fmt(self, f)
-    }
-}
-
-impl Error for ModDependencyErr {}
