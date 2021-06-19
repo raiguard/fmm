@@ -275,7 +275,7 @@ pub enum ModsSetErr {
 }
 
 // The `zip` crate doesn't have proper iterator methods, so we must use a bare `for` loop and early return
-fn find_info_json_in_zip(entry: &DirEntry) -> Result<InfoJson> {
+fn find_info_json_in_zip(entry: &DirEntry) -> Result<InfoJson, Box<dyn Error>> {
     let file = File::open(entry.path())?;
     let mut archive = ZipArchive::new(file)?;
     // Thus, we need to use a bare `for` loop and iterate the indices, then act on the file if we find it
