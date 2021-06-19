@@ -2,7 +2,7 @@ mod dependency;
 mod input;
 mod mods_set;
 
-use std::error::Error;
+use anyhow::Result;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -43,7 +43,7 @@ struct App {
     remove: Vec<InputMod>,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     let app = App::from_args();
 
     let mut set = ModsSet::new(&app.dir)?;
