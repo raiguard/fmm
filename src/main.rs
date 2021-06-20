@@ -2,6 +2,7 @@ mod dependency;
 mod input;
 mod mods_set;
 
+use std::collections::HashSet;
 use std::error::Error;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -32,9 +33,13 @@ struct App {
     /// Enable the latest versions of all mods.
     #[structopt(short = "l", long)]
     enable_all: bool,
-    /// A list of mods to enable. Format is `mod_name` or `mod_name@version`.
+    /// A list of mods to enable. Enabling a mod will enable all of its dependencies as well.
+    /// Format is `mod_name` or `mod_name@version`.
     #[structopt(short, long)]
     enable: Vec<InputMod>,
+    /// Ignore mod dependencies when enabling them.
+    #[structopt(long)]
+    ignore_dependencies: bool,
     /// Include the base mod when calling `disable-all`.
     #[structopt(long)]
     include_base_mod: bool,
@@ -68,8 +73,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         set.disable(mod_ident)?;
     }
 
-    for mod_ident in app.enable.iter() {
-        set.enable(mod_ident)?;
+    if app.enable.len() > 0 {
+        let enabled_names: HashSet<String> = HashSet::new();
+        let to_enable = app.enable.clone();
+
+        for mod_ident in to_enable.iter() {
+            set.enable(mod_ident)?;
+        }
     }
 
     set.write_mod_list()?;

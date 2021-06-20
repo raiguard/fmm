@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::mods_set::ModEnabledType;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct InputMod {
     pub name: String,
     pub version: ModEnabledType,

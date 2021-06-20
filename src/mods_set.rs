@@ -177,30 +177,42 @@ impl ModsSet {
             .for_each(|(_, mod_data)| mod_data.enabled = ModEnabledType::Latest);
     }
 
-    pub fn enable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
+    pub fn enable(&mut self, mod_ident: &InputMod) -> Result<Vec<InputMod>, ModsSetErr> {
         println!("Enabling {}", mod_ident);
 
         let mod_data = self.get_mod(&mod_ident.name)?;
 
-        mod_data.enabled = match &mod_ident.version {
-            ModEnabledType::Version(version) => {
-                if mod_data
-                    .versions
-                    .binary_search_by(|stored_version| stored_version.version.cmp(version))
-                    .is_ok()
-                {
-                    // TODO: Remove clone?
-                    Ok(ModEnabledType::Version(version.clone()))
-                } else {
-                    Err(ModsSetErr::ModVersionDoesNotExist(version.clone()))
+        mod_data.enabled = mod_ident.version.clone();
+
+        // Assemble list of dependencies to activate.
+        let version_index = mod_data.find_version(&mod_ident.version)?;
+        // PANIC: If `find_version` returns an index, then the version is guaranteed to exist
+        let dependencies = &mod_data.versions.get(version_index).unwrap().dependencies;
+
+        let to_enable: Result<Vec<InputMod>, ModsSetErr> = dependencies
+            .iter()
+            .map(|dependency| {
+                let dependency_data = self.get_mod(&dependency.name)?;
+                let version_req = &dependency.version_req;
+
+                // Iterate from newest to oldest
+                for version in dependency_data.versions.iter().rev() {
+                    if version_req.is_none()
+                        || version_req.as_ref().unwrap().matches(&version.version)
+                    {
+                        return Ok(InputMod {
+                            name: dependency_data.name.clone(),
+                            version: ModEnabledType::Version(version.version.clone()),
+                        });
+                    }
                 }
-            }
-            _ => Ok(ModEnabledType::Latest),
-        }?;
 
-        // TODO: Enable dependencies
+                Err(ModsSetErr::NoCompatibleDependencyVersionsFound)
+            })
+            .collect();
+        let to_enable = to_enable?;
 
-        Ok(())
+        Ok(to_enable)
     }
 
     pub fn remove(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
@@ -272,6 +284,8 @@ pub enum ModsSetErr {
     ModDoesNotExist,
     #[error("Version {0} does not exist")]
     ModVersionDoesNotExist(Version),
+    #[error("No compatible dependency versions found TODO")]
+    NoCompatibleDependencyVersionsFound,
 }
 
 // The `zip` crate doesn't have proper iterator methods, so we must use a bare `for` loop and early return
@@ -311,7 +325,7 @@ impl Mod {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum ModEnabledType {
     Disabled,
     Latest,
