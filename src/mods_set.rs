@@ -35,7 +35,6 @@ struct InfoJson {
 }
 
 pub struct ModsSet {
-    #[allow(unused)]
     dir: PathBuf,
     mods: HashMap<String, Mod>,
 }
@@ -199,11 +198,9 @@ impl ModsSet {
             _ => Ok(ModEnabledType::Latest),
         }?;
 
-        let mod_data = self.get_mod(&mod_ident.name)?;
-
-        let active_version = mod_data.get_active_version()?.unwrap();
-
         // Return a list of dependencies to enable
+        let mod_data = self.get_mod(&mod_ident.name)?;
+        let active_version = mod_data.get_active_version()?.unwrap();
         Ok(active_version
             .dependencies
             .iter()
@@ -218,10 +215,7 @@ impl ModsSet {
                 let dependency = self
                     .get_mod(&dependency_ident.name)
                     // TODO: More explanative errors
-                    .map_err(|_| {
-                        println!("{}", dependency_ident.name);
-                        ModsSetErr::MatchingDependencyNotFound
-                    })?;
+                    .map_err(|_| ModsSetErr::MatchingDependencyNotFound)?;
                 let version = if dependency_ident.version_req.is_none() {
                     dependency.versions.last()
                 } else {
@@ -236,10 +230,9 @@ impl ModsSet {
                 if version.is_none() {
                     return Err(ModsSetErr::MatchingDependencyNotFound);
                 }
-                let version = version.unwrap();
                 Ok(InputMod {
                     name: dependency.name.clone(),
-                    version: ModEnabledType::Version(version.version.clone()),
+                    version: ModEnabledType::Version(version.unwrap().version.clone()),
                 })
             })
             .collect::<Result<Vec<InputMod>, ModsSetErr>>()?)
