@@ -1,6 +1,5 @@
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::error::Error;
 use std::ffi::OsStr;
@@ -8,10 +7,11 @@ use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
 use std::path::PathBuf;
+use std::{cmp::Ordering, collections::HashSet};
 use thiserror::Error;
 use zip::ZipArchive;
 
-use crate::dependency::{ModDependency, ModDependencyResult};
+use crate::dependency::{ModDependency, ModDependencyResult, ModDependencyType};
 use crate::input::InputMod;
 
 #[derive(Deserialize, Serialize)]
@@ -162,7 +162,7 @@ impl ModsSet {
     pub fn disable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
         println!("Disabling {}", mod_ident);
 
-        let mod_data = self.get_mod(&mod_ident.name)?;
+        let mod_data = self.get_mod_mut(&mod_ident.name)?;
 
         mod_data.enabled = ModEnabledType::Disabled;
 
@@ -177,11 +177,12 @@ impl ModsSet {
             .for_each(|(_, mod_data)| mod_data.enabled = ModEnabledType::Latest);
     }
 
-    pub fn enable(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
+    pub fn enable(&mut self, mod_ident: &InputMod) -> Result<Vec<InputMod>, ModsSetErr> {
         println!("Enabling {}", mod_ident);
 
-        let mod_data = self.get_mod(&mod_ident.name)?;
+        let mod_data = self.get_mod_mut(&mod_ident.name)?;
 
+        // Enable this mod
         mod_data.enabled = match &mod_ident.version {
             ModEnabledType::Version(version) => {
                 if mod_data
@@ -198,15 +199,75 @@ impl ModsSet {
             _ => Ok(ModEnabledType::Latest),
         }?;
 
-        // TODO: Enable dependencies
+        let mod_data = self.get_mod(&mod_ident.name)?;
 
+        let active_version = mod_data.get_active_version()?.unwrap();
+
+        // Return a list of dependencies to enable
+        Ok(active_version
+            .dependencies
+            .iter()
+            .filter(|dependency_ident| {
+                dependency_ident.name != "base"
+                    && match dependency_ident.dep_type {
+                        ModDependencyType::NoLoadOrder | ModDependencyType::Required => true,
+                        _ => false,
+                    }
+            })
+            .map(|dependency_ident| {
+                let dependency = self
+                    .get_mod(&dependency_ident.name)
+                    // TODO: More explanative errors
+                    .map_err(|_| {
+                        println!("{}", dependency_ident.name);
+                        ModsSetErr::MatchingDependencyNotFound
+                    })?;
+                let version = if dependency_ident.version_req.is_none() {
+                    dependency.versions.last()
+                } else {
+                    let req = dependency_ident.version_req.as_ref().unwrap();
+                    dependency
+                        .versions
+                        .iter()
+                        .rev()
+                        .find(|version| req.matches(&version.version))
+                };
+
+                if version.is_none() {
+                    return Err(ModsSetErr::MatchingDependencyNotFound);
+                }
+                let version = version.unwrap();
+                Ok(InputMod {
+                    name: dependency.name.clone(),
+                    version: ModEnabledType::Version(version.version.clone()),
+                })
+            })
+            .collect::<Result<Vec<InputMod>, ModsSetErr>>()?)
+    }
+
+    pub fn enable_list(&mut self, initial_to_enable: Vec<InputMod>) -> Result<(), ModsSetErr> {
+        let mut to_enable = initial_to_enable;
+        let mut did_enable: HashSet<String> = HashSet::new();
+
+        while to_enable.len() > 0 {
+            let mut to_enable_next = Vec::new();
+            // Enable all of the mods
+            for mod_ident in &to_enable {
+                if did_enable.get(&mod_ident.name).is_none() {
+                    to_enable_next.append(&mut self.enable(&mod_ident)?);
+                    did_enable.insert(mod_ident.name.clone());
+                }
+            }
+            // Replace `to_enable`
+            to_enable = to_enable_next;
+        }
         Ok(())
     }
 
     pub fn remove(&mut self, mod_ident: &InputMod) -> Result<(), ModsSetErr> {
         println!("Removing {}", mod_ident);
 
-        let mod_data = self.get_mod(&mod_ident.name)?;
+        let mod_data = self.get_mod_mut(&mod_ident.name)?;
 
         // Extract the matching version from the versions table
         let version_data = mod_data
@@ -251,10 +312,14 @@ impl ModsSet {
         Ok(())
     }
 
-    fn get_mod(&mut self, mod_name: &str) -> Result<&mut Mod, ModsSetErr> {
+    fn get_mod_mut(&mut self, mod_name: &str) -> Result<&mut Mod, ModsSetErr> {
         self.mods
             .get_mut(mod_name)
             .ok_or(ModsSetErr::ModDoesNotExist)
+    }
+
+    fn get_mod(&self, mod_name: &str) -> Result<&Mod, ModsSetErr> {
+        self.mods.get(mod_name).ok_or(ModsSetErr::ModDoesNotExist)
     }
 }
 
@@ -268,6 +333,8 @@ pub enum ModsSetErr {
     FilesystemError,
     #[error("Invalid mod structure")]
     InvalidModStructure,
+    #[error("Matching dependency not found")]
+    MatchingDependencyNotFound,
     #[error("Mod does not exist")]
     ModDoesNotExist,
     #[error("Version {0} does not exist")]
@@ -309,9 +376,13 @@ impl Mod {
             _ => Ok(self.versions.len() - 1),
         }
     }
+
+    fn get_active_version(&self) -> Result<Option<&ModVersion>, ModsSetErr> {
+        Ok(self.versions.get(self.find_version(&self.enabled)?))
+    }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum ModEnabledType {
     Disabled,
     Latest,
