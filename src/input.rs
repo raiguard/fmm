@@ -1,11 +1,11 @@
 use semver::Version;
+use std::fmt;
 use std::str::FromStr;
-use std::{collections::HashSet, fmt};
 use thiserror::Error;
 
 use crate::mods_set::ModEnabledType;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct InputMod {
     pub name: String,
     pub version: ModEnabledType,
@@ -62,18 +62,4 @@ pub enum InputModErr {
     IncorrectArgCount(usize),
     #[error("Invalid version identifier: `{0}`")]
     InvalidVersion(String),
-}
-
-pub struct ModEnabledLists {
-    pub did_enable: HashSet<String>,
-    pub to_enable: Vec<InputMod>,
-}
-
-impl ModEnabledLists {
-    pub fn new(to_enable: Vec<InputMod>) -> Self {
-        Self {
-            did_enable: HashSet::new(),
-            to_enable,
-        }
-    }
 }

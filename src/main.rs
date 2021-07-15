@@ -2,11 +2,11 @@ mod dependency;
 mod input;
 mod mods_set;
 
+use std::error::Error;
 use std::path::PathBuf;
-use std::{collections::HashSet, error::Error};
 use structopt::StructOpt;
 
-use crate::input::{InputMod, ModEnabledLists};
+use crate::input::InputMod;
 use crate::mods_set::ModsSet;
 
 // TODO: Figure out why it's not coloring the help info.
