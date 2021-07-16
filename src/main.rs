@@ -47,7 +47,7 @@ struct App {
 impl App {
     fn merge_config(&mut self, config_file: ConfigFile) {
         if let Some(directory) = config_file.directory {
-            self.config = Some(directory);
+            self.dir = Some(directory);
         }
     }
 }
