@@ -69,7 +69,7 @@ pub enum InputModErr {
     InvalidVersion(String),
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ConfigFile {
     pub directory: Option<PathBuf>,
 }
@@ -104,7 +104,6 @@ impl ConfigFile {
 
         // FIXME: Don't unwrap here. Use anyhow?
         let config: ConfigFile = toml::from_str(&file).unwrap();
-        println!("{:#?}", config);
         Ok(Some(config))
     }
 }

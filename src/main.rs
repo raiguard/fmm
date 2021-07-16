@@ -1,3 +1,5 @@
+#![allow(unstable_name_collisions)]
+
 mod dependency;
 mod input;
 mod mods_set;
