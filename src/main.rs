@@ -6,7 +6,7 @@ use std::error::Error;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-use crate::input::InputMod;
+use crate::input::{ConfigFile, InputMod};
 use crate::mods_set::ModsSet;
 
 // TODO: Figure out why it's not coloring the help info.
@@ -16,13 +16,14 @@ use crate::mods_set::ModsSet;
     about = "Enable, disable, download, update, create, and delete Factorio mods."
 )]
 struct App {
+    config: Option<PathBuf>,
     /// Deduplicate zipped mod versions, leaving only the latest version
     #[structopt(long)]
     dedup: bool,
     /// The path to the mods directory
     // TODO: Make optional, introduce config file to specify default path
     #[structopt(short = "f", long)]
-    dir: PathBuf,
+    dir: Option<PathBuf>,
     /// Disable all mods.
     #[structopt(short = "o", long)]
     disable_all: bool,
@@ -43,10 +44,25 @@ struct App {
     remove: Vec<InputMod>,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let app = App::from_args();
+impl App {
+    fn merge_config(&mut self, config_file: ConfigFile) {
+        if let Some(directory) = config_file.directory {
+            self.config = Some(directory);
+        }
+    }
+}
 
-    let mut set = ModsSet::new(&app.dir)?;
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut app = App::from_args();
+
+    // Find or create config file
+    let config_file = ConfigFile::new(&app.config)?;
+    if let Some(config_file) = config_file {
+        app.merge_config(config_file);
+    }
+
+    // FIXME: If they don't provide a path in the toml or in the arguments, this will panic
+    let mut set = ModsSet::new(&app.dir.unwrap())?;
 
     for mod_ident in app.remove.iter() {
         set.remove(mod_ident)?;
