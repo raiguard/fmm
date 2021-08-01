@@ -4,6 +4,7 @@ mod dependency;
 mod input;
 mod mods_set;
 
+use std::collections::HashSet;
 use std::error::Error;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -18,6 +19,8 @@ use crate::mods_set::ModsSet;
     about = "Enable, disable, download, update, create, and delete Factorio mods."
 )]
 struct App {
+    /// The path to a custom configuration file
+    #[structopt(short, long)]
     config: Option<PathBuf>,
     /// Deduplicate zipped mod versions, leaving only the latest version
     #[structopt(long)]
