@@ -80,7 +80,7 @@ impl ModsSet {
             let mod_structure = ModVersionStructure::parse(&entry)?;
 
             // Extract contents of info.json file
-            let info: InfoJson = match mod_structure {
+            let info = match mod_structure {
                 ModVersionStructure::Zip => {
                     // WORKAROUND: The `zip` crate doesn't have nice iterator methods, so we need to
                     // early-return out of a `for` loop, necessitating a separate function
@@ -90,41 +90,49 @@ impl ModsSet {
                 _ => {
                     let mut path = entry.path();
                     path.push("info.json");
-                    let contents = fs::read_to_string(path)?;
-                    let json: InfoJson = serde_json::from_str(&contents)?;
-                    json
+                    fs::read_to_string(path)?
                 }
             };
 
-            // Retrive or create mod data
-            let mod_data = mods.entry(info.name.clone()).or_insert(Mod {
-                name: info.name.clone(),
-                versions: vec![],
-                enabled: {
-                    // Move the enabled status extracted from mod-list.json into the mod object
-                    let active_version = enabled_versions.remove(&info.name);
-                    match active_version {
-                        Some(enabled_type) => enabled_type,
-                        None => ModEnabledType::Disabled,
+            // Parse info string into a struct
+            match serde_json::from_str::<InfoJson>(&info) {
+                Ok(info) => {
+                    // Retrive or create mod data
+                    let mod_data = mods.entry(info.name.clone()).or_insert(Mod {
+                        name: info.name.clone(),
+                        versions: vec![],
+                        enabled: {
+                            // Move the enabled status extracted from mod-list.json into the mod object
+                            let active_version = enabled_versions.remove(&info.name);
+                            match active_version {
+                                Some(enabled_type) => enabled_type,
+                                None => ModEnabledType::Disabled,
+                            }
+                        },
+                    });
+
+                    // TODO: Optimize to not parse dependencies unless we need to insert the version
+                    let mod_version = ModVersion {
+                        entry,
+                        dependencies: info
+                            .dependencies
+                            .unwrap_or(vec![])
+                            .iter()
+                            .map(ModDependency::new)
+                            .collect::<ModDependencyResult>()?,
+                        structure: mod_structure,
+                        version: info.version,
+                    };
+
+                    if let Err(index) = mod_data.versions.binary_search(&mod_version) {
+                        mod_data.versions.insert(index, mod_version);
                     }
-                },
-            });
-
-            // TODO: Optimize to not parse dependencies unless we need to insert the version
-            let mod_version = ModVersion {
-                entry,
-                dependencies: info
-                    .dependencies
-                    .unwrap_or(vec![])
-                    .iter()
-                    .map(ModDependency::new)
-                    .collect::<ModDependencyResult>()?,
-                structure: mod_structure,
-                version: info.version,
-            };
-
-            if let Err(index) = mod_data.versions.binary_search(&mod_version) {
-                mod_data.versions.insert(index, mod_version);
+                }
+                Err(_) => {
+                    if let Some(mod_name) = entry.file_name().to_str() {
+                        eprintln!("Could not read info.json for {}", mod_name)
+                    }
+                }
             }
         }
 
@@ -335,7 +343,7 @@ pub enum ModsSetErr {
 }
 
 // The `zip` crate doesn't have proper iterator methods, so we must use a bare `for` loop and early return
-fn find_info_json_in_zip(entry: &DirEntry) -> Result<InfoJson, Box<dyn Error>> {
+fn find_info_json_in_zip(entry: &DirEntry) -> Result<String, Box<dyn Error>> {
     let file = File::open(entry.path())?;
     let mut archive = ZipArchive::new(file)?;
     // Thus, we need to use a bare `for` loop and iterate the indices, then act on the file if we find it
@@ -344,9 +352,7 @@ fn find_info_json_in_zip(entry: &DirEntry) -> Result<InfoJson, Box<dyn Error>> {
         if file.name().contains("info.json") {
             let mut contents = String::new();
             file.read_to_string(&mut contents)?;
-            // FIXME: Doesn't work with special characters
-            let json: InfoJson = serde_json::from_str(&contents)?;
-            return Ok(json);
+            return Ok(contents);
         }
     }
     Err("Mod ZIP does not contain an info.json file".into())
