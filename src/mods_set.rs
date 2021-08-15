@@ -1,3 +1,5 @@
+use once_cell::sync::OnceCell;
+use regex::Regex;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -84,7 +86,6 @@ impl ModsSet {
                 ModVersionStructure::Zip => {
                     // WORKAROUND: The `zip` crate doesn't have nice iterator methods, so we need to
                     // early-return out of a `for` loop, necessitating a separate function
-                    // TODO: Make a method somewhere?
                     find_info_json_in_zip(&entry)?
                 }
                 _ => {
@@ -129,8 +130,17 @@ impl ModsSet {
                     }
                 }
                 Err(_) => {
-                    if let Some(mod_name) = entry.file_name().to_str() {
-                        eprintln!("Could not read info.json for {}", mod_name)
+                    if let Some(file_name) = entry.file_name().to_owned().to_str() {
+                        // Avoid creating the regex object every time
+                        static FILENAME_REGEX: OnceCell<Regex> = OnceCell::new();
+                        let captures = FILENAME_REGEX
+                            .get_or_init(|| {
+                                Regex::new(r"^(?P<name>.*)_(?P<version>\d*\.\d*\.\d*\.)$").unwrap()
+                            })
+                            .captures(file_name)
+                            .ok_or(ModsSetErr::ModFilenameUnreadable);
+                        // TODO: Keep a list of invalid mods
+                        // Perhaps we need to re-think the arcitecture to keep active versions and the actual versions separate
                     }
                 }
             }
@@ -340,6 +350,8 @@ pub enum ModsSetErr {
     ModDoesNotExist,
     #[error("Version {0} does not exist")]
     ModVersionDoesNotExist(Version),
+    #[error("Could not read mod file name {0}")]
+    ModFilenameUnreadable(String),
 }
 
 // The `zip` crate doesn't have proper iterator methods, so we must use a bare `for` loop and early return
@@ -449,6 +461,7 @@ impl Eq for ModVersion {}
 #[derive(Debug)]
 enum ModVersionStructure {
     Directory,
+    Invalid,
     Symlink,
     Zip,
 }

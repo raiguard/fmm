@@ -26,7 +26,6 @@ struct App {
     #[structopt(long)]
     dedup: bool,
     /// The path to the mods directory
-    // TODO: Make optional, introduce config file to specify default path
     #[structopt(short = "f", long)]
     dir: Option<PathBuf>,
     /// Disable all mods.
