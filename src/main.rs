@@ -4,7 +4,6 @@ mod dependency;
 mod input;
 mod mods_set;
 
-use std::collections::HashSet;
 use std::error::Error;
 use std::path::PathBuf;
 use structopt::StructOpt;

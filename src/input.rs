@@ -30,7 +30,7 @@ impl FromStr for InputMod {
                 let parsed_version = Version::parse(version);
                 if let Ok(version) = parsed_version {
                     // Validate that the version does *not* have prerelease or build data
-                    if version.pre.len() > 0 || version.build.len() > 0 {
+                    if !version.pre.is_empty() || !version.build.is_empty() {
                         Err(InputModErr::InvalidVersion(version.to_string()))
                     } else {
                         Ok(Self {

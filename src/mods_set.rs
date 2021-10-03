@@ -8,7 +8,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::{cmp::Ordering, collections::HashSet};
 use thiserror::Error;
 use zip::ZipArchive;
@@ -43,24 +43,24 @@ pub struct ModsSet {
 
 impl ModsSet {
     // TODO: Better error formatting so the user knows which mod threw the error
-    pub fn new(path: &PathBuf) -> Result<Self, Box<dyn Error>> {
+    pub fn new(path: &Path) -> Result<Self, Box<dyn Error>> {
         // Read mod-list.json to a file
-        let mut mlj_path = path.clone();
+        let mut mlj_path = path.to_owned();
         mlj_path.push("mod-list.json");
         let mlj_contents = std::fs::read_to_string(mlj_path)?;
         let mut enabled_versions: HashMap<String, ModEnabledType> =
             serde_json::from_str::<ModListJson>(&mlj_contents)?
                 .mods
                 .iter()
-                .filter_map(|entry| {
-                    Some((
+                .map(|entry| {
+                    (
                         entry.name.clone(),
                         match (entry.enabled, &entry.version) {
                             (true, Some(version)) => ModEnabledType::Version(version.clone()),
                             (true, None) => ModEnabledType::Latest,
                             _ => ModEnabledType::Disabled,
                         },
-                    ))
+                    )
                 })
                 .collect();
 
@@ -95,6 +95,9 @@ impl ModsSet {
                 }
             };
 
+            // Remove all non-UTF8 characters from the string
+            let info = info.replace(|c: char| !c.is_ascii(), "");
+
             // Parse info string into a struct
             match serde_json::from_str::<InfoJson>(&info) {
                 Ok(info) => {
@@ -117,9 +120,9 @@ impl ModsSet {
                         entry,
                         dependencies: info
                             .dependencies
-                            .unwrap_or(vec![])
+                            .unwrap_or_default()
                             .iter()
-                            .map(ModDependency::new)
+                            .map(|dep| ModDependency::new(&dep))
                             .collect::<ModDependencyResult>()?,
                         structure: mod_structure,
                         version: info.version,
@@ -131,13 +134,15 @@ impl ModsSet {
                 }
                 Err(_) => {
                     if let Some(file_name) = entry.file_name().to_owned().to_str() {
+                        println!("Could not read mod: {}", file_name);
+                        let file_name = file_name.replace(|c: char| !c.is_ascii(), "");
                         // Avoid creating the regex object every time
                         static FILENAME_REGEX: OnceCell<Regex> = OnceCell::new();
                         let captures = FILENAME_REGEX
                             .get_or_init(|| {
                                 Regex::new(r"^(?P<name>.*)_(?P<version>\d*\.\d*\.\d*\.)$").unwrap()
                             })
-                            .captures(file_name)
+                            .captures(&file_name)
                             .ok_or(ModsSetErr::ModFilenameUnreadable);
                         // TODO: Keep a list of invalid mods
                         // Perhaps we need to re-think the arcitecture to keep active versions and the actual versions separate
@@ -147,7 +152,7 @@ impl ModsSet {
         }
 
         Ok(Self {
-            dir: path.clone(),
+            dir: path.to_owned(),
             mods,
         })
     }
@@ -219,15 +224,15 @@ impl ModsSet {
         // Return a list of dependencies to enable
         let mod_data = self.get_mod(&mod_ident.name)?;
         let active_version = mod_data.get_active_version()?.unwrap();
-        Ok(active_version
+        active_version
             .dependencies
             .iter()
             .filter(|dependency_ident| {
                 dependency_ident.name != "base"
-                    && match dependency_ident.dep_type {
-                        ModDependencyType::NoLoadOrder | ModDependencyType::Required => true,
-                        _ => false,
-                    }
+                    && matches!(
+                        dependency_ident.dep_type,
+                        ModDependencyType::NoLoadOrder | ModDependencyType::Required
+                    )
             })
             .map(|dependency_ident| {
                 let dependency = self
@@ -253,14 +258,14 @@ impl ModsSet {
                     version: ModEnabledType::Version(version.unwrap().version.clone()),
                 })
             })
-            .collect::<Result<Vec<InputMod>, ModsSetErr>>()?)
+            .collect::<Result<Vec<InputMod>, ModsSetErr>>()
     }
 
     pub fn enable_list(&mut self, initial_to_enable: Vec<InputMod>) -> Result<(), ModsSetErr> {
         let mut to_enable = initial_to_enable;
         let mut did_enable: HashSet<String> = HashSet::new();
 
-        while to_enable.len() > 0 {
+        while !to_enable.is_empty() {
             let mut to_enable_next = Vec::new();
             // Enable all of the mods
             for mod_ident in &to_enable {

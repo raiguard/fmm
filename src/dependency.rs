@@ -12,7 +12,7 @@ pub struct ModDependency {
 }
 
 impl ModDependency {
-    pub fn new(input: &String) -> Result<Self, ModDependencyErr> {
+    pub fn new(input: &str) -> Result<Self, ModDependencyErr> {
         // Avoid creating the regex object every time
         static DEP_STRING_REGEX: OnceCell<Regex> = OnceCell::new();
         let captures = DEP_STRING_REGEX
@@ -22,7 +22,7 @@ impl ModDependency {
                 ).unwrap()
             })
             .captures(input)
-            .ok_or(ModDependencyErr::InvalidDependencyString(input.clone()))?;
+            .ok_or_else(|| ModDependencyErr::InvalidDependencyString(input.to_string()))?;
 
         Ok(Self {
             dep_type: match captures.name("type").map(|mtch| mtch.as_str()) {
@@ -35,7 +35,7 @@ impl ModDependency {
             },
             name: match captures.name("name") {
                 Some(mtch) => mtch.as_str().to_string(),
-                None => return Err(ModDependencyErr::NameIsUnparsable(input.clone())),
+                None => return Err(ModDependencyErr::NameIsUnparsable(input.to_string())),
             },
             version_req: match [captures.name("version_req"), captures.name("version")] {
                 [Some(req_match), Some(version_match)] => {
@@ -47,7 +47,7 @@ impl ModDependency {
                             Ok(sub
                                 .parse::<usize>()
                                 .map_err(|_| {
-                                    ModDependencyErr::InvalidDependencyString(input.clone())
+                                    ModDependencyErr::InvalidDependencyString(input.to_string())
                                 })?
                                 .to_string())
                         })
