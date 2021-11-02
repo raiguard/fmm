@@ -87,8 +87,6 @@ pub enum ModDependencyType {
     Required,
 }
 
-pub type ModDependencyResult = Result<Vec<ModDependency>, ModDependencyErr>;
-
 #[derive(Clone, Debug, Error)]
 pub enum ModDependencyErr {
     #[error("Invalid dependency string: `{0}`")]

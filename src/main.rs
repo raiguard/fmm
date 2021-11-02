@@ -12,7 +12,7 @@ use structopt::StructOpt;
 use zip::ZipArchive;
 
 mod config;
-// mod dependency;
+mod dependency;
 mod types;
 
 use config::*;
