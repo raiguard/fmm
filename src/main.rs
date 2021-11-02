@@ -1,99 +1,48 @@
-#![allow(unstable_name_collisions)]
+#![allow(unused)]
 
-mod dependency;
-mod input;
-mod mods_set;
-
+use semver::Version;
+use std::collections::HashMap;
 use std::error::Error;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-use crate::input::{ConfigFile, InputMod};
-use crate::mods_set::ModsSet;
-
-// TODO: Figure out why it's not coloring the help info.
-#[derive(Debug, StructOpt)]
-#[structopt(
-    name = "fmm",
-    about = "Enable, disable, download, update, create, and delete Factorio mods."
-)]
+#[derive(StructOpt)]
+#[structopt(name = "fmm")]
 struct App {
-    /// The path to a custom configuration file
-    #[structopt(short, long)]
-    config: Option<PathBuf>,
-    /// Deduplicate zipped mod versions, leaving only the latest version
-    #[structopt(long)]
-    dedup: bool,
-    /// The path to the mods directory
-    #[structopt(short = "f", long)]
-    dir: Option<PathBuf>,
-    /// Disable all mods.
-    #[structopt(short = "o", long)]
-    disable_all: bool,
-    /// A list of mods to disable. Format is `mod_name` or `mod_name@version`.
-    #[structopt(short, long)]
-    disable: Vec<InputMod>,
-    /// Enable the latest versions of all mods.
-    #[structopt(short = "l", long)]
-    enable_all: bool,
-    /// A list of mods to enable. Format is `mod_name` or `mod_name@version`.
-    #[structopt(short, long)]
-    enable: Vec<InputMod>,
-    /// Include the base mod when calling `disable-all`.
-    #[structopt(long)]
-    include_base_mod: bool,
-    /// A list of mods to remove. If no version is provided, the latest version will be removed.
-    #[structopt(short, long)]
-    remove: Vec<InputMod>,
+    dir: PathBuf,
 }
 
-// impl App {
-//     fn merge_config(&mut self, config_file: ConfigFile) {
-//         if let Some(directory) = config_file.directory {
-//             self.dir = Some(directory);
-//         }
-//     }
-// }
+// DESIGN NOTES:
+// - Get a list of all mods + versions in the folder _without_ reading the ZIP files (use filenames)
+// - Only read ZIPs if we need to get dependencies or other info
+// - Cache will only be used once we have advanced features that would benefit from it
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut app = App::from_args();
 
-    todo!()
+    // Step 1: Get all mods in the directory
+    // let mut directory_mods: HashMap<String, Vec<Version>> = HashMap::new();
+    let directory_mods = std::fs::read_dir(&app.dir)?
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let file_name = entry.file_name();
+
+            // TODO: Folders can be versionless, in which case we have to parse their info.json
+            let (mod_name, version) = file_name.to_str()?.rsplit_once("_")?;
+            let (version, _) = version.rsplit_once(".").unwrap_or((version, "")); // Strip file extension
+
+            Some((mod_name.to_string(), Version::parse(version).ok()?))
+        })
+        .fold(HashMap::new(), |mut directory_mods, (mod_name, version)| {
+            let versions = directory_mods.entry(mod_name).or_insert_with(Vec::new);
+
+            let index = versions
+                .binary_search(&version)
+                .unwrap_or_else(|index| index);
+            versions.insert(index, version);
+
+            directory_mods
+        });
+
+    Ok(())
 }
-
-// // Find or create config file
-// let config_file = ConfigFile::new(&app.config)?;
-// if let Some(config_file) = config_file {
-//     app.merge_config(config_file);
-// }
-
-// if let Some(dir) = &app.dir {
-//     let mut set = ModsSet::new(dir)?;
-
-//     for mod_ident in app.remove.iter() {
-//         set.remove(mod_ident)?;
-//     }
-
-//     if app.dedup {
-//         set.dedup()?;
-//     }
-
-//     if app.disable_all {
-//         set.disable_all(app.include_base_mod);
-//     }
-
-//     if app.enable_all {
-//         set.enable_all();
-//     }
-
-//     for mod_ident in app.disable.iter() {
-//         set.disable(mod_ident)?;
-//     }
-
-//     set.enable_list(app.enable)?;
-
-//     set.write_mod_list()?;
-//     Ok(())
-// } else {
-//     Err("Must specify a path either with the --dir flag or in fmm.toml".into())
-// }
