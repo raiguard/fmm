@@ -2,7 +2,7 @@
 name = "factorio_mod_manager"
 version = "0.1.0"
 authors = ["raiguard <caleb.heuer@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 directories = "3.0.2"
