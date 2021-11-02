@@ -38,8 +38,8 @@ impl ConfigFile {
         let file = std::fs::read_to_string(config_path.unwrap())
             .map_err(|_| ConfigFileErr::CouldNotOpenFile)?;
 
-        // FIXME: Don't unwrap here. Use anyhow?
-        let config: ConfigFile = toml::from_str(&file).unwrap();
+        let config: ConfigFile =
+            toml::from_str(&file).map_err(|_| ConfigFileErr::CouldNotParseFile)?;
         Ok(Some(config))
     }
 }
@@ -53,4 +53,6 @@ pub enum ConfigFileErr {
     CouldNotCreatePath,
     #[error("Could not create config file.")]
     CouldNotCreateFile,
+    #[error("Could not parse config file.")]
+    CouldNotParseFile,
 }
