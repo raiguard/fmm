@@ -1,3 +1,5 @@
+#![feature(iter_intersperse)]
+
 use semver::Version;
 use std::collections::HashMap;
 use std::error::Error;
@@ -5,8 +7,10 @@ use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+mod dependency;
 mod types;
 
+use dependency::*;
 use types::*;
 
 #[derive(StructOpt)]
@@ -101,6 +105,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
+    // Write mod-list.json
     fs::write(&mlj_path, serde_json::to_string_pretty(&mod_list_json)?)?;
 
     Ok(())
