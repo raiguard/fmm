@@ -22,8 +22,12 @@ use types::*;
 struct App {
     #[structopt(long)]
     dir: PathBuf,
+    #[structopt(short = "o", long)]
+    disable_all: bool,
     #[structopt(short, long)]
     disable: Vec<InputMod>,
+    #[structopt(short = "a", long)]
+    enable_all: bool,
     #[structopt(short, long)]
     enable: Vec<InputMod>,
 }
@@ -93,9 +97,30 @@ fn main() -> Result<(), Box<dyn Error>> {
     let enabled_versions = std::fs::read_to_string(&mlj_path)?;
     let mut mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
 
+    // Disable all mods
+    if app.disable_all {
+        println!("Disabled all mods");
+        for mod_data in mod_list_json
+            .mods
+            .iter_mut()
+            .filter(|mod_state| mod_state.name != "base")
+        {
+            mod_data.enabled = false;
+            mod_data.version = None;
+        }
+    }
+
+    // Enable all mods
+    if app.enable_all {
+        println!("Enabled latest versions of all mods");
+        for mod_data in mod_list_json.mods.iter_mut() {
+            mod_data.enabled = true;
+        }
+    }
+
     // Enable specified mods
     for mod_data in app.enable {
-        if directory_mods.contains_key(&mod_data.name) {
+        if mod_data.name == "base" || directory_mods.contains_key(&mod_data.name) {
             let mod_state = mod_list_json
                 .mods
                 .iter_mut()
@@ -120,7 +145,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Disable specified mods
     for mod_data in app.disable {
-        if directory_mods.contains_key(&mod_data.name) {
+        if mod_data.name == "base" || directory_mods.contains_key(&mod_data.name) {
             let mod_state = mod_list_json
                 .mods
                 .iter_mut()
