@@ -11,9 +11,11 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 use zip::ZipArchive;
 
+mod config;
 // mod dependency;
 mod types;
 
+use config::*;
 // use dependency::*;
 use types::*;
 
@@ -21,7 +23,9 @@ use types::*;
 #[structopt(name = "fmm", about = "Manage your Factorio mods.")]
 struct App {
     #[structopt(long)]
-    dir: PathBuf,
+    config: Option<PathBuf>,
+    #[structopt(long)]
+    dir: Option<PathBuf>,
     #[structopt(short = "o", long)]
     disable_all: bool,
     #[structopt(short, long)]
@@ -30,6 +34,14 @@ struct App {
     enable_all: bool,
     #[structopt(short, long)]
     enable: Vec<InputMod>,
+}
+
+impl App {
+    fn merge_config(&mut self, config_file: ConfigFile) {
+        if let Some(directory) = config_file.directory {
+            self.dir = Some(directory);
+        }
+    }
 }
 
 // DESIGN NOTES:
@@ -62,10 +74,21 @@ fn read_info_json(entry: &DirEntry) -> Option<InfoJson> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let app = App::from_args();
+    let mut app = App::from_args();
+
+    let config = ConfigFile::new(&app.config)?;
+    if let Some(config) = config {
+        app.merge_config(config);
+    }
+
+    if app.dir.is_none() {
+        return Err("Must specify a mods path via flag or via the configuration file.".into());
+    }
+
+    let dir = app.dir.unwrap();
 
     // Get all mods in the directory
-    let directory_mods = fs::read_dir(&app.dir)?
+    let directory_mods = fs::read_dir(&dir)?
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let file_name = entry.file_name();
@@ -92,7 +115,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
 
     // Parse mod-list.json
-    let mut mlj_path = app.dir;
+    let mut mlj_path = dir;
     mlj_path.push("mod-list.json");
     let enabled_versions = std::fs::read_to_string(&mlj_path)?;
     let mut mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
