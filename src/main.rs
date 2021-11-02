@@ -4,13 +4,20 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt;
+use std::fs;
 use std::path::PathBuf;
+use std::str::FromStr;
 use structopt::StructOpt;
+use thiserror::Error;
 
 #[derive(StructOpt)]
 #[structopt(name = "fmm")]
 struct App {
+    #[structopt(short, long)]
     dir: PathBuf,
+    #[structopt(short, long)]
+    enable: Vec<InputMod>,
 }
 
 // DESIGN NOTES:
@@ -23,7 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Step 1: Get all mods in the directory
     // let mut directory_mods: HashMap<String, Vec<Version>> = HashMap::new();
-    let directory_mods = std::fs::read_dir(&app.dir)?
+    let directory_mods = fs::read_dir(&app.dir)?
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let file_name = entry.file_name();
@@ -49,7 +56,32 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut mlj_path = app.dir;
     mlj_path.push("mod-list.json");
     let enabled_versions = std::fs::read_to_string(&mlj_path)?;
-    let enabled_versions: ModListJson = serde_json::from_str(&enabled_versions)?;
+    let mut mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
+
+    // Enable specified mods
+    for mod_data in app.enable {
+        if directory_mods.contains_key(&mod_data.name) {
+            let mod_state = mod_list_json
+                .mods
+                .iter_mut()
+                .find(|mod_state| mod_data.name == mod_state.name);
+
+            println!("Enabled {}", &mod_data);
+
+            if let Some(mod_state) = mod_state {
+                mod_state.enabled = true;
+                mod_state.version = mod_data.version;
+            } else {
+                mod_list_json.mods.push(ModListJsonMod {
+                    name: mod_data.name.to_string(),
+                    enabled: true,
+                    version: mod_data.version,
+                });
+            }
+        }
+    }
+
+    fs::write(&mlj_path, serde_json::to_string_pretty(&mod_list_json)?);
 
     Ok(())
 }
@@ -65,4 +97,63 @@ struct ModListJsonMod {
     #[serde(skip_serializing_if = "Option::is_none")]
     version: Option<Version>,
     enabled: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct InputMod {
+    pub name: String,
+    pub version: Option<Version>,
+}
+
+impl FromStr for InputMod {
+    type Err = InputModErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split('@').collect();
+        match parts[..] {
+            [name] => Ok(Self {
+                name: name.to_string(),
+                version: None,
+            }),
+            [name, version] => {
+                let parsed_version = Version::parse(version);
+                if let Ok(version) = parsed_version {
+                    // Validate that the version does *not* have prerelease or build data
+                    if !version.pre.is_empty() || !version.build.is_empty() {
+                        Err(InputModErr::InvalidVersion(version.to_string()))
+                    } else {
+                        Ok(Self {
+                            name: name.to_string(),
+                            version: Some(version),
+                        })
+                    }
+                } else {
+                    Err(InputModErr::InvalidVersion(version.to_string()))
+                }
+            }
+            _ => Err(InputModErr::IncorrectArgCount(parts.len())),
+        }
+    }
+}
+
+impl fmt::Display for InputMod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{}",
+            self.name,
+            match &self.version {
+                Some(version) => format!(" v{}", version),
+                _ => "".to_string(),
+            }
+        )
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum InputModErr {
+    #[error("Incorrect argument count: expected 1 or 2, got {0}")]
+    IncorrectArgCount(usize),
+    #[error("Invalid version identifier: `{0}`")]
+    InvalidVersion(String),
 }
