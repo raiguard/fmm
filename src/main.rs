@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -81,7 +79,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-    fs::write(&mlj_path, serde_json::to_string_pretty(&mod_list_json)?);
+    fs::write(&mlj_path, serde_json::to_string_pretty(&mod_list_json)?)?;
 
     Ok(())
 }
