@@ -1,5 +1,5 @@
 [package]
-name = "factorio_mod_manager"
+name = "fmm"
 version = "0.1.0"
 authors = ["raiguard <caleb.heuer@gmail.com>"]
 edition = "2021"
@@ -18,7 +18,3 @@ structopt = "0.3.21"
 thiserror = "1.0.25"
 toml = "0.5.8"
 zip = "0.5.11"
-
-[[bin]]
-name = "fmm"
-path = "src/main.rs"
