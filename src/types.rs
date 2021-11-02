@@ -1,6 +1,8 @@
 use semver::Version;
 use serde::{Deserialize, Serialize};
+use std::ffi::OsStr;
 use std::fmt;
+use std::fs::DirEntry;
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -74,4 +76,42 @@ pub enum InputModErr {
     IncorrectArgCount(usize),
     #[error("Invalid version identifier: `{0}`")]
     InvalidVersion(String),
+}
+
+#[derive(Debug)]
+pub enum ModEntryStructure {
+    Directory,
+    Symlink,
+    Zip,
+}
+
+impl ModEntryStructure {
+    pub fn parse(entry: &DirEntry) -> Option<Self> {
+        let path = entry.path();
+        let extension = path.extension();
+
+        if extension.is_some() && extension.unwrap() == OsStr::new("zip") {
+            return Some(ModEntryStructure::Zip);
+        } else {
+            let file_type = entry.file_type().ok()?;
+            if file_type.is_symlink() {
+                return Some(ModEntryStructure::Symlink);
+            } else {
+                let mut path = entry.path();
+                path.push("info.json");
+                if path.exists() {
+                    return Some(ModEntryStructure::Directory);
+                }
+            }
+        };
+
+        None
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct InfoJson {
+    pub dependencies: Option<Vec<String>>,
+    pub name: String,
+    pub version: Version,
 }

@@ -4,13 +4,17 @@ use semver::Version;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
+use std::fs::DirEntry;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use structopt::StructOpt;
+use zip::ZipArchive;
 
-mod dependency;
+// mod dependency;
 mod types;
 
-use dependency::*;
+// use dependency::*;
 use types::*;
 
 #[derive(StructOpt)]
@@ -29,6 +33,30 @@ struct App {
 // - Only read ZIPs if we need to get dependencies or other info
 // - Cache will only be used once we have advanced features that would benefit from it
 
+// TODO: Use errors instead of an option
+fn read_info_json(entry: &DirEntry) -> Option<InfoJson> {
+    let contents = match ModEntryStructure::parse(entry)? {
+        ModEntryStructure::Directory | ModEntryStructure::Symlink => {
+            let mut path = entry.path();
+            path.push("info.json");
+            fs::read_to_string(path).ok()?
+        }
+        ModEntryStructure::Zip => {
+            let mut archive = ZipArchive::new(File::open(entry.path()).ok()?).ok()?;
+            let filename = archive
+                .file_names()
+                .find(|name| name.contains("info.json"))
+                .map(ToString::to_string)?;
+            let mut file = archive.by_name(&filename).ok()?;
+            let mut contents = String::new();
+            file.read_to_string(&mut contents).ok()?;
+            contents
+        }
+    };
+
+    serde_json::from_str::<InfoJson>(&contents).ok()
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let app = App::from_args();
 
@@ -38,11 +66,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             let entry = entry.ok()?;
             let file_name = entry.file_name();
 
-            // TODO: Folders can be versionless, in which case we have to parse their info.json
-            let (mod_name, version) = file_name.to_str()?.rsplit_once("_")?;
-            let (version, _) = version.rsplit_once(".").unwrap_or((version, "")); // Strip file extension
+            if let Some((mod_name, version)) = file_name.to_str()?.rsplit_once("_") {
+                let (version, _) = version.rsplit_once(".").unwrap_or((version, "")); // Strip file extension
 
-            Some((mod_name.to_string(), Version::parse(version).ok()?))
+                Some((mod_name.to_string(), Version::parse(version).ok()?))
+            } else {
+                let info_json = read_info_json(&entry)?;
+
+                Some((info_json.name, info_json.version))
+            }
         })
         .fold(HashMap::new(), |mut directory_mods, (mod_name, version)| {
             let versions = directory_mods.entry(mod_name).or_insert_with(Vec::new);
