@@ -12,8 +12,10 @@ use types::*;
 #[derive(StructOpt)]
 #[structopt(name = "fmm", about = "Manage your Factorio mods.")]
 struct App {
-    #[structopt(short, long)]
+    #[structopt(long)]
     dir: PathBuf,
+    #[structopt(short, long)]
+    disable: Vec<InputMod>,
     #[structopt(short, long)]
     enable: Vec<InputMod>,
 }
@@ -75,6 +77,27 @@ fn main() -> Result<(), Box<dyn Error>> {
                     version: mod_data.version,
                 });
             }
+        } else {
+            println!("Could not find {}", &mod_data);
+        }
+    }
+
+    // Disable specified mods
+    for mod_data in app.disable {
+        if directory_mods.contains_key(&mod_data.name) {
+            let mod_state = mod_list_json
+                .mods
+                .iter_mut()
+                .find(|mod_state| mod_data.name == mod_state.name);
+
+            println!("Disabled {}", &mod_data);
+
+            if let Some(mod_state) = mod_state {
+                mod_state.enabled = false;
+                mod_state.version = None;
+            }
+        } else {
+            println!("Could not find {}", &mod_data);
         }
     }
 
