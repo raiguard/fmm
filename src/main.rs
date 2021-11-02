@@ -138,31 +138,41 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("Enabled latest versions of all mods");
         for mod_data in mod_list_json.mods.iter_mut() {
             mod_data.enabled = true;
+            mod_data.version = None;
         }
     }
 
     // Enable specified mods
-    for mod_data in app.enable {
-        if mod_data.name == "base" || directory_mods.contains_key(&mod_data.name) {
-            let mod_state = mod_list_json
-                .mods
-                .iter_mut()
-                .find(|mod_state| mod_data.name == mod_state.name);
-
-            println!("Enabled {}", &mod_data);
-
-            if let Some(mod_state) = mod_state {
-                mod_state.enabled = true;
-                mod_state.version = mod_data.version;
+    for mod_ident in app.enable {
+        if mod_ident.name != "base" {
+            let mod_exists = if let Some(mod_versions) = directory_mods.get(&mod_ident.name) {
+                mod_ident.version.is_none()
+                    || mod_versions.contains(mod_ident.version.as_ref().unwrap())
             } else {
-                mod_list_json.mods.push(ModListJsonMod {
-                    name: mod_data.name.to_string(),
-                    enabled: true,
-                    version: mod_data.version,
-                });
+                false
+            };
+
+            if mod_exists {
+                let mod_state = mod_list_json
+                    .mods
+                    .iter_mut()
+                    .find(|mod_state| mod_ident.name == mod_state.name);
+
+                println!("Enabled {}", &mod_ident);
+
+                if let Some(mod_state) = mod_state {
+                    mod_state.enabled = true;
+                    mod_state.version = mod_ident.version;
+                } else {
+                    mod_list_json.mods.push(ModListJsonMod {
+                        name: mod_ident.name.to_string(),
+                        enabled: true,
+                        version: mod_ident.version,
+                    });
+                }
+            } else {
+                println!("Could not find {}", &mod_ident);
             }
-        } else {
-            println!("Could not find {}", &mod_data);
         }
     }
 
