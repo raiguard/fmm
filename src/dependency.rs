@@ -1,17 +1,21 @@
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use semver::VersionReq;
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct ModDependency {
     pub dep_type: ModDependencyType,
     pub name: String,
     pub version_req: Option<VersionReq>,
 }
 
-impl ModDependency {
-    pub fn new(input: &str) -> Result<Self, ModDependencyErr> {
+impl FromStr for ModDependency {
+    type Err = ModDependencyErr;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Avoid creating the regex object every time
         static DEP_STRING_REGEX: OnceCell<Regex> = OnceCell::new();
         let captures = DEP_STRING_REGEX
@@ -20,8 +24,8 @@ impl ModDependency {
                     r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=?) *(?P<version>(?:\d+\.){1,2}\d+))?$",
                 ).unwrap()
             })
-            .captures(input)
-            .ok_or_else(|| ModDependencyErr::InvalidDependencyString(input.to_string()))?;
+            .captures(s)
+            .ok_or_else(|| ModDependencyErr::InvalidDependencyString(s.to_string()))?;
 
         Ok(Self {
             dep_type: match captures.name("type").map(|mtch| mtch.as_str()) {
@@ -34,7 +38,7 @@ impl ModDependency {
             },
             name: match captures.name("name") {
                 Some(mtch) => mtch.as_str().to_string(),
-                None => return Err(ModDependencyErr::NameIsUnparsable(input.to_string())),
+                None => return Err(ModDependencyErr::NameIsUnparsable(s.to_string())),
             },
             version_req: match [captures.name("version_req"), captures.name("version")] {
                 [Some(req_match), Some(version_match)] => {
@@ -46,7 +50,7 @@ impl ModDependency {
                             Ok(sub
                                 .parse::<usize>()
                                 .map_err(|_| {
-                                    ModDependencyErr::InvalidDependencyString(input.to_string())
+                                    ModDependencyErr::InvalidDependencyString(s.to_string())
                                 })?
                                 .to_string())
                         })
@@ -74,7 +78,7 @@ impl ModDependency {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub enum ModDependencyType {
     Incompatible,
     NoLoadOrder,
