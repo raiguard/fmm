@@ -1,6 +1,7 @@
 #![allow(unused)]
 
 use semver::Version;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::path::PathBuf;
@@ -18,7 +19,7 @@ struct App {
 // - Cache will only be used once we have advanced features that would benefit from it
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut app = App::from_args();
+    let app = App::from_args();
 
     // Step 1: Get all mods in the directory
     // let mut directory_mods: HashMap<String, Vec<Version>> = HashMap::new();
@@ -44,5 +45,24 @@ fn main() -> Result<(), Box<dyn Error>> {
             directory_mods
         });
 
+    // Step 2: Parse mod-list.json
+    let mut mlj_path = app.dir;
+    mlj_path.push("mod-list.json");
+    let enabled_versions = std::fs::read_to_string(&mlj_path)?;
+    let enabled_versions: ModListJson = serde_json::from_str(&enabled_versions)?;
+
     Ok(())
+}
+
+#[derive(Deserialize, Serialize)]
+struct ModListJson {
+    mods: Vec<ModListJsonMod>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct ModListJsonMod {
+    name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<Version>,
+    enabled: bool,
 }
