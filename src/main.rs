@@ -16,7 +16,7 @@ mod dependency;
 mod types;
 
 use config::*;
-// use dependency::*;
+use dependency::*;
 use types::*;
 
 #[derive(StructOpt)]
@@ -180,7 +180,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     let enabled = mod_state.is_some() && mod_state.as_ref().unwrap().enabled;
 
                     if !enabled {
-                        println!("Enabled {}", &mod_ident);
+                        println!("Enabled {} v{}", mod_ident.name, mod_entry.version);
 
                         let version = mod_ident
                             .version_req
@@ -203,6 +203,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 .and_then(|info_json| info_json.dependencies)
                                 .unwrap_or_default()
                                 .iter()
+                                .filter(|dependency| {
+                                    dependency.name != "base"
+                                        && matches!(
+                                            dependency.dep_type,
+                                            ModDependencyType::NoLoadOrder
+                                                | ModDependencyType::Required
+                                        )
+                                })
                                 .map(|dependency| InputMod {
                                     name: dependency.name.clone(),
                                     version_req: dependency.version_req.clone(),
