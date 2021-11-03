@@ -1,4 +1,4 @@
-use semver::Version;
+use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::cmp::Ordering;
@@ -27,6 +27,7 @@ pub struct ModListJsonMod {
 pub struct InputMod {
     pub name: String,
     pub version: Option<Version>,
+    pub version_req: Option<VersionReq>,
 }
 
 impl FromStr for InputMod {
@@ -38,6 +39,7 @@ impl FromStr for InputMod {
             [name] => Ok(Self {
                 name: name.to_string(),
                 version: None,
+                version_req: None,
             }),
             [name, version] => {
                 let parsed_version = Version::parse(version);
@@ -49,6 +51,11 @@ impl FromStr for InputMod {
                         Ok(Self {
                             name: name.to_string(),
                             version: Some(version),
+                            version_req: Some(
+                                VersionReq::from_str(&format!("={}", version)).map_err(|_| {
+                                    InputModErr::InvalidVersion(version.to_string())
+                                })?,
+                            ),
                         })
                     }
                 } else {
