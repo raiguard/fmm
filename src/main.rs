@@ -150,6 +150,25 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
+    // Disable specified mods
+    for mod_data in app.disable {
+        if mod_data.name == "base" || mod_entries.contains_key(&mod_data.name) {
+            let mod_state = mod_list_json
+                .mods
+                .iter_mut()
+                .find(|mod_state| mod_data.name == mod_state.name);
+
+            println!("Disabled {}", &mod_data);
+
+            if let Some(mod_state) = mod_state {
+                mod_state.enabled = false;
+                mod_state.version = None;
+            }
+        } else {
+            println!("Could not find {}", &mod_data);
+        }
+    }
+
     // Enable all mods
     if app.enable_all {
         println!("Enabled latest versions of all mods");
@@ -235,25 +254,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         to_enable = to_enable_next;
-    }
-
-    // Disable specified mods
-    for mod_data in app.disable {
-        if mod_data.name == "base" || mod_entries.contains_key(&mod_data.name) {
-            let mod_state = mod_list_json
-                .mods
-                .iter_mut()
-                .find(|mod_state| mod_data.name == mod_state.name);
-
-            println!("Disabled {}", &mod_data);
-
-            if let Some(mod_state) = mod_state {
-                mod_state.enabled = false;
-                mod_state.version = None;
-            }
-        } else {
-            println!("Could not find {}", &mod_data);
-        }
     }
 
     // Write mod-list.json
