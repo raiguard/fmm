@@ -31,7 +31,7 @@ struct App {
     /// Disables all mods in the directory
     #[structopt(short = "o", long)]
     disable_all: bool,
-    /// Disables the given mods. Mods are formatted as `Name` or `Name@Version`
+    /// Disables the given mods. Mods are formatted as `Name`
     #[structopt(short, long)]
     disable: Vec<InputMod>,
     /// Enables all mods in the directory
