@@ -95,7 +95,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             if let Some((mod_name, version)) = file_name.to_str()?.rsplit_once("_") {
                 let (version, _) = version.rsplit_once(".").unwrap_or((version, "")); // Strip file extension
-
                 Some((
                     mod_name.to_string(),
                     ModVersion {
@@ -219,7 +218,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         );
                     }
                 } else {
-                    println!("Could not find {}", &mod_ident);
+                    println!("Could not find or read {}", &mod_ident);
                 }
             }
         }
