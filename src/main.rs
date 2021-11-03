@@ -1,6 +1,6 @@
 #![feature(iter_intersperse)]
 
-use semver::{Version, VersionReq};
+use semver::Version;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
