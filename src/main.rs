@@ -22,16 +22,22 @@ use types::*;
 #[derive(StructOpt)]
 #[structopt(name = "fmm", about = "Manage your Factorio mods.")]
 struct App {
+    /// The path to the configuration file
     #[structopt(long)]
     config: Option<PathBuf>,
+    /// The mods directory to manipulate. Optional if a configuration file is in use
     #[structopt(long)]
     dir: Option<PathBuf>,
+    /// Disables all mods in the directory
     #[structopt(short = "o", long)]
     disable_all: bool,
+    /// Disables the given mods. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
     disable: Vec<InputMod>,
+    /// Enables all mods in the directory
     #[structopt(short = "a", long)]
     enable_all: bool,
+    /// Enables the given mods. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
     enable: Vec<InputMod>,
 }
@@ -178,7 +184,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                     let enabled = mod_state.is_some() && mod_state.as_ref().unwrap().enabled;
 
-                    if !enabled {
+                    if enabled {
+                        println!(
+                            "{} v{} is already enabled",
+                            mod_ident.name, mod_entry.version
+                        );
+                    } else {
                         println!("Enabled {} v{}", mod_ident.name, mod_entry.version);
 
                         let version = mod_ident
