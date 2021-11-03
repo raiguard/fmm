@@ -33,6 +33,7 @@ cargo install --locked --forced --path .
 - Disable mods
 - Enable or disable all mods at once
 - Set your default directory by using a config file
+- Remove mods from your mods directory
 
 ## Configuration
 
