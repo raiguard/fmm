@@ -46,6 +46,7 @@ directory = "/home/rai/.factorio/mods"
 
 Roughly in this order:
 
+- Automatically publish to AUR
 - Mod sets
 - Sync with `mod-list.json`
 - Sync with log file?
