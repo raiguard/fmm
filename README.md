@@ -21,7 +21,7 @@ cargo build
 
 ### Installing to `PATH`
 
-You can build `fmm` and install it on your `PATH` like this:
+You can build `fmm` from source and install it on your `PATH` like this:
 
 ```
 cargo install --locked --forced --path .
