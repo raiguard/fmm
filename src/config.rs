@@ -18,13 +18,12 @@ impl ConfigFile {
                 let mut config_path: PathBuf = base_dirs.config_dir().into();
                 config_path.push("fmm");
                 if !config_path.exists() {
-                    fs::create_dir_all(&config_path)
-                        .map_err(|_| ConfigFileErr::CouldNotCreatePath)?;
+                    fs::create_dir_all(&config_path).map_err(|_| ConfigFileErr::CreatePath)?;
                 }
                 config_path.push("fmm.toml");
                 if !config_path.exists() {
                     config_path.push("fmm.toml");
-                    File::create(&config_path).map_err(|_| ConfigFileErr::CouldNotCreateFile)?;
+                    File::create(&config_path).map_err(|_| ConfigFileErr::CreateFile)?;
                 };
                 Some(config_path)
             } else {
@@ -35,24 +34,22 @@ impl ConfigFile {
             return Ok(None);
         }
 
-        let file = std::fs::read_to_string(config_path.unwrap())
-            .map_err(|_| ConfigFileErr::CouldNotOpenFile)?;
+        let file =
+            std::fs::read_to_string(config_path.unwrap()).map_err(|_| ConfigFileErr::Open)?;
 
-        let config: ConfigFile =
-            toml::from_str(&file).map_err(|_| ConfigFileErr::CouldNotParseFile)?;
+        let config: ConfigFile = toml::from_str(&file).map_err(|_| ConfigFileErr::ParseFile)?;
         Ok(Some(config))
     }
 }
 
-#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Error)]
 pub enum ConfigFileErr {
-    #[error("Could not open config file.")]
-    CouldNotOpenFile,
-    #[error("Could not create config file path.")]
-    CouldNotCreatePath,
     #[error("Could not create config file.")]
-    CouldNotCreateFile,
+    CreateFile,
+    #[error("Could not create config file path.")]
+    CreatePath,
+    #[error("Could not open config file.")]
+    Open,
     #[error("Could not parse config file.")]
-    CouldNotParseFile,
+    ParseFile,
 }
