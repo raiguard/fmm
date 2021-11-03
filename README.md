@@ -24,7 +24,7 @@ cargo build
 You can build `fmm` from source and install it on your `PATH` like this:
 
 ```
-cargo install --locked --forced --path .
+cargo install --locked --force --path .
 ```
 
 ## Usage
