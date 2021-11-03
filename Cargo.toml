@@ -14,6 +14,7 @@ semver = {version = "0.11.0", features = ["serde"]}
 serde = {version = "1.0.125", features = ["derive"]}
 serde_derive = "1.0.126"
 serde_json = "1.0.64"
+serde_with = "1.11.0"
 structopt = "0.3.21"
 thiserror = "1.0.25"
 toml = "0.5.8"

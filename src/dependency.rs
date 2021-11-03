@@ -2,6 +2,7 @@ use once_cell::sync::OnceCell;
 use regex::Regex;
 use semver::VersionReq;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -75,6 +76,27 @@ impl FromStr for ModDependency {
                 _ => None,
             },
         })
+    }
+}
+
+impl Display for ModDependency {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}{}{}",
+            match self.dep_type {
+                ModDependencyType::Incompatible => "! ",
+                ModDependencyType::NoLoadOrder => "~ ",
+                ModDependencyType::Optional => "? ",
+                ModDependencyType::OptionalHidden => "(?) ",
+                ModDependencyType::Required => "",
+            },
+            self.name,
+            match &self.version_req {
+                Some(version_req) => format!(" {}", version_req),
+                None => String::new(),
+            }
+        )
     }
 }
 
