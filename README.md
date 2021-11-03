@@ -27,6 +27,14 @@ You can build `fmm` from source and install it on your `PATH` like this:
 cargo install --locked --forced --path .
 ```
 
+## Usage
+
+```
+fmm --enable space-exploration
+```
+
+See `fmm --help` for all subcommands.
+
 ## Features
 
 - Enable mods and their dependencies
