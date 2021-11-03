@@ -1,6 +1,6 @@
 #![feature(iter_intersperse)]
 
-use semver::Version;
+use semver::{Version, VersionReq};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
@@ -40,6 +40,9 @@ struct App {
     /// Enables the given mods. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
     enable: Vec<InputMod>,
+    /// Removes the given mods from the mods directory. Mods are formatted as `Name` or `Name@Version`
+    #[structopt(short, long)]
+    remove: Vec<InputMod>,
 }
 
 impl App {
@@ -94,7 +97,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dir = app.dir.unwrap();
 
     // Get all mods in the directory
-    let mod_entries = fs::read_dir(&dir)?
+    let mut mod_entries = fs::read_dir(&dir)?
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let file_name = entry.file_name();
@@ -134,8 +137,48 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Parse mod-list.json
     let mut mlj_path = dir;
     mlj_path.push("mod-list.json");
-    let enabled_versions = std::fs::read_to_string(&mlj_path)?;
+    let enabled_versions = fs::read_to_string(&mlj_path)?;
     let mut mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
+
+    // Remove specified mods
+    for mod_ident in app.remove {
+        if mod_ident.name != "base" {
+            let version_req = mod_ident
+                .version_req
+                .as_ref()
+                .cloned()
+                .unwrap_or_else(VersionReq::any);
+            if let Some(mod_versions) = mod_entries.get(&mod_ident.name) {
+                mod_versions
+                    .iter()
+                    .filter(|version| version_req.matches(&version.version))
+                    .for_each(|version| {
+                        let result = version.entry.metadata().and_then(|metadata| {
+                            if metadata.is_dir() {
+                                fs::remove_dir_all(version.entry.path())
+                            } else {
+                                fs::remove_file(version.entry.path())
+                            }
+                        });
+                        if result.is_ok() {
+                            println!("Removed {} v{}", &mod_ident.name, version.version);
+                        } else {
+                            println!("Could not remove {} v{}", &mod_ident.name, version.version);
+                        }
+                    });
+                mod_entries.remove(&mod_ident.name);
+            }
+
+            if let Some((index, _)) = mod_list_json
+                .mods
+                .iter()
+                .enumerate()
+                .find(|(_, mod_state)| mod_ident.name == mod_state.name)
+            {
+                mod_list_json.mods.remove(index);
+            }
+        }
+    }
 
     // Disable all mods
     if app.disable_all {

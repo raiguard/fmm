@@ -1,4 +1,6 @@
 # v0.2.0 - ??????????
+## Features
+- Added `--remove` flag
 ## Bugfixes
 - Fixed GitHub release workflow
 
