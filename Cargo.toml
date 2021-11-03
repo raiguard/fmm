@@ -3,6 +3,11 @@ name = "fmm"
 version = "0.1.0"
 authors = ["raiguard <caleb.heuer@gmail.com>"]
 edition = "2021"
+description = "Manage your Factorio mods."
+readme = "README.md"
+repository = "https://github.com/raiguard/fmm"
+license = "MIT"
+keywords = ["factorio", "cli", "structopt", "manager", "mod"]
 
 [dependencies]
 directories = "3.0.2"
