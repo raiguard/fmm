@@ -11,21 +11,17 @@ pub struct ConfigFile {
 
 impl ConfigFile {
     pub fn new(path: &Option<PathBuf>) -> Result<Option<Self>, ConfigFileErr> {
-        let config_path: Option<PathBuf> = path.clone().or({
-            if let Some(base_dirs) = BaseDirs::new() {
-                let mut config_path: PathBuf = base_dirs.config_dir().into();
-                config_path.push("fmm");
-                config_path.push("fmm.toml");
-
-                if config_path.exists() {
-                    Some(config_path)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        });
+        let config_path: Option<PathBuf> = path
+            .clone()
+            .or({
+                BaseDirs::new().map(|base_dirs| {
+                    let mut config_path: PathBuf = base_dirs.config_dir().into();
+                    config_path.push("fmm");
+                    config_path.push("fmm.toml");
+                    config_path
+                })
+            })
+            .filter(|config_path| config_path.exists());
 
         if config_path.is_none() {
             return Ok(None);
