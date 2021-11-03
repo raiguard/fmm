@@ -1,6 +1,6 @@
 #![feature(iter_intersperse)]
 
-use semver::Version;
+use semver::{Version, VersionReq};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
@@ -88,7 +88,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let dir = app.dir.unwrap();
 
     // Get all mods in the directory
-    let directory_mods = fs::read_dir(&dir)?
+    let mod_entries = fs::read_dir(&dir)?
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let file_name = entry.file_name();
@@ -96,11 +96,23 @@ fn main() -> Result<(), Box<dyn Error>> {
             if let Some((mod_name, version)) = file_name.to_str()?.rsplit_once("_") {
                 let (version, _) = version.rsplit_once(".").unwrap_or((version, "")); // Strip file extension
 
-                Some((mod_name.to_string(), Version::parse(version).ok()?))
+                Some((
+                    mod_name.to_string(),
+                    ModVersion {
+                        entry,
+                        version: Version::parse(version).ok()?,
+                    },
+                ))
             } else {
                 let info_json = read_info_json(&entry)?;
 
-                Some((info_json.name, info_json.version))
+                Some((
+                    info_json.name,
+                    ModVersion {
+                        entry,
+                        version: info_json.version,
+                    },
+                ))
             }
         })
         .fold(HashMap::new(), |mut directory_mods, (mod_name, version)| {
@@ -143,42 +155,73 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Enable specified mods
-    for mod_ident in app.enable {
-        if mod_ident.name != "base" {
-            let mod_exists = if let Some(mod_versions) = directory_mods.get(&mod_ident.name) {
-                mod_ident.version.is_none()
-                    || mod_versions.contains(mod_ident.version.as_ref().unwrap())
-            } else {
-                false
-            };
+    let mut to_enable = app.enable.clone();
+    while !to_enable.is_empty() {
+        let mut to_enable_next = Vec::new();
+        for mod_ident in &to_enable {
+            if mod_ident.name != "base" {
+                let mod_entry = mod_entries.get(&mod_ident.name).and_then(|mod_versions| {
+                    if let Some(version_req) = &mod_ident.version_req {
+                        mod_versions
+                            .iter()
+                            .rev()
+                            .find(|version| version_req.matches(&version.version))
+                    } else {
+                        mod_versions.last()
+                    }
+                });
 
-            if mod_exists {
-                let mod_state = mod_list_json
-                    .mods
-                    .iter_mut()
-                    .find(|mod_state| mod_ident.name == mod_state.name);
+                if let Some(mod_entry) = mod_entry {
+                    let mod_state = mod_list_json
+                        .mods
+                        .iter_mut()
+                        .find(|mod_state| mod_ident.name == mod_state.name);
 
-                println!("Enabled {}", &mod_ident);
+                    let enabled = mod_state.is_some() && mod_state.as_ref().unwrap().enabled;
 
-                if let Some(mod_state) = mod_state {
-                    mod_state.enabled = true;
-                    mod_state.version = mod_ident.version;
+                    if !enabled {
+                        println!("Enabled {}", &mod_ident);
+
+                        let version = mod_ident
+                            .version_req
+                            .as_ref()
+                            .map(|_| mod_entry.version.clone());
+
+                        if let Some(mod_state) = mod_state {
+                            mod_state.enabled = true;
+                            mod_state.version = version;
+                        } else {
+                            mod_list_json.mods.push(ModListJsonMod {
+                                name: mod_ident.name.to_string(),
+                                enabled: true,
+                                version,
+                            });
+                        }
+
+                        to_enable_next.append(
+                            &mut read_info_json(&mod_entry.entry)
+                                .and_then(|info_json| info_json.dependencies)
+                                .unwrap_or_default()
+                                .iter()
+                                .map(|dependency| InputMod {
+                                    name: dependency.name.clone(),
+                                    version_req: dependency.version_req.clone(),
+                                })
+                                .collect(),
+                        );
+                    }
                 } else {
-                    mod_list_json.mods.push(ModListJsonMod {
-                        name: mod_ident.name.to_string(),
-                        enabled: true,
-                        version: mod_ident.version,
-                    });
+                    println!("Could not find {}", &mod_ident);
                 }
-            } else {
-                println!("Could not find {}", &mod_ident);
             }
         }
+
+        to_enable = to_enable_next;
     }
 
     // Disable specified mods
     for mod_data in app.disable {
-        if mod_data.name == "base" || directory_mods.contains_key(&mod_data.name) {
+        if mod_data.name == "base" || mod_entries.contains_key(&mod_data.name) {
             let mod_state = mod_list_json
                 .mods
                 .iter_mut()

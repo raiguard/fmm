@@ -26,7 +26,7 @@ pub struct ModListJsonMod {
 #[derive(Clone, Debug)]
 pub struct InputMod {
     pub name: String,
-    pub version: Option<Version>,
+    // pub version: Option<Version>,
     pub version_req: Option<VersionReq>,
 }
 
@@ -38,7 +38,7 @@ impl FromStr for InputMod {
         match parts[..] {
             [name] => Ok(Self {
                 name: name.to_string(),
-                version: None,
+                // version: None,
                 version_req: None,
             }),
             [name, version] => {
@@ -50,7 +50,7 @@ impl FromStr for InputMod {
                     } else {
                         Ok(Self {
                             name: name.to_string(),
-                            version: Some(version),
+                            // version: Some(version),
                             version_req: Some(
                                 VersionReq::from_str(&format!("={}", version)).map_err(|_| {
                                     InputModErr::InvalidVersion(version.to_string())
@@ -73,8 +73,8 @@ impl fmt::Display for InputMod {
             f,
             "{}{}",
             self.name,
-            match &self.version {
-                Some(version) => format!(" v{}", version),
+            match &self.version_req {
+                Some(version_req) => format!(" {}", version_req),
                 _ => "".to_string(),
             }
         )
