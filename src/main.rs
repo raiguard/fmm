@@ -61,11 +61,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         app.merge_config(config);
     }
 
-    if app.dir.is_none() {
-        return Err("Must specify a mods path via flag or via the configuration file.".into());
-    }
-
-    let mut directory = Directory::new(app.dir.unwrap())?;
+    let mut directory = Directory::new(match app.dir {
+        Some(dir) => dir,
+        None => {
+            return Err("Must specify a mods path via flag or via the configuration file.".into())
+        }
+    })?;
 
     // Remove specified mods
     for mod_ident in app.remove {
@@ -95,7 +96,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         to_enable = to_enable
             .iter_mut()
             .filter(|mod_ident| mod_ident.name != "base")
-            .flat_map(|mod_ident| directory.enable(mod_ident).unwrap_or_else(Vec::new))
+            .filter_map(|mod_ident| directory.enable(mod_ident))
+            .flatten()
             .collect();
     }
 
