@@ -69,6 +69,26 @@ impl Directory {
         })
     }
 
+    pub fn disable_all(&mut self) {
+        println!("Disabled all mods");
+        for mod_data in self
+            .mod_list
+            .iter_mut()
+            .filter(|mod_state| mod_state.name != "base")
+        {
+            mod_data.enabled = false;
+            mod_data.version = None;
+        }
+    }
+
+    pub fn enable_all(&mut self) {
+        println!("Enabled latest versions of all mods");
+        for mod_data in self.mod_list.iter_mut() {
+            mod_data.enabled = true;
+            mod_data.version = None;
+        }
+    }
+
     pub fn remove(&mut self, mod_ident: &InputMod) {
         let version_req = mod_ident
             .version_req

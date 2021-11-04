@@ -77,15 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Disable all mods
     if app.disable_all {
-        println!("Disabled all mods");
-        for mod_data in directory
-            .mod_list
-            .iter_mut()
-            .filter(|mod_state| mod_state.name != "base")
-        {
-            mod_data.enabled = false;
-            mod_data.version = None;
-        }
+        directory.disable_all();
     }
 
     // Disable specified mods
@@ -109,11 +101,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Enable all mods
     if app.enable_all {
-        println!("Enabled latest versions of all mods");
-        for mod_data in directory.mod_list.iter_mut() {
-            mod_data.enabled = true;
-            mod_data.version = None;
-        }
+        directory.enable_all();
     }
 
     // Enable specified mods
