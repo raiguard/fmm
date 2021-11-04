@@ -90,17 +90,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Enable specified mods
-    let mut to_enable = app.enable.clone();
+    let mut to_enable = app.enable;
     while !to_enable.is_empty() {
-        let mut to_enable_next = Vec::new();
-        for mod_ident in &to_enable {
-            if mod_ident.name != "base" {
-                if let Some(mut dependencies) = directory.enable(mod_ident) {
-                    to_enable_next.append(&mut dependencies);
-                }
-            }
-        }
-        to_enable = to_enable_next;
+        to_enable = to_enable
+            .iter_mut()
+            .filter(|mod_ident| mod_ident.name != "base")
+            .flat_map(|mod_ident| directory.enable(mod_ident).unwrap_or_else(Vec::new))
+            .collect();
     }
 
     // Write mod-list.json
