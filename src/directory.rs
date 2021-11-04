@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use semver::{Version, VersionReq};
 use zip::ZipArchive;
 
+use crate::dependency::ModDependencyType;
 use crate::types::*;
 
 pub struct Directory {
@@ -67,6 +68,89 @@ impl Directory {
             mod_list: mod_list_json.mods,
             mod_list_path: mlj_path,
         })
+    }
+
+    pub fn enable(&mut self, mod_ident: &InputMod) -> Option<Vec<InputMod>> {
+        let mod_entry = self.mods.get(&mod_ident.name).and_then(|mod_versions| {
+            if let Some(version_req) = &mod_ident.version_req {
+                mod_versions
+                    .iter()
+                    .rev()
+                    .find(|version| version_req.matches(&version.version))
+            } else {
+                mod_versions.last()
+            }
+        });
+
+        if let Some(mod_entry) = mod_entry {
+            let mod_state = self
+                .mod_list
+                .iter_mut()
+                .find(|mod_state| mod_ident.name == mod_state.name);
+
+            let enabled = mod_state.is_some() && mod_state.as_ref().unwrap().enabled;
+
+            if !enabled {
+                println!("Enabled {} v{}", mod_ident.name, mod_entry.version);
+
+                let version = mod_ident
+                    .version_req
+                    .as_ref()
+                    .map(|_| mod_entry.version.clone());
+
+                if let Some(mod_state) = mod_state {
+                    mod_state.enabled = true;
+                    mod_state.version = version;
+                } else {
+                    self.mod_list.push(ModListJsonMod {
+                        name: mod_ident.name.to_string(),
+                        enabled: true,
+                        version,
+                    });
+                }
+
+                return Some(
+                    read_info_json(&mod_entry.entry)
+                        .and_then(|info_json| info_json.dependencies)
+                        .unwrap_or_default()
+                        .iter()
+                        .filter(|dependency| {
+                            dependency.name != "base"
+                                && matches!(
+                                    dependency.dep_type,
+                                    ModDependencyType::NoLoadOrder | ModDependencyType::Required
+                                )
+                        })
+                        .map(|dependency| InputMod {
+                            name: dependency.name.clone(),
+                            version_req: dependency.version_req.clone(),
+                        })
+                        .collect(),
+                );
+            }
+        } else {
+            println!("Could not find or read {}", &mod_ident);
+        }
+
+        None
+    }
+
+    pub fn disable(&mut self, mod_ident: &InputMod) {
+        if mod_ident.name == "base" || self.mods.contains_key(&mod_ident.name) {
+            let mod_state = self
+                .mod_list
+                .iter_mut()
+                .find(|mod_state| mod_ident.name == mod_state.name);
+
+            println!("Disabled {}", &mod_ident);
+
+            if let Some(mod_state) = mod_state {
+                mod_state.enabled = false;
+                mod_state.version = None;
+            }
+        } else {
+            println!("Could not find {}", &mod_ident);
+        }
     }
 
     pub fn disable_all(&mut self) {

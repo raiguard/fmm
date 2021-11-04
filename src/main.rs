@@ -11,7 +11,6 @@ mod directory;
 mod types;
 
 use config::*;
-use dependency::*;
 use directory::*;
 use types::*;
 
@@ -81,22 +80,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     // Disable specified mods
-    for mod_data in app.disable {
-        if mod_data.name == "base" || directory.mods.contains_key(&mod_data.name) {
-            let mod_state = directory
-                .mod_list
-                .iter_mut()
-                .find(|mod_state| mod_data.name == mod_state.name);
-
-            println!("Disabled {}", &mod_data);
-
-            if let Some(mod_state) = mod_state {
-                mod_state.enabled = false;
-                mod_state.version = None;
-            }
-        } else {
-            println!("Could not find {}", &mod_data);
-        }
+    for mod_ident in app.disable {
+        directory.disable(&mod_ident);
     }
 
     // Enable all mods
@@ -110,73 +95,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut to_enable_next = Vec::new();
         for mod_ident in &to_enable {
             if mod_ident.name != "base" {
-                let mod_entry = directory
-                    .mods
-                    .get(&mod_ident.name)
-                    .and_then(|mod_versions| {
-                        if let Some(version_req) = &mod_ident.version_req {
-                            mod_versions
-                                .iter()
-                                .rev()
-                                .find(|version| version_req.matches(&version.version))
-                        } else {
-                            mod_versions.last()
-                        }
-                    });
-
-                if let Some(mod_entry) = mod_entry {
-                    let mod_state = directory
-                        .mod_list
-                        .iter_mut()
-                        .find(|mod_state| mod_ident.name == mod_state.name);
-
-                    let enabled = mod_state.is_some() && mod_state.as_ref().unwrap().enabled;
-
-                    if !enabled {
-                        println!("Enabled {} v{}", mod_ident.name, mod_entry.version);
-
-                        let version = mod_ident
-                            .version_req
-                            .as_ref()
-                            .map(|_| mod_entry.version.clone());
-
-                        if let Some(mod_state) = mod_state {
-                            mod_state.enabled = true;
-                            mod_state.version = version;
-                        } else {
-                            directory.mod_list.push(ModListJsonMod {
-                                name: mod_ident.name.to_string(),
-                                enabled: true,
-                                version,
-                            });
-                        }
-
-                        to_enable_next.append(
-                            &mut read_info_json(&mod_entry.entry)
-                                .and_then(|info_json| info_json.dependencies)
-                                .unwrap_or_default()
-                                .iter()
-                                .filter(|dependency| {
-                                    dependency.name != "base"
-                                        && matches!(
-                                            dependency.dep_type,
-                                            ModDependencyType::NoLoadOrder
-                                                | ModDependencyType::Required
-                                        )
-                                })
-                                .map(|dependency| InputMod {
-                                    name: dependency.name.clone(),
-                                    version_req: dependency.version_req.clone(),
-                                })
-                                .collect(),
-                        );
-                    }
-                } else {
-                    println!("Could not find or read {}", &mod_ident);
+                if let Some(mut dependencies) = directory.enable(mod_ident) {
+                    to_enable_next.append(&mut dependencies);
                 }
             }
         }
-
         to_enable = to_enable_next;
     }
 
