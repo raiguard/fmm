@@ -246,12 +246,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                     let enabled = mod_state.is_some() && mod_state.as_ref().unwrap().enabled;
 
-                    if enabled {
-                        println!(
-                            "{} v{} is already enabled",
-                            mod_ident.name, mod_entry.version
-                        );
-                    } else {
+                    if !enabled {
                         println!("Enabled {} v{}", mod_ident.name, mod_entry.version);
 
                         let version = mod_ident
