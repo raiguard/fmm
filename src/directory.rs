@@ -212,7 +212,7 @@ impl Directory {
 }
 
 // TODO: Use errors instead of an option
-pub fn read_info_json(entry: &DirEntry) -> Option<InfoJson> {
+fn read_info_json(entry: &DirEntry) -> Option<InfoJson> {
     let contents = match ModEntryStructure::parse(entry)? {
         ModEntryStructure::Directory | ModEntryStructure::Symlink => {
             let mut path = entry.path();
