@@ -70,6 +70,36 @@ impl Directory {
         })
     }
 
+    pub fn disable(&mut self, mod_ident: &InputMod) {
+        if mod_ident.name == "base" || self.mods.contains_key(&mod_ident.name) {
+            let mod_state = self
+                .mod_list
+                .iter_mut()
+                .find(|mod_state| mod_ident.name == mod_state.name);
+
+            println!("Disabled {}", &mod_ident);
+
+            if let Some(mod_state) = mod_state {
+                mod_state.enabled = false;
+                mod_state.version = None;
+            }
+        } else {
+            println!("Could not find {}", &mod_ident);
+        }
+    }
+
+    pub fn disable_all(&mut self) {
+        println!("Disabled all mods");
+        for mod_data in self
+            .mod_list
+            .iter_mut()
+            .filter(|mod_state| mod_state.name != "base")
+        {
+            mod_data.enabled = false;
+            mod_data.version = None;
+        }
+    }
+
     pub fn enable(&mut self, mod_ident: &InputMod) -> Option<Vec<InputMod>> {
         let mod_entry = self.mods.get(&mod_ident.name).and_then(|mod_versions| {
             if let Some(version_req) = &mod_ident.version_req {
@@ -133,36 +163,6 @@ impl Directory {
         }
 
         None
-    }
-
-    pub fn disable(&mut self, mod_ident: &InputMod) {
-        if mod_ident.name == "base" || self.mods.contains_key(&mod_ident.name) {
-            let mod_state = self
-                .mod_list
-                .iter_mut()
-                .find(|mod_state| mod_ident.name == mod_state.name);
-
-            println!("Disabled {}", &mod_ident);
-
-            if let Some(mod_state) = mod_state {
-                mod_state.enabled = false;
-                mod_state.version = None;
-            }
-        } else {
-            println!("Could not find {}", &mod_ident);
-        }
-    }
-
-    pub fn disable_all(&mut self) {
-        println!("Disabled all mods");
-        for mod_data in self
-            .mod_list
-            .iter_mut()
-            .filter(|mod_state| mod_state.name != "base")
-        {
-            mod_data.enabled = false;
-            mod_data.version = None;
-        }
     }
 
     pub fn enable_all(&mut self) {
