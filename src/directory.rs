@@ -5,7 +5,7 @@ use std::fs::{DirEntry, File};
 use std::io::Read;
 use std::path::PathBuf;
 
-use semver::Version;
+use semver::{Version, VersionReq};
 use zip::ZipArchive;
 
 use crate::types::*;
@@ -67,6 +67,43 @@ impl Directory {
             mod_list: mod_list_json.mods,
             mod_list_path: mlj_path,
         })
+    }
+
+    pub fn remove(&mut self, mod_ident: &InputMod) {
+        let version_req = mod_ident
+            .version_req
+            .as_ref()
+            .cloned()
+            .unwrap_or_else(VersionReq::any);
+        if let Some(mod_versions) = self.mods.get(&mod_ident.name) {
+            mod_versions
+                .iter()
+                .filter(|version| version_req.matches(&version.version))
+                .for_each(|version| {
+                    let result = version.entry.metadata().and_then(|metadata| {
+                        if metadata.is_dir() {
+                            fs::remove_dir_all(version.entry.path())
+                        } else {
+                            fs::remove_file(version.entry.path())
+                        }
+                    });
+                    if result.is_ok() {
+                        println!("Removed {} v{}", &mod_ident.name, version.version);
+                    } else {
+                        println!("Could not remove {} v{}", &mod_ident.name, version.version);
+                    }
+                });
+            self.mods.remove(&mod_ident.name);
+        }
+
+        if let Some((index, _)) = self
+            .mod_list
+            .iter()
+            .enumerate()
+            .find(|(_, mod_state)| mod_ident.name == mod_state.name)
+        {
+            self.mod_list.remove(index);
+        }
     }
 }
 

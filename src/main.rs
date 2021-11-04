@@ -1,6 +1,5 @@
 #![feature(iter_intersperse)]
 
-use semver::VersionReq;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
@@ -72,40 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Remove specified mods
     for mod_ident in app.remove {
         if mod_ident.name != "base" {
-            let version_req = mod_ident
-                .version_req
-                .as_ref()
-                .cloned()
-                .unwrap_or_else(VersionReq::any);
-            if let Some(mod_versions) = directory.mods.get(&mod_ident.name) {
-                mod_versions
-                    .iter()
-                    .filter(|version| version_req.matches(&version.version))
-                    .for_each(|version| {
-                        let result = version.entry.metadata().and_then(|metadata| {
-                            if metadata.is_dir() {
-                                fs::remove_dir_all(version.entry.path())
-                            } else {
-                                fs::remove_file(version.entry.path())
-                            }
-                        });
-                        if result.is_ok() {
-                            println!("Removed {} v{}", &mod_ident.name, version.version);
-                        } else {
-                            println!("Could not remove {} v{}", &mod_ident.name, version.version);
-                        }
-                    });
-                directory.mods.remove(&mod_ident.name);
-            }
-
-            if let Some((index, _)) = directory
-                .mod_list
-                .iter()
-                .enumerate()
-                .find(|(_, mod_state)| mod_ident.name == mod_state.name)
-            {
-                directory.mod_list.remove(index);
-            }
+            directory.remove(&mod_ident);
         }
     }
 
