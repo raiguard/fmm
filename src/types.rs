@@ -24,12 +24,12 @@ pub struct ModListJsonMod {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct InputMod {
+pub struct ModIdent {
     pub name: String,
     pub version_req: Option<VersionReq>,
 }
 
-impl FromStr for InputMod {
+impl FromStr for ModIdent {
     type Err = InputModErr;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -64,7 +64,7 @@ impl FromStr for InputMod {
     }
 }
 
-impl fmt::Display for InputMod {
+impl fmt::Display for ModIdent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

@@ -70,7 +70,7 @@ impl Directory {
         })
     }
 
-    pub fn disable(&mut self, mod_ident: &InputMod) {
+    pub fn disable(&mut self, mod_ident: &ModIdent) {
         if mod_ident.name == "base" || self.mods.contains_key(&mod_ident.name) {
             let mod_state = self
                 .mod_list
@@ -100,7 +100,7 @@ impl Directory {
         }
     }
 
-    pub fn enable(&mut self, mod_ident: &InputMod) -> Option<Vec<InputMod>> {
+    pub fn enable(&mut self, mod_ident: &ModIdent) -> Option<Vec<ModIdent>> {
         let mod_entry = self.mods.get(&mod_ident.name).and_then(|mod_versions| {
             if let Some(version_req) = &mod_ident.version_req {
                 mod_versions
@@ -151,7 +151,7 @@ impl Directory {
                                     ModDependencyType::NoLoadOrder | ModDependencyType::Required
                                 )
                         })
-                        .map(|dependency| InputMod {
+                        .map(|dependency| ModIdent {
                             name: dependency.name.clone(),
                             version_req: dependency.version_req.clone(),
                         })
@@ -173,7 +173,7 @@ impl Directory {
         }
     }
 
-    pub fn remove(&mut self, mod_ident: &InputMod) {
+    pub fn remove(&mut self, mod_ident: &ModIdent) {
         let version_req = mod_ident
             .version_req
             .as_ref()

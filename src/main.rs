@@ -28,7 +28,7 @@ struct App {
     disable_all: bool,
     /// Disables the given mods. Mods are formatted as `Name`
     #[structopt(short, long)]
-    disable: Vec<InputMod>,
+    disable: Vec<ModIdent>,
     /// Enables all mods in the directory
     #[structopt(short = "a", long)]
     enable_all: bool,
@@ -37,10 +37,10 @@ struct App {
     enable_set: Option<String>,
     /// Enables the given mods. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
-    enable: Vec<InputMod>,
+    enable: Vec<ModIdent>,
     /// Removes the given mods from the mods directory. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
-    remove: Vec<InputMod>,
+    remove: Vec<ModIdent>,
 }
 
 impl App {

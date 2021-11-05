@@ -6,14 +6,14 @@ use std::fs;
 use std::path::PathBuf;
 use thiserror::Error;
 
-use crate::types::InputMod;
+use crate::types::ModIdent;
 
 #[serde_as]
 #[derive(Deserialize)]
 pub struct ConfigFile {
     pub directory: Option<PathBuf>,
     #[serde_as(as = "Option<HashMap<_, Vec<DisplayFromStr>>>")]
-    pub sets: Option<HashMap<String, Vec<InputMod>>>,
+    pub sets: Option<HashMap<String, Vec<ModIdent>>>,
 }
 
 impl ConfigFile {
