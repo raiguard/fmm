@@ -46,15 +46,25 @@ See `fmm --help` for all subcommands.
 - Enable mods and their dependencies
 - Disable mods
 - Enable or disable all mods at once
+- Enable pre-defined sets of mods
 - Set your default directory by using a config file
 - Remove mods from your mods directory
 
 ## Configuration
 
-`fmm` is very bare-bones, but does support a [`toml`](https://toml.io/en/) file for setting the default directory. You can set the path to this file with the `--config` flag, or place it in `$XDG_CONFIG_HOME/fmm/fmm.toml` for it to be sourced automatically.
+`fmm` accepts a `--config` flag with a path to a [`toml`](https://toml.io/en/) configuration file. If `--config` is not provided, `fmm` will look for this file in `$XDG_CONFIG_HOME/fmm/fmm.toml` and source it if it exists. Here is the format of this file:
 
 ```toml
-directory = "/home/rai/.factorio/mods"
+# The path to the Factorio mods directory
+directory = "/home/rai/.factorio/mods/"
+
+# Customizable mod sets
+# Each key will be available for use in the `--enable-set` flag
+# Dependencies will automatically be enabled
+# Specific versions may be specified by appending `@version` to the mod name
+[sets]
+EditorExtensions = ["EditorExtensions", "Sandbox"]
+Krastorio2Beta = ["Krastorio2@1.2.0", "EditorExtensions", "Sandbox"]
 ```
 
 ## Roadmap
