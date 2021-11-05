@@ -8,6 +8,7 @@ use structopt::StructOpt;
 mod config;
 mod dependency;
 mod directory;
+mod sync;
 mod types;
 
 use config::*;
@@ -41,6 +42,9 @@ struct App {
     /// Removes the given mods from the mods directory. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
     remove: Vec<ModIdent>,
+    /// A path to a save file to sync with
+    #[structopt(short, long)]
+    sync: Option<PathBuf>,
 }
 
 impl App {
@@ -85,6 +89,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             )
         }
     })?;
+
+    if let Some(sync_path) = app.sync {
+        sync::SaveFile::from(sync_path)?;
+    }
 
     // Remove specified mods
     for mod_ident in app.remove {
