@@ -71,7 +71,6 @@ Krastorio2Beta = ["Krastorio2@1.2.0", "EditorExtensions", "Sandbox"]
 
 Roughly in this order:
 
-- Mod sets
 - Sync with `mod-list.json`
 - Sync with save
 - Automatically publish to AUR
