@@ -61,10 +61,10 @@ directory = "/home/rai/.factorio/mods"
 
 Roughly in this order:
 
-- Automatically publish to AUR
 - Mod sets
 - Sync with `mod-list.json`
 - Sync with save
+- Automatically publish to AUR
 - Create new mod
 - Package mod
 - Datestamp and increment mod version
