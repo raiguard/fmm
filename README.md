@@ -27,6 +27,12 @@ You can build `fmm` from source and install it on your `PATH` like this:
 cargo install --locked --force --path .
 ```
 
+Or just run this without cloning the repository:
+
+```
+cargo install fmm
+```
+
 ## Usage
 
 ```
