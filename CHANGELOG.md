@@ -1,4 +1,7 @@
 # v0.2.1 - ??????????
+## Features
+- Added `--enable-set` flag, for enabling pre-defined sets of mods
+  - These sets can be configured in `fmm.toml`
 ## Changes
 - "Mod is already enabled" messages were removed - they hurt more than they helped
 

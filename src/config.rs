@@ -1,12 +1,19 @@
 use directories::BaseDirs;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde_with::{serde_as, DisplayFromStr};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use thiserror::Error;
 
-#[derive(Deserialize, Serialize)]
+use crate::types::InputMod;
+
+#[serde_as]
+#[derive(Deserialize)]
 pub struct ConfigFile {
     pub directory: Option<PathBuf>,
+    #[serde_as(as = "Option<HashMap<_, Vec<DisplayFromStr>>>")]
+    pub sets: Option<HashMap<String, Vec<InputMod>>>,
 }
 
 impl ConfigFile {

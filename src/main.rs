@@ -32,6 +32,9 @@ struct App {
     /// Enables all mods in the directory
     #[structopt(short = "a", long)]
     enable_all: bool,
+    /// Enables the mods in the given set
+    #[structopt(short = "s", long)]
+    enable_set: Option<String>,
     /// Enables the given mods. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
     enable: Vec<InputMod>,
@@ -58,6 +61,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let config = ConfigFile::new(&app.config)?;
     if let Some(config) = config {
+        // Pull mods to enable from the defined set, if any
+        if let Some(set_name) = &app.enable_set {
+            if let Some(sets) = &config.sets {
+                if let Some(set) = sets.get(set_name) {
+                    app.enable = set.to_vec()
+                } else {
+                    return Err(format!("Set `{}` is not defined", set_name).into());
+                }
+            }
+        }
+
         app.merge_config(config);
     }
 
