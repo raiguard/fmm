@@ -52,7 +52,7 @@ See `fmm --help` for all subcommands.
 
 ## Configuration
 
-`fmm` accepts a `--config` flag with a path to a [`toml`](https://toml.io/en/) configuration file. If `--config` is not provided, `fmm` will look for this file in `$XDG_CONFIG_HOME/fmm/fmm.toml` and source it if it exists. Here is the format of this file:
+`fmm` accepts a `--config` flag with a path to a [`toml`](https://toml.io/en/) configuration file. If `--config` is not provided, `fmm` will look for this file in `$XDG_CONFIG_HOME/fmm/fmm.toml` and source it if it exists.
 
 ```toml
 # The path to the Factorio mods directory
