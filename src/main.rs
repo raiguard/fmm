@@ -33,7 +33,7 @@ struct App {
     #[structopt(short = "a", long)]
     enable_all: bool,
     /// Enables the mods in the given set
-    #[structopt(short = "s", long)]
+    #[structopt(short = "E", long)]
     enable_set: Option<String>,
     /// Enables the given mods. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
