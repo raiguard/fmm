@@ -23,17 +23,30 @@ pub struct SaveFile {
 
 impl SaveFile {
     pub fn from(path: PathBuf) -> Result<Self> {
+        println!("Reading save file...");
         let mut archive = ZipArchive::new(File::open(&path)?)?;
-        let filename = archive
-            .file_names()
-            // TODO: Old saves only have one level.dat and it is not compressed
+        let mut compressed = true;
+        let filenames: Vec<&str> = archive.file_names().collect();
+        let filename = filenames
+            .iter()
             .find(|filename| filename.contains("level.dat0"))
+            .or_else(|| {
+                compressed = false;
+                filenames
+                    .iter()
+                    .find(|filename| filename.contains("level.dat"))
+            })
             .map(ToString::to_string)
             .ok_or(SaveFileErr::NoLevelDat)?;
         let file = archive.by_name(&filename)?;
 
-        let mut decompressed = Vec::new();
-        zlib::Decoder::new(file).read_to_end(&mut decompressed)?;
+        let decompressed = if compressed {
+            let mut bytes = Vec::new();
+            zlib::Decoder::new(file).read_to_end(&mut bytes)?;
+            bytes
+        } else {
+            file.bytes().filter_map(|byte| byte.ok()).collect()
+        };
 
         let mut reader = Cursor::new(decompressed);
         let version_major = reader.read_u16::<LittleEndian>()?;
