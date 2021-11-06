@@ -1,9 +1,12 @@
 use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt};
 use compress::zlib;
-use std::fs::{DirEntry, File};
+use semver::Version;
+use std::fs::File;
+use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::Read;
+use std::io::SeekFrom;
 use std::path::PathBuf;
 use thiserror::Error;
 use zip::ZipArchive;
@@ -11,9 +14,11 @@ use zip::ZipArchive;
 use crate::types::ModIdent;
 
 pub struct SaveFile {
-    pub entry: DirEntry,
+    pub map_version: Version,
     pub mods: Vec<ModIdent>,
     pub path: PathBuf,
+    pub scenario_mod_name: String,
+    pub scenario: String,
 }
 
 impl SaveFile {
@@ -21,6 +26,7 @@ impl SaveFile {
         let mut archive = ZipArchive::new(File::open(&path)?)?;
         let filename = archive
             .file_names()
+            // TODO: Old saves only have one level.dat and it is not compressed
             .find(|filename| filename.contains("level.dat0"))
             .map(ToString::to_string)
             .ok_or(SaveFileErr::NoLevelDat)?;
@@ -33,24 +39,58 @@ impl SaveFile {
         let version_major = reader.read_u16::<LittleEndian>()?;
         let version_minor = reader.read_u16::<LittleEndian>()?;
         let version_patch = reader.read_u16::<LittleEndian>()?;
-        let version_build = reader.read_u16::<LittleEndian>()?;
+        // let _version_build = reader.read_u16::<LittleEndian>()?;
 
-        println!(
-            "{}.{}.{}.{}",
-            version_major, version_minor, version_patch, version_build
-        );
+        reader.seek(SeekFrom::Current(4))?;
 
-        // Factorio level.dat format
-        // First eight bytes are the map version
-        // Then magic
-        // Then mods
+        let scenario_name = read_string(&mut reader)?;
+        let scenario_mod_name = read_string(&mut reader)?;
 
-        todo!()
+        reader.seek(SeekFrom::Current(14))?;
+
+        let num_mods = reader.read_u8()?;
+
+        let mut mods = Vec::with_capacity(num_mods as usize);
+        for _ in 0..num_mods {
+            mods.push(read_mod(&mut reader)?);
+        }
+
+        Ok(Self {
+            mods,
+            map_version: Version::new(
+                version_major as u64,
+                version_minor as u64,
+                version_patch as u64,
+            ),
+            path,
+            scenario: scenario_name,
+            scenario_mod_name,
+        })
     }
 }
 
 #[derive(Debug, Error)]
 pub enum SaveFileErr {
-    #[error("No level-init.dat was found in the save file")]
+    #[error("No level.dat was found in the save file")]
     NoLevelDat,
+}
+
+fn read_string(reader: &mut Cursor<Vec<u8>>) -> Result<String> {
+    let scenario_len = reader.read_u8()?;
+    let mut scenario_name = vec![0; scenario_len as usize];
+    reader.read_exact(&mut scenario_name)?;
+
+    Ok(String::from_utf8_lossy(&scenario_name).to_string())
+}
+
+fn read_mod(reader: &mut Cursor<Vec<u8>>) -> Result<ModIdent> {
+    let mod_name = read_string(reader)?;
+
+    // TODO: Read mod versions
+    reader.seek(SeekFrom::Current(7))?;
+
+    Ok(ModIdent {
+        name: mod_name,
+        version_req: None,
+    })
 }

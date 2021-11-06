@@ -1,4 +1,6 @@
 # v0.3.1 - ??????????
+## Features
+- Added `--sync` flag, for enabling mods that are in the given save file
 
 # v0.3.0 - 2021-11-06
 ## Features

@@ -90,8 +90,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     })?;
 
+    // Sync with save
     if let Some(sync_path) = app.sync {
-        sync::SaveFile::from(sync_path)?;
+        let save_file = sync::SaveFile::from(sync_path)?;
+
+        app.enable = save_file.mods;
     }
 
     // Remove specified mods
