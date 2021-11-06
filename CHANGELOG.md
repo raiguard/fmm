@@ -4,6 +4,8 @@
   - These sets can be configured in `fmm.toml`
 ## Changes
 - "Mod is already enabled" messages were removed - they hurt more than they helped
+## Bugfixes
+- Fixed that versionless mod folders with an underscore would not be parsed correctly
 
 # v0.2.0 - 2021-11-03
 ## Features
