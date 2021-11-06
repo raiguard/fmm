@@ -11,7 +11,7 @@ keywords = ["factorio", "cli", "structopt", "manager", "mod"]
 
 [dependencies]
 anyhow = "1.0.45"
-binread = "2.2.0"
+byteorder = "1.4.3"
 directories = "3.0.2"
 json = "0.12.4"
 once_cell = "1.7.2"

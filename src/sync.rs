@@ -1,5 +1,8 @@
 use anyhow::Result;
+use byteorder::{LittleEndian, ReadBytesExt};
 use std::fs::{DirEntry, File};
+use std::io::Cursor;
+use std::io::Read;
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -22,6 +25,23 @@ impl SaveFile {
             .map(ToString::to_string)
             .ok_or(SaveFileErr::NoLevelDat)?;
         let file = archive.by_name(&filename)?;
+        let bytes: Vec<u8> = file.bytes().filter_map(|byte| byte.ok()).collect();
+        let mut reader = Cursor::new(bytes);
+
+        let version_major = reader.read_u16::<LittleEndian>()?;
+        let version_minor = reader.read_u16::<LittleEndian>()?;
+        let version_patch = reader.read_u16::<LittleEndian>()?;
+        let version_build = reader.read_u16::<LittleEndian>()?;
+
+        println!(
+            "{}.{}.{}.{}",
+            version_major, version_minor, version_patch, version_build
+        );
+
+        // Factorio level.dat format
+        // First eight bytes are the map version
+        // Then magic
+        // Then mods
 
         todo!()
     }
@@ -29,6 +49,6 @@ impl SaveFile {
 
 #[derive(Debug, Error)]
 pub enum SaveFileErr {
-    #[error("No level-init.dat or level.dat was found in the save file")]
+    #[error("No level-init.dat was found in the save file")]
     NoLevelDat,
 }
