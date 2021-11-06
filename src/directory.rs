@@ -18,19 +18,6 @@ pub struct Directory {
     pub mod_list_path: PathBuf,
 }
 
-fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {
-    let (name, version) = file_name
-        .to_str()?
-        .trim_end_matches(".zip")
-        .rsplit_once("_")?;
-
-    if let Ok(version) = Version::parse(version) {
-        Some((name.to_string(), version))
-    } else {
-        None
-    }
-}
-
 impl Directory {
     pub fn new(dir: PathBuf) -> Result<Self, Box<dyn Error>> {
         // Get all mods in the directory
@@ -213,6 +200,19 @@ impl Directory {
         {
             self.mod_list.remove(index);
         }
+    }
+}
+
+fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {
+    let (name, version) = file_name
+        .to_str()?
+        .trim_end_matches(".zip")
+        .rsplit_once("_")?;
+
+    if let Ok(version) = Version::parse(version) {
+        Some((name.to_string(), version))
+    } else {
+        None
     }
 }
 
