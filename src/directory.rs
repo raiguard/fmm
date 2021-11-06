@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
+use std::ffi::OsString;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
@@ -23,20 +24,11 @@ impl Directory {
         let mod_entries = fs::read_dir(&dir)?
             .filter_map(|entry| {
                 let entry = entry.ok()?;
-                let file_name = entry.file_name();
 
-                if let Some((mod_name, version)) = file_name.to_str()?.rsplit_once("_") {
-                    let (version, _) = version.rsplit_once(".").unwrap_or((version, "")); // Strip file extension
-                    Some((
-                        mod_name.to_string(),
-                        ModVersion {
-                            entry,
-                            version: Version::parse(version).ok()?,
-                        },
-                    ))
+                if let Some((mod_name, version)) = parse_file_name(&entry.file_name()) {
+                    Some((mod_name, ModVersion { entry, version }))
                 } else {
                     let info_json = read_info_json(&entry)?;
-
                     Some((
                         info_json.name,
                         ModVersion {
@@ -208,6 +200,19 @@ impl Directory {
         {
             self.mod_list.remove(index);
         }
+    }
+}
+
+fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {
+    let (name, version) = file_name
+        .to_str()?
+        .trim_end_matches(".zip")
+        .rsplit_once("_")?;
+
+    if let Ok(version) = Version::parse(version) {
+        Some((name.to_string(), version))
+    } else {
+        None
     }
 }
 

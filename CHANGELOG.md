@@ -1,9 +1,13 @@
-# v0.3.0 - ??????????
+# v0.3.1 - ??????????
+
+# v0.3.0 - 2021-11-06
 ## Features
 - Added `--enable-set` flag, for enabling pre-defined sets of mods
   - These sets can be configured in `fmm.toml`
 ## Changes
 - "Mod is already enabled" messages were removed - they hurt more than they helped
+## Bugfixes
+- Fixed that versionless mod folders with an underscore would not be parsed correctly
 
 # v0.2.0 - 2021-11-03
 ## Features
