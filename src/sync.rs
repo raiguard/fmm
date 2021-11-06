@@ -13,7 +13,7 @@ use zip::ZipArchive;
 
 use crate::types::ModIdent;
 
-const ONE_MEBIBYTE: usize = 1_048_576;
+const READ_SIZE: usize = 1_048_576;
 
 pub struct SaveFile {
     pub map_version: Version,
@@ -43,37 +43,35 @@ impl SaveFile {
         let file = archive.by_name(&filename)?;
 
         let decompressed = if compressed {
-            // Pre-allocate 1 MiB just in case
-            let mut bytes = Vec::with_capacity(ONE_MEBIBYTE);
+            let mut bytes = Vec::with_capacity(READ_SIZE);
             zlib::Decoder::new(file).read_exact(&mut bytes)?;
             bytes
         } else {
-            // Limit to 1 MiB to avoid problems with giant level.dats
             file.bytes()
-                .take(ONE_MEBIBYTE)
+                .take(READ_SIZE)
                 .filter_map(|byte| byte.ok())
                 .collect()
         };
 
-        let mut reader = Cursor::new(decompressed);
-        let version_major = reader.read_u16::<LittleEndian>()?;
-        let version_minor = reader.read_u16::<LittleEndian>()?;
-        let version_patch = reader.read_u16::<LittleEndian>()?;
-        let _version_build = reader.read_u16::<LittleEndian>()?;
+        let mut cursor = Cursor::new(decompressed);
+        let version_major = cursor.read_u16::<LittleEndian>()?;
+        let version_minor = cursor.read_u16::<LittleEndian>()?;
+        let version_patch = cursor.read_u16::<LittleEndian>()?;
+        let _version_build = cursor.read_u16::<LittleEndian>()?;
 
-        reader.seek(SeekFrom::Current(2))?;
+        cursor.seek(SeekFrom::Current(2))?;
 
-        let scenario_name = read_string(&mut reader)?;
-        let scenario_mod_name = read_string(&mut reader)?;
+        let scenario_name = read_string(&mut cursor)?;
+        let scenario_mod_name = read_string(&mut cursor)?;
 
         // TODO: Handle campaigns
-        reader.seek(SeekFrom::Current(14))?;
+        cursor.seek(SeekFrom::Current(14))?;
 
-        let num_mods = reader.read_u8()?;
+        let num_mods = cursor.read_u8()?;
 
         let mut mods = Vec::with_capacity(num_mods as usize);
         for _ in 0..num_mods {
-            mods.push(read_mod(&mut reader)?);
+            mods.push(read_mod(&mut cursor)?);
         }
 
         Ok(Self {
