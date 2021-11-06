@@ -1,4 +1,4 @@
-# v0.3.0 - ??????????
+# v0.3.0 - 2021-11-06
 ## Features
 - Added `--enable-set` flag, for enabling pre-defined sets of mods
   - These sets can be configured in `fmm.toml`
