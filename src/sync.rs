@@ -13,6 +13,8 @@ use zip::ZipArchive;
 
 use crate::types::ModIdent;
 
+const ONE_MEBIBYTE: usize = 1_048_576;
+
 pub struct SaveFile {
     pub map_version: Version,
     pub mods: Vec<ModIdent>,
@@ -41,24 +43,30 @@ impl SaveFile {
         let file = archive.by_name(&filename)?;
 
         let decompressed = if compressed {
-            let mut bytes = Vec::new();
-            zlib::Decoder::new(file).read_to_end(&mut bytes)?;
+            // Pre-allocate 1 MiB just in case
+            let mut bytes = Vec::with_capacity(ONE_MEBIBYTE);
+            zlib::Decoder::new(file).read_exact(&mut bytes)?;
             bytes
         } else {
-            file.bytes().filter_map(|byte| byte.ok()).collect()
+            // Limit to 1 MiB to avoid problems with giant level.dats
+            file.bytes()
+                .take(ONE_MEBIBYTE)
+                .filter_map(|byte| byte.ok())
+                .collect()
         };
 
         let mut reader = Cursor::new(decompressed);
         let version_major = reader.read_u16::<LittleEndian>()?;
         let version_minor = reader.read_u16::<LittleEndian>()?;
         let version_patch = reader.read_u16::<LittleEndian>()?;
-        // let _version_build = reader.read_u16::<LittleEndian>()?;
+        let _version_build = reader.read_u16::<LittleEndian>()?;
 
-        reader.seek(SeekFrom::Current(4))?;
+        reader.seek(SeekFrom::Current(2))?;
 
         let scenario_name = read_string(&mut reader)?;
         let scenario_mod_name = read_string(&mut reader)?;
 
+        // TODO: Handle campaigns
         reader.seek(SeekFrom::Current(14))?;
 
         let num_mods = reader.read_u8()?;
