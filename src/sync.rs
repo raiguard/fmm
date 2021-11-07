@@ -44,7 +44,7 @@ impl SaveFile {
 
         let decompressed = if compressed {
             let mut bytes = Vec::with_capacity(READ_SIZE);
-            zlib::Decoder::new(file).read_exact(&mut bytes)?;
+            zlib::Decoder::new(file).read_to_end(&mut bytes)?;
             bytes
         } else {
             file.bytes()
