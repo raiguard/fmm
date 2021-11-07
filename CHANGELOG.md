@@ -1,5 +1,6 @@
 # v0.4.0 - ??????????
 ## Features
+- Added `--list` flag, for listing all of the mods in the directory
 - Added `--sync` flag, for enabling mods that are in the given save file
 
 # v0.3.0 - 2021-11-06

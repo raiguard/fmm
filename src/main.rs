@@ -40,6 +40,9 @@ struct App {
     /// Enables the given mods. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
     enable: Vec<ModIdent>,
+    /// Lists all mods in the directory
+    #[structopt(short, long)]
+    list: bool,
     /// Removes the given mods from the mods directory. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
     remove: Vec<ModIdent>,
@@ -90,6 +93,23 @@ fn main() -> Result<()> {
             ))
         }
     })?;
+
+    // List mods
+    if app.list {
+        let mut lines: Vec<String> = directory
+            .mods
+            .iter()
+            .flat_map(|(mod_name, mod_versions)| {
+                mod_versions
+                    .iter()
+                    .map(|version| format!("{} v{}", mod_name, version.version))
+                    .collect::<Vec<String>>()
+            })
+            .collect();
+
+        lines.sort();
+        lines.iter().for_each(|line| println!("{}", line));
+    }
 
     // Sync with save
     if let Some(sync_path) = app.sync {
