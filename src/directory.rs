@@ -1,5 +1,5 @@
+use anyhow::Result;
 use std::collections::HashMap;
-use std::error::Error;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::{DirEntry, File};
@@ -19,7 +19,7 @@ pub struct Directory {
 }
 
 impl Directory {
-    pub fn new(dir: PathBuf) -> Result<Self, Box<dyn Error>> {
+    pub fn new(dir: PathBuf) -> Result<Self> {
         // Get all mods in the directory
         let mod_entries = fs::read_dir(&dir)?
             .filter_map(|entry| {

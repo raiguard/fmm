@@ -1,6 +1,7 @@
 #![feature(iter_intersperse)]
 
-use std::error::Error;
+use anyhow::anyhow;
+use anyhow::Result;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -48,7 +49,7 @@ struct App {
 }
 
 impl App {
-    fn merge_config(&mut self, config_file: ConfigFile) -> Result<(), Box<dyn Error>> {
+    fn merge_config(&mut self, config_file: ConfigFile) -> Result<()> {
         // Directory
         if let Some(directory) = config_file.directory {
             self.dir = Some(directory);
@@ -60,7 +61,7 @@ impl App {
                 if let Some(set) = sets.get(set_name) {
                     self.enable = set.to_vec()
                 } else {
-                    return Err(format!("Set `{}` is not defined", set_name).into());
+                    return Err(anyhow!("Set `{}` is not defined", set_name));
                 }
             }
         }
@@ -74,7 +75,7 @@ impl App {
 // - Only read ZIPs if we need to get dependencies or other info
 // - Cache will only be used once we have advanced features that would benefit from it
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     let mut app = App::from_args();
 
     if let Some(config) = ConfigFile::new(&app.config)? {
@@ -84,9 +85,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut directory = Directory::new(match app.dir {
         Some(dir) => dir,
         None => {
-            return Err(
-                "Must specify a directory path via flag or via the configuration file.".into(),
-            )
+            return Err(anyhow!(
+                "Must specify a directory path via flag or via the configuration file."
+            ))
         }
     })?;
 
