@@ -22,9 +22,12 @@ struct App {
     /// The path to the configuration file
     #[structopt(long)]
     config: Option<PathBuf>,
-    /// The mods directory to manipulate. Optional if a configuration file is in use
+    /// The directory of the Factorio installation
     #[structopt(long)]
-    dir: Option<PathBuf>,
+    game_dir: Option<PathBuf>,
+    /// The directory where mods are kept. Defaults to factorio-dir/mods
+    #[structopt(long)]
+    mods_dir: Option<PathBuf>,
     /// Disables all mods in the directory
     #[structopt(short = "o", long)]
     disable_all: bool,
@@ -53,10 +56,26 @@ struct App {
 
 impl App {
     fn merge_config(&mut self, config_file: ConfigFile) -> Result<()> {
-        // Directory
-        if let Some(directory) = config_file.directory {
-            self.dir = Some(directory);
-        }
+        // Directories
+        match [config_file.game_dir, config_file.mods_dir] {
+            [Some(game_dir), Some(mods_dir)] => {
+                self.game_dir = Some(game_dir);
+                self.mods_dir = Some(mods_dir);
+            }
+            [Some(game_dir), None] => {
+                let mut mods_dir = game_dir.clone();
+                mods_dir.push("mods");
+                if !mods_dir.exists() {
+                    return Err(anyhow!("Mods directory is not in the expected location."));
+                }
+                self.game_dir = Some(game_dir);
+                self.mods_dir = Some(mods_dir);
+            }
+            [None, Some(mods_dir)] => {
+                self.mods_dir = Some(mods_dir);
+            }
+            _ => (),
+        };
 
         // Mod sets
         if let Some(set_name) = &self.enable_set {
@@ -85,7 +104,7 @@ fn main() -> Result<()> {
         app.merge_config(config)?;
     }
 
-    let mut directory = Directory::new(match app.dir {
+    let mut directory = Directory::new(match app.mods_dir {
         Some(dir) => dir,
         None => {
             return Err(anyhow!(

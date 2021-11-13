@@ -11,7 +11,8 @@ use crate::types::ModIdent;
 #[serde_as]
 #[derive(Deserialize)]
 pub struct ConfigFile {
-    pub directory: Option<PathBuf>,
+    pub game_dir: Option<PathBuf>,
+    pub mods_dir: Option<PathBuf>,
     #[serde_as(as = "Option<HashMap<_, Vec<DisplayFromStr>>>")]
     pub sets: Option<HashMap<String, Vec<ModIdent>>>,
 }
