@@ -19,7 +19,7 @@ pub struct Directory {
 }
 
 impl Directory {
-    pub fn new(dir: PathBuf) -> Result<Self> {
+    pub fn new(dir: &PathBuf) -> Result<Self> {
         // Get all mods in the directory
         let mod_entries = fs::read_dir(&dir)?
             .filter_map(|entry| {
@@ -50,7 +50,7 @@ impl Directory {
             });
 
         // Parse mod-list.json
-        let mut mlj_path = dir;
+        let mut mlj_path = dir.clone();
         mlj_path.push("mod-list.json");
         let enabled_versions = fs::read_to_string(&mlj_path)?;
         let mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
@@ -58,7 +58,7 @@ impl Directory {
         Ok(Self {
             mods: mod_entries,
             mod_list: mod_list_json.mods,
-            mod_list_path: mlj_path,
+            mod_list_path: mlj_path.clone(),
         })
     }
 

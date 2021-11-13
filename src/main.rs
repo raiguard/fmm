@@ -1,10 +1,15 @@
 use anyhow::Result;
-use structopt::StructOpt;
 
-use fmm::cli;
+use fmm::input::proc_input;
 use fmm::run;
 
 fn main() -> Result<()> {
-    let app = cli::App::from_args();
-    run(app)
+    let (actions, config, directory) = proc_input()?;
+
+    println!("{:#?}", actions);
+    println!("{:#?}", config);
+
+    // run(actions)
+
+    Ok(())
 }
