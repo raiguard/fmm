@@ -168,38 +168,6 @@ pub fn proc_input() -> Result<(Actions, Config, Directory)> {
     Ok((actions, config, directory))
 }
 
-// cycle = cycle
-//     .iter_mut()
-//     .filter(|mod_ident| mod_ident.name != "base")
-//     .flat_map(|mod_ident| {
-//         directory
-//             .get_mut(mod_ident)
-//             .and_then(|mod_version| mod_version.get_info_json())
-//             .and_then(|info_json| info_json.dependencies.as_ref())
-//             .map(|dependencies| {
-//                 dependencies
-//                     .iter()
-//                     .filter(|dependency| {
-//                         dependency.name != "base"
-//                             && matches!(
-//                                 dependency.dep_type,
-//                                 ModDependencyType::NoLoadOrder
-//                                     | ModDependencyType::Required
-//                             )
-//                     })
-//                     .map(|dependency| ModIdent {
-//                         name: dependency.name.clone(),
-//                         version_req: dependency.version_req.clone(),
-//                     })
-//                     .collect::<Vec<ModIdent>>()
-//             })
-//     })
-//     .flatten()
-//     .collect();
-
-// println!("{:#?}", cycle);
-// mods.extend(cycle.clone());
-
 #[derive(StructOpt)]
 #[structopt(name = "fmm", about = "Manage your Factorio mods.")]
 struct Args {
