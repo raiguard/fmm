@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 use thiserror::Error;
 
+use crate::dependency::ModDependencyType;
 use crate::directory::Directory;
 use crate::types::*;
 
@@ -89,7 +90,7 @@ pub fn proc_input() -> Result<(Actions, Config, Directory)> {
     };
 
     // Process actions
-    let directory = Directory::new(&config.mods_dir)?;
+    let mut directory = Directory::new(&config.mods_dir)?;
     let mut actions = Actions {
         remove: args.remove,
         ..Default::default()
@@ -118,17 +119,86 @@ pub fn proc_input() -> Result<(Actions, Config, Directory)> {
                 ModifyType::None => ModifyType::Some(args.enable),
                 ModifyType::Some(mut mods) => {
                     mods.extend(args.enable);
+
                     ModifyType::Some(mods)
                 }
                 ModifyType::All => ModifyType::All,
             };
         }
+
+        // Add dependencies to the list
+        if let ModifyType::Some(ref mut mods) = actions.enable {
+            let mut cycle = mods.clone();
+            while !cycle.is_empty() {
+                cycle = cycle
+                    .iter()
+                    .filter(|mod_ident| mod_ident.name != "base")
+                    .filter_map(|mod_ident| {
+                        directory
+                            .get_mut(mod_ident)
+                            .and_then(|mod_version| {
+                                mod_version.get_info_json()?.dependencies.as_ref()
+                            })
+                            .map(|dependencies| {
+                                dependencies
+                                    .iter()
+                                    .filter(|dependency| {
+                                        dependency.name != "base"
+                                            && matches!(
+                                                dependency.dep_type,
+                                                ModDependencyType::NoLoadOrder
+                                                    | ModDependencyType::Required
+                                            )
+                                    })
+                                    .map(|dependency| ModIdent {
+                                        name: dependency.name.clone(),
+                                        version_req: dependency.version_req.clone(),
+                                    })
+                                    .collect::<Vec<ModIdent>>()
+                            })
+                    })
+                    .flatten()
+                    .collect();
+
+                mods.extend(cycle.clone());
+            }
+        }
     }
-    // TODO: Get dependencies for all mods and extend the list with them
-    // We want to memoize the info.json parsing into the `Directories` struct
 
     Ok((actions, config, directory))
 }
+
+// cycle = cycle
+//     .iter_mut()
+//     .filter(|mod_ident| mod_ident.name != "base")
+//     .flat_map(|mod_ident| {
+//         directory
+//             .get_mut(mod_ident)
+//             .and_then(|mod_version| mod_version.get_info_json())
+//             .and_then(|info_json| info_json.dependencies.as_ref())
+//             .map(|dependencies| {
+//                 dependencies
+//                     .iter()
+//                     .filter(|dependency| {
+//                         dependency.name != "base"
+//                             && matches!(
+//                                 dependency.dep_type,
+//                                 ModDependencyType::NoLoadOrder
+//                                     | ModDependencyType::Required
+//                             )
+//                     })
+//                     .map(|dependency| ModIdent {
+//                         name: dependency.name.clone(),
+//                         version_req: dependency.version_req.clone(),
+//                     })
+//                     .collect::<Vec<ModIdent>>()
+//             })
+//     })
+//     .flatten()
+//     .collect();
+
+// println!("{:#?}", cycle);
+// mods.extend(cycle.clone());
 
 #[derive(StructOpt)]
 #[structopt(name = "fmm", about = "Manage your Factorio mods.")]

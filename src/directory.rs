@@ -1,10 +1,11 @@
 use anyhow::Result;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use semver::{Version, VersionReq};
 use zip::ZipArchive;
@@ -19,21 +20,29 @@ pub struct Directory {
 }
 
 impl Directory {
-    pub fn new(dir: &PathBuf) -> Result<Self> {
+    pub fn new(dir: &Path) -> Result<Self> {
         // Get all mods in the directory
         let mod_entries = fs::read_dir(&dir)?
             .filter_map(|entry| {
                 let entry = entry.ok()?;
 
                 if let Some((mod_name, version)) = parse_file_name(&entry.file_name()) {
-                    Some((mod_name, ModVersion { entry, version }))
+                    Some((
+                        mod_name,
+                        ModVersion {
+                            entry,
+                            version,
+                            info_json: None,
+                        },
+                    ))
                 } else {
                     let info_json = read_info_json(&entry)?;
                     Some((
-                        info_json.name,
+                        info_json.name.clone(),
                         ModVersion {
                             entry,
-                            version: info_json.version,
+                            version: info_json.version.clone(),
+                            info_json: Some(info_json),
                         },
                     ))
                 }
@@ -50,7 +59,7 @@ impl Directory {
             });
 
         // Parse mod-list.json
-        let mut mlj_path = dir.clone();
+        let mut mlj_path = dir.to_owned();
         mlj_path.push("mod-list.json");
         let enabled_versions = fs::read_to_string(&mlj_path)?;
         let mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
@@ -59,6 +68,19 @@ impl Directory {
             mods: mod_entries,
             mod_list: mod_list_json.mods,
             mod_list_path: mlj_path.clone(),
+        })
+    }
+
+    pub fn get_mut(&mut self, mod_ident: &ModIdent) -> Option<&mut ModVersion> {
+        self.mods.get_mut(&mod_ident.name).and_then(|mod_versions| {
+            if let Some(version_req) = &mod_ident.version_req {
+                mod_versions
+                    .iter_mut()
+                    .rev()
+                    .find(|version| version_req.matches(&version.version))
+            } else {
+                mod_versions.last_mut()
+            }
         })
     }
 
@@ -92,7 +114,7 @@ impl Directory {
         }
     }
 
-    pub fn enable(&mut self, mod_ident: &ModIdent) -> Option<Vec<ModIdent>> {
+    pub fn enable(&mut self, mod_ident: &ModIdent) {
         let mod_entry = self.mods.get(&mod_ident.name).and_then(|mod_versions| {
             if let Some(version_req) = &mod_ident.version_req {
                 mod_versions
@@ -130,31 +152,10 @@ impl Directory {
                         version,
                     });
                 }
-
-                return Some(
-                    read_info_json(&mod_entry.entry)
-                        .and_then(|info_json| info_json.dependencies)
-                        .unwrap_or_default()
-                        .iter()
-                        .filter(|dependency| {
-                            dependency.name != "base"
-                                && matches!(
-                                    dependency.dep_type,
-                                    ModDependencyType::NoLoadOrder | ModDependencyType::Required
-                                )
-                        })
-                        .map(|dependency| ModIdent {
-                            name: dependency.name.clone(),
-                            version_req: dependency.version_req.clone(),
-                        })
-                        .collect(),
-                );
             }
         } else {
             println!("Could not find or read {}", &mod_ident);
         }
-
-        None
     }
 
     pub fn enable_all(&mut self) {
@@ -202,6 +203,42 @@ impl Directory {
         }
     }
 }
+
+pub struct ModVersion {
+    pub entry: DirEntry,
+    pub version: Version,
+    pub info_json: Option<InfoJson>,
+}
+
+impl ModVersion {
+    pub fn get_info_json(&mut self) -> Option<&InfoJson> {
+        if self.info_json.is_none() {
+            let info_json = read_info_json(&self.entry);
+            self.info_json = info_json;
+        }
+        self.info_json.as_ref()
+    }
+}
+
+impl PartialOrd for ModVersion {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.version.partial_cmp(&other.version)
+    }
+}
+
+impl Ord for ModVersion {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.version.cmp(&other.version)
+    }
+}
+
+impl PartialEq for ModVersion {
+    fn eq(&self, other: &Self) -> bool {
+        self.version == other.version
+    }
+}
+
+impl Eq for ModVersion {}
 
 fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {
     let (name, version) = file_name

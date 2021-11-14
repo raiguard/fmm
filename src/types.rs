@@ -86,31 +86,6 @@ pub enum InputModErr {
     InvalidVersion(String),
 }
 
-pub struct ModVersion {
-    pub entry: DirEntry,
-    pub version: Version,
-}
-
-impl PartialOrd for ModVersion {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.version.partial_cmp(&other.version)
-    }
-}
-
-impl Ord for ModVersion {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.version.cmp(&other.version)
-    }
-}
-
-impl PartialEq for ModVersion {
-    fn eq(&self, other: &Self) -> bool {
-        self.version == other.version
-    }
-}
-
-impl Eq for ModVersion {}
-
 #[derive(Debug)]
 pub enum ModEntryStructure {
     Directory,
