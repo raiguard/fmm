@@ -14,19 +14,20 @@ use crate::types::*;
 
 #[derive(Debug, Default)]
 pub struct Actions {
-    pub disable: ModifierType,
+    pub remove: Vec<ModIdent>,
+    pub disable: ModifyType,
     pub download: Vec<ModIdent>,
-    pub enable: ModifierType,
+    pub enable: ModifyType,
 }
 
 #[derive(Debug)]
-pub enum ModifierType {
+pub enum ModifyType {
     All,
     Some(Vec<ModIdent>),
     None,
 }
 
-impl Default for ModifierType {
+impl Default for ModifyType {
     fn default() -> Self {
         Self::None
     }
@@ -58,7 +59,7 @@ pub fn proc_input() -> Result<(Actions, Config, Directory)> {
             mods_dir: match [game_dir.clone(), args.mods_dir.or(config_file.mods_dir)] {
                 [_, Some(mods_dir)] if mods_dir.exists() => mods_dir,
                 [Some(game_dir), None] if game_dir.exists() => {
-                    let mut mods_dir = game_dir.clone();
+                    let mut mods_dir = game_dir;
                     mods_dir.push("mods");
                     if !mods_dir.exists() {
                         return Err(anyhow!("Could not find mods directory"));
@@ -87,11 +88,44 @@ pub fn proc_input() -> Result<(Actions, Config, Directory)> {
         }
     };
 
-    // Create directory object
-    let directory = Directory::new(&config.mods_dir)?;
-
     // Process actions
-    let actions = Actions::default();
+    let directory = Directory::new(&config.mods_dir)?;
+    let mut actions = Actions {
+        remove: args.remove,
+        ..Default::default()
+    };
+
+    // Disabling
+    if args.disable_all {
+        actions.disable = ModifyType::All;
+    } else if !args.disable.is_empty() {
+        actions.disable = ModifyType::Some(args.disable);
+    }
+
+    // TODO: Downloading
+
+    // Enabling
+    if args.enable_all {
+        actions.enable = ModifyType::All;
+    } else {
+        if let Some(set_name) = args.enable_set {
+            if let Some(set) = config_file.sets.and_then(|mut sets| sets.remove(&set_name)) {
+                actions.enable = ModifyType::Some(set);
+            }
+        }
+        if !args.enable.is_empty() {
+            actions.enable = match actions.enable {
+                ModifyType::None => ModifyType::Some(args.enable),
+                ModifyType::Some(mut mods) => {
+                    mods.extend(args.enable);
+                    ModifyType::Some(mods)
+                }
+                ModifyType::All => ModifyType::All,
+            };
+        }
+    }
+    // TODO: Get dependencies for all mods and extend the list with them
+    // We want to memoize the info.json parsing into the `Directories` struct
 
     Ok((actions, config, directory))
 }
@@ -183,39 +217,3 @@ struct PlayerDataJson {
     service_username: Option<String>,
     service_token: Option<String>,
 }
-
-// pub fn merge_config(&mut self, config_file: ConfigFile) -> Result<()> {
-//     // Directories
-//     match [config_file.game_dir, config_file.mods_dir] {
-//         [Some(game_dir), Some(mods_dir)] => {
-//             self.game_dir = Some(game_dir);
-//             self.mods_dir = Some(mods_dir);
-//         }
-//         [Some(game_dir), None] => {
-//             let mut mods_dir = game_dir.clone();
-//             mods_dir.push("mods");
-//             if !mods_dir.exists() {
-//                 return Err(anyhow!("Mods directory is not in the expected location."));
-//             }
-//             self.game_dir = Some(game_dir);
-//             self.mods_dir = Some(mods_dir);
-//         }
-//         [None, Some(mods_dir)] => {
-//             self.mods_dir = Some(mods_dir);
-//         }
-//         _ => (),
-//     };
-
-//     // Mod sets
-//     if let Some(set_name) = &self.enable_set {
-//         if let Some(sets) = config_file.sets {
-//             if let Some(set) = sets.get(set_name) {
-//                 self.enable = set.to_vec()
-//             } else {
-//                 return Err(anyhow!("Set `{}` is not defined", set_name));
-//             }
-//         }
-//     }
-
-//     Ok(())
-// }
