@@ -11,6 +11,7 @@ use thiserror::Error;
 
 use crate::dependency::ModDependencyType;
 use crate::directory::Directory;
+use crate::sync;
 use crate::types::*;
 
 #[derive(Debug, Default)]
@@ -106,12 +107,32 @@ pub fn proc_input() -> Result<(Actions, Config, Directory)> {
     // TODO: Downloading
 
     // Enabling
+    // TODO: This whole thing needs to be cleaned up
     if args.enable_all {
         actions.enable = ModifyType::All;
     } else {
+        if let Some(path) = args.sync {
+            if let Ok(save_file) = sync::SaveFile::from(path) {
+                actions.enable = match actions.enable {
+                    ModifyType::None => ModifyType::Some(save_file.mods),
+                    ModifyType::Some(mut mods) => {
+                        mods.extend(save_file.mods);
+                        ModifyType::Some(mods)
+                    }
+                    ModifyType::All => ModifyType::All,
+                }
+            }
+        }
         if let Some(set_name) = args.enable_set {
             if let Some(set) = config_file.sets.and_then(|mut sets| sets.remove(&set_name)) {
-                actions.enable = ModifyType::Some(set);
+                actions.enable = match actions.enable {
+                    ModifyType::None => ModifyType::Some(set),
+                    ModifyType::Some(mut mods) => {
+                        mods.extend(set);
+                        ModifyType::Some(mods)
+                    }
+                    ModifyType::All => todo!(),
+                };
             }
         }
         if !args.enable.is_empty() {
