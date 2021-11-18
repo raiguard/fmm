@@ -1,6 +1,5 @@
 #![feature(iter_intersperse)]
 
-use anyhow::anyhow;
 use anyhow::Result;
 use std::fs;
 use std::path::PathBuf;
@@ -16,15 +15,12 @@ use config::*;
 use directory::*;
 use types::*;
 
-#[derive(StructOpt)]
+#[derive(Clone, StructOpt)]
 #[structopt(name = "fmm", about = "Manage your Factorio mods.")]
-struct App {
+pub struct App {
     /// The path to the configuration file
     #[structopt(long)]
     config: Option<PathBuf>,
-    /// The mods directory to manipulate. Optional if a configuration file is in use
-    #[structopt(long)]
-    dir: Option<PathBuf>,
     /// Disables all mods in the directory
     #[structopt(short = "o", long)]
     disable_all: bool,
@@ -40,37 +36,21 @@ struct App {
     /// Enables the given mods. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
     enable: Vec<ModIdent>,
+    /// The game directory to manipulate. Optional if a configuration file is in use
+    #[structopt(long)]
+    game_dir: Option<PathBuf>,
     /// Lists all mods in the directory
     #[structopt(short, long)]
     list: bool,
+    /// The mods directory to manipulate. Optional if a configuration file is in use
+    #[structopt(long)]
+    mods_dir: Option<PathBuf>,
     /// Removes the given mods from the mods directory. Mods are formatted as `Name` or `Name@Version`
     #[structopt(short, long)]
     remove: Vec<ModIdent>,
     /// A path to a save file to sync with
     #[structopt(short, long)]
     sync: Option<PathBuf>,
-}
-
-impl App {
-    fn merge_config(&mut self, config_file: ConfigFile) -> Result<()> {
-        // Directory
-        if let Some(directory) = config_file.directory {
-            self.dir = Some(directory);
-        }
-
-        // Mod sets
-        if let Some(set_name) = &self.enable_set {
-            if let Some(sets) = config_file.sets {
-                if let Some(set) = sets.get(set_name) {
-                    self.enable = set.to_vec()
-                } else {
-                    return Err(anyhow!("Set `{}` is not defined", set_name));
-                }
-            }
-        }
-
-        Ok(())
-    }
 }
 
 // DESIGN NOTES:
@@ -81,18 +61,9 @@ impl App {
 fn main() -> Result<()> {
     let mut app = App::from_args();
 
-    if let Some(config) = ConfigFile::new(&app.config)? {
-        app.merge_config(config)?;
-    }
+    let config = Config::new(&app)?;
 
-    let mut directory = Directory::new(match app.dir {
-        Some(dir) => dir,
-        None => {
-            return Err(anyhow!(
-                "Must specify a directory path via flag or via the configuration file."
-            ))
-        }
-    })?;
+    let mut directory = Directory::new(&config.mods_dir)?;
 
     // List mods
     if app.list {

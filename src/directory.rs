@@ -4,7 +4,7 @@ use std::ffi::OsString;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use semver::{Version, VersionReq};
 use zip::ZipArchive;
@@ -19,7 +19,7 @@ pub struct Directory {
 }
 
 impl Directory {
-    pub fn new(dir: PathBuf) -> Result<Self> {
+    pub fn new(dir: &Path) -> Result<Self> {
         // Get all mods in the directory
         let mod_entries = fs::read_dir(&dir)?
             .filter_map(|entry| {
@@ -50,7 +50,7 @@ impl Directory {
             });
 
         // Parse mod-list.json
-        let mut mlj_path = dir;
+        let mut mlj_path = dir.to_owned();
         mlj_path.push("mod-list.json");
         let enabled_versions = fs::read_to_string(&mlj_path)?;
         let mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
