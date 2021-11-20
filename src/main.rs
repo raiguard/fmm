@@ -79,7 +79,10 @@ fn main() -> Result<()> {
             .collect();
 
         lines.sort();
-        lines.iter().for_each(|line| println!("{}", line));
+
+        for line in lines {
+            println!("{}", line)
+        }
     }
 
     // Sync with save

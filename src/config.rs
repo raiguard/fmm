@@ -10,6 +10,7 @@ use thiserror::Error;
 use crate::types::ModIdent;
 use crate::App;
 
+#[derive(Debug)]
 pub struct Config {
     pub game_dir: Option<PathBuf>,
     pub mods_dir: PathBuf,
