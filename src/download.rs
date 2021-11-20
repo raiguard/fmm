@@ -76,13 +76,17 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
     let mut hasher = Sha1::new();
 
     while downloaded < total_size {
-        // TODO: Handle interrupted error
-        let bytes = res.read(&mut buf)?;
-        file.write_all(&buf[0..bytes])?;
-        hasher.update(&buf[0..bytes]);
-        // Update progress bar
-        downloaded = min(downloaded + (bytes as u64), total_size);
-        pb.set_position(downloaded);
+        if let Some(bytes) = match res.read(&mut buf) {
+            Ok(bytes) => Some(bytes),
+            Err(err) if matches!(err.kind(), std::io::ErrorKind::Interrupted) => None,
+            Err(err) => return Err(anyhow!(err)),
+        } {
+            file.write_all(&buf[0..bytes])?;
+            hasher.update(&buf[0..bytes]);
+            // Update progress bar
+            downloaded = min(downloaded + (bytes as u64), total_size);
+            pb.set_position(downloaded);
+        }
     }
 
     let hash = hasher.finalize();
