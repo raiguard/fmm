@@ -14,10 +14,62 @@ use crate::dependency::ModDependencyType;
 use crate::types::*;
 
 pub struct Directory {
-    pub mods: HashMap<String, Vec<ModVersion>>,
+    pub mods: Mods,
     pub mod_list: Vec<ModListJsonMod>,
     pub mod_list_path: PathBuf,
 }
+
+// This is required to work around a borrow checker limitation
+// See https://smallcultfollowing.com/babysteps//blog/2021/11/05/view-types/
+pub struct Mods(pub HashMap<String, Vec<ModEntry>>);
+
+impl Mods {
+    pub fn contains(&self, mod_ident: &ModIdent) -> bool {
+        if let Some(mod_versions) = self.0.get(&mod_ident.name) {
+            if let Some(version_req) = &mod_ident.version_req {
+                return mod_versions
+                    .iter()
+                    .rev()
+                    .any(|version| version_req.matches(&version.version));
+            }
+        }
+        false
+    }
+
+    pub fn get(&self, mod_ident: &ModIdent) -> Option<&ModEntry> {
+        self.0.get(&mod_ident.name).and_then(|mod_versions| {
+            if let Some(version_req) = &mod_ident.version_req {
+                mod_versions
+                    .iter()
+                    .rev()
+                    .find(|version| version_req.matches(&version.version))
+            } else {
+                mod_versions.last()
+            }
+        })
+    }
+
+    pub fn get_mut(&mut self, mod_ident: &ModIdent) -> Option<&mut ModEntry> {
+        self.0.get_mut(&mod_ident.name).and_then(|mod_versions| {
+            if let Some(version_req) = &mod_ident.version_req {
+                mod_versions
+                    .iter_mut()
+                    .rev()
+                    .find(|version| version_req.matches(&version.version))
+            } else {
+                mod_versions.last_mut()
+            }
+        })
+    }
+}
+
+// impl Deref for Mods {
+//     type Target = HashMap<String, Vec<ModEntry>>;
+
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
 
 impl Directory {
     pub fn new(dir: &Path) -> Result<Self> {
@@ -27,12 +79,12 @@ impl Directory {
                 let entry = entry.ok()?;
 
                 if let Some((mod_name, version)) = parse_file_name(&entry.file_name()) {
-                    Some((mod_name, ModVersion { entry, version }))
+                    Some((mod_name, ModEntry { entry, version }))
                 } else {
                     let info_json = read_info_json(&entry)?;
                     Some((
                         info_json.name,
-                        ModVersion {
+                        ModEntry {
                             entry,
                             version: info_json.version,
                         },
@@ -57,14 +109,14 @@ impl Directory {
         let mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
 
         Ok(Self {
-            mods: mod_entries,
+            mods: Mods(mod_entries),
             mod_list: mod_list_json.mods,
             mod_list_path: mlj_path,
         })
     }
 
     pub fn disable(&mut self, mod_ident: &ModIdent) {
-        if mod_ident.name == "base" || self.mods.contains_key(&mod_ident.name) {
+        if mod_ident.name == "base" || self.mods.0.contains_key(&mod_ident.name) {
             let mod_state = self
                 .mod_list
                 .iter_mut()
@@ -95,18 +147,7 @@ impl Directory {
     }
 
     pub fn enable(&mut self, mod_ident: &ModIdent) -> Option<Vec<ModIdent>> {
-        let mod_entry = self.mods.get(&mod_ident.name).and_then(|mod_versions| {
-            if let Some(version_req) = &mod_ident.version_req {
-                mod_versions
-                    .iter()
-                    .rev()
-                    .find(|version| version_req.matches(&version.version))
-            } else {
-                mod_versions.last()
-            }
-        });
-
-        if let Some(mod_entry) = mod_entry {
+        if let Some(mod_entry) = self.mods.get(mod_ident) {
             let mod_state = self
                 .mod_list
                 .iter_mut()
@@ -181,7 +222,7 @@ impl Directory {
             .as_ref()
             .cloned()
             .unwrap_or_else(VersionReq::any);
-        if let Some(mod_versions) = self.mods.get(&mod_ident.name) {
+        if let Some(mod_versions) = self.mods.0.get(&mod_ident.name) {
             mod_versions
                 .iter()
                 .filter(|version| version_req.matches(&version.version))
@@ -204,7 +245,7 @@ impl Directory {
                         println!("Could not remove {} v{}", &mod_ident.name, version.version);
                     }
                 });
-            self.mods.remove(&mod_ident.name);
+            self.mods.0.remove(&mod_ident.name);
         }
 
         if let Some((index, _)) = self
