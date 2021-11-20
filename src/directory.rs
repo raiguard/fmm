@@ -1,4 +1,5 @@
 use anyhow::Result;
+use console::style;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs;
@@ -69,7 +70,7 @@ impl Directory {
                 .iter_mut()
                 .find(|mod_state| mod_ident.name == mod_state.name);
 
-            println!("Disabled {}", &mod_ident);
+            println!("{} {}", style("Disabled").yellow().bold(), &mod_ident);
 
             if let Some(mod_state) = mod_state {
                 mod_state.enabled = false;
@@ -81,7 +82,8 @@ impl Directory {
     }
 
     pub fn disable_all(&mut self) {
-        println!("Disabled all mods");
+        println!("{}", style("Disabled all mods").yellow().bold());
+
         for mod_data in self
             .mod_list
             .iter_mut()
@@ -113,7 +115,12 @@ impl Directory {
             let enabled = mod_state.is_some() && mod_state.as_ref().unwrap().enabled;
 
             if !enabled {
-                println!("Enabled {} v{}", mod_ident.name, mod_entry.version);
+                println!(
+                    "{} {} v{}",
+                    style("Enabled").green().bold(),
+                    mod_ident.name,
+                    mod_entry.version
+                );
 
                 let version = mod_ident
                     .version_req
@@ -158,7 +165,10 @@ impl Directory {
     }
 
     pub fn enable_all(&mut self) {
-        println!("Enabled latest versions of all mods");
+        println!(
+            "{}",
+            style("Enabled latest versions of all mods").green().bold()
+        );
         for mod_data in self.mod_list.iter_mut() {
             mod_data.enabled = true;
             mod_data.version = None;
@@ -184,7 +194,12 @@ impl Directory {
                         }
                     });
                     if result.is_ok() {
-                        println!("Removed {} v{}", &mod_ident.name, version.version);
+                        println!(
+                            "{} {} v{}",
+                            style("Removed").red().bold(),
+                            &mod_ident.name,
+                            version.version
+                        );
                     } else {
                         println!("Could not remove {} v{}", &mod_ident.name, version.version);
                     }

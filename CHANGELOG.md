@@ -1,4 +1,6 @@
 # v0.4.1 - ??????????
+## Features
+- Added colors to actions and statuses
 
 # v0.4.0 - 2021-11-13
 ## Features
