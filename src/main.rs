@@ -31,9 +31,6 @@ pub struct App {
     /// Disables the given mods. Mods are formatted as `Name`
     #[structopt(short, long)]
     disable: Vec<ModIdent>,
-    /// Downloads the given mods from the mod portal. Mods are formatted as `Name` or `Name@Version`
-    #[structopt(short = "D", long)]
-    download: Vec<ModIdent>,
     /// Enables all mods in the directory
     #[structopt(short = "a", long)]
     enable_all: bool,
@@ -127,11 +124,6 @@ fn main() -> Result<()> {
         directory.disable(&mod_ident);
     }
 
-    // Download mods
-    for mod_ident in &app.download {
-        download::download_mod(mod_ident, &mut directory, &config, &client)?;
-    }
-
     // Enable all mods
     if app.enable_all {
         directory.enable_all();
@@ -151,7 +143,7 @@ fn main() -> Result<()> {
             .filter_map(|order| match order {
                 ManageOrder::Download(mod_ident) => {
                     download::download_mod(mod_ident, &mut directory, &config, &client).ok()?;
-                    Some(Vec::new())
+                    Some(vec![ManageOrder::Enable(mod_ident.clone())])
                 }
                 ManageOrder::Enable(mod_ident) => directory.enable(mod_ident),
             })

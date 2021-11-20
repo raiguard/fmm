@@ -63,15 +63,25 @@ impl Directory {
         })
     }
 
+    /// Adds the mod, but keeps it disabled
     pub fn add(&mut self, (mod_name, mod_entry): (String, ModEntry)) {
-        self.mod_list.push(ModListJsonMod {
-            name: mod_name.clone(),
-            version: Some(mod_entry.version.clone()),
-            enabled: true,
-        });
+        // Add or disable mod in mod-list.json
+        if let Some(mod_state) = self
+            .mod_list
+            .iter_mut()
+            .find(|mod_state| mod_name == mod_state.name)
+        {
+            mod_state.enabled = false;
+            mod_state.version = None;
+        } else {
+            self.mod_list.push(ModListJsonMod {
+                name: mod_name.clone(),
+                enabled: false,
+                version: None,
+            });
+        }
 
         let entries = self.mods.entry(mod_name).or_default();
-        // TODO: Don't unwrap
         if let Err(index) = entries.binary_search(&mod_entry) {
             entries.insert(index, mod_entry);
         }
