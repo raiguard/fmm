@@ -19,8 +19,7 @@ use crate::types::ModIdent;
 pub fn download_mods(mods: &[ModIdent], config: &Config) {
     let client = Client::new();
     for mod_ident in mods {
-        let res = download_mod(mod_ident, config, &client);
-        if let Err(err) = res {
+        if let Err(err) = download_mod(mod_ident, config, &client) {
             eprintln!(
                 "{} Could not download {}: {}",
                 style("Error:").red().bold(),
@@ -38,7 +37,7 @@ pub fn download_mod(mod_ident: &ModIdent, config: &Config, client: &Client) -> R
         .as_ref()
         .ok_or(DownloadModErr::CredentialsNotFound)?;
 
-    println!("{} {}", style("Fetching").cyan().bold(), mod_ident.name);
+    // println!("{} {}", style("Fetching").cyan().bold(), mod_ident.name);
 
     // Download mod information
     let mod_info: ModPortalResult = client
@@ -48,11 +47,11 @@ pub fn download_mod(mod_ident: &ModIdent, config: &Config, client: &Client) -> R
         ))
         .send()?
         .json()
-        .map_err(|_| DownloadModErr::ModNotFound(mod_ident.name.clone()))?;
+        .map_err(|_| DownloadModErr::ModNotFound)?;
 
     // Get the corresponding release
-    let release = get_mod_version(&mod_info.releases, mod_ident)
-        .ok_or_else(|| DownloadModErr::ModNotFound(mod_ident.name.clone()))?;
+    let release =
+        get_mod_version(&mod_info.releases, mod_ident).ok_or(DownloadModErr::ModNotFound)?;
 
     // Download the mod
     let mut res = match client
@@ -145,8 +144,8 @@ enum DownloadModErr {
     DamagedDownload,
     #[error("Invalid mod portal credentials")]
     InvalidCredentials,
-    #[error("Mod `{0}` was not found on the portal")]
-    ModNotFound(String),
+    #[error("Mod was not found on the portal")]
+    ModNotFound,
     #[error("Could not get content length")]
     NoContentLength,
 }

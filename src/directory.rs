@@ -94,7 +94,7 @@ impl Directory {
         }
     }
 
-    pub fn enable(&mut self, mod_ident: &ModIdent) -> Option<Vec<ModIdent>> {
+    pub fn enable(&mut self, mod_ident: &ModIdent) -> Option<Vec<ManageOrder>> {
         if let Some(mod_entry) = self
             .mods
             .get(&mod_ident.name)
@@ -147,11 +147,20 @@ impl Directory {
                             name: dependency.name.clone(),
                             version_req: dependency.version_req.clone(),
                         })
+                        .map(|dependency_ident| {
+                            self.mods
+                                .get(&dependency_ident.name)
+                                .and_then(|dependency_entries| {
+                                    get_mod_version(dependency_entries, &dependency_ident)
+                                })
+                                .map(|_| ManageOrder::Enable(dependency_ident.clone()))
+                                .unwrap_or_else(|| ManageOrder::Download(dependency_ident.clone()))
+                        })
                         .collect(),
                 );
             }
         } else {
-            println!("Could not find or read {}", &mod_ident);
+            return Some(vec![ManageOrder::Download(mod_ident.clone())]);
         }
 
         None

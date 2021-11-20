@@ -4,8 +4,6 @@ use std::fs;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use console::style;
-use reqwest::blocking::Client;
 use semver::Version;
 use structopt::StructOpt;
 
@@ -135,16 +133,30 @@ fn main() -> Result<()> {
         directory.enable_all();
     }
 
-    // Enable specified mods
-    let mut to_enable = app.enable;
-    while !to_enable.is_empty() {
-        to_enable = to_enable
+    // Start a cycle of enable -> download -> enable -> download
+    let mut cycle_orders: Vec<ManageOrder> = app
+        .enable
+        .iter()
+        .map(|mod_ident| ManageOrder::Enable(mod_ident.clone()))
+        .collect();
+
+    while !cycle_orders.is_empty() {
+        cycle_orders = cycle_orders
             .iter_mut()
-            .filter(|mod_ident| mod_ident.name != "base")
-            .filter_map(|mod_ident| directory.enable(mod_ident))
+            .filter(|order| order.get_name() != "base")
+            .filter_map(|order| match order {
+                ManageOrder::Download(mod_ident) => {
+                    // FIXME: This is very bad
+                    download::download_mods(&[mod_ident.clone()], &config);
+                    Some(Vec::new())
+                }
+                ManageOrder::Enable(mod_ident) => directory.enable(mod_ident),
+            })
             .flatten()
             .collect();
     }
+
+    // Enable specified mods
 
     // Write mod-list.json
     fs::write(

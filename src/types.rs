@@ -156,3 +156,17 @@ pub struct InfoJson {
     pub name: String,
     pub version: Version,
 }
+
+pub enum ManageOrder {
+    Download(ModIdent),
+    Enable(ModIdent),
+}
+
+impl ManageOrder {
+    pub fn get_name(&self) -> &str {
+        match self {
+            Self::Download(mod_ident) => &mod_ident.name,
+            Self::Enable(mod_ident) => &mod_ident.name,
+        }
+    }
+}
