@@ -4,6 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use reqwest::blocking::Client;
 use semver::Version;
 use structopt::StructOpt;
 
@@ -66,9 +67,9 @@ pub struct App {
 
 fn main() -> Result<()> {
     let mut app = App::from_args();
+    let client = Client::new();
 
     let config = Config::new(&app)?;
-
     let mut directory = Directory::new(config.mods_dir.clone())?;
 
     // List mods
@@ -126,14 +127,16 @@ fn main() -> Result<()> {
     }
 
     // Download mods
-    download::download_mods(&app.download, &config);
+    for mod_ident in &app.download {
+        download::download_mod(mod_ident, &config, &client);
+    }
 
     // Enable all mods
     if app.enable_all {
         directory.enable_all();
     }
 
-    // Start a cycle of enable -> download -> enable -> download
+    // Enable and/or download specified mods
     let mut cycle_orders: Vec<ManageOrder> = app
         .enable
         .iter()
@@ -146,8 +149,9 @@ fn main() -> Result<()> {
             .filter(|order| order.get_name() != "base")
             .filter_map(|order| match order {
                 ManageOrder::Download(mod_ident) => {
-                    // FIXME: This is very bad
-                    download::download_mods(&[mod_ident.clone()], &config);
+                    download::download_mod(mod_ident, &config, &client);
+                    // TODO: Add to directory
+                    // TODO: Return enable order for this mod
                     Some(Vec::new())
                 }
                 ManageOrder::Enable(mod_ident) => directory.enable(mod_ident),
@@ -155,8 +159,6 @@ fn main() -> Result<()> {
             .flatten()
             .collect();
     }
-
-    // Enable specified mods
 
     // Write mod-list.json
     fs::write(

@@ -16,21 +16,18 @@ use crate::config::Config;
 use crate::get_mod_version;
 use crate::types::ModIdent;
 
-pub fn download_mods(mods: &[ModIdent], config: &Config) {
-    let client = Client::new();
-    for mod_ident in mods {
-        if let Err(err) = download_mod(mod_ident, config, &client) {
-            eprintln!(
-                "{} Could not download {}: {}",
-                style("Error:").red().bold(),
-                mod_ident.name,
-                err
-            );
-        }
+pub fn download_mod(mod_ident: &ModIdent, config: &Config, client: &Client) {
+    if let Err(err) = download_mod_internal(mod_ident, config, client) {
+        eprintln!(
+            "{} Could not download {}: {}",
+            style("Error:").red().bold(),
+            mod_ident.name,
+            err
+        );
     }
 }
 
-pub fn download_mod(mod_ident: &ModIdent, config: &Config, client: &Client) -> Result<()> {
+fn download_mod_internal(mod_ident: &ModIdent, config: &Config, client: &Client) -> Result<()> {
     // Get authentication token and username
     let portal_auth = config
         .portal_auth
@@ -76,10 +73,10 @@ pub fn download_mod(mod_ident: &ModIdent, config: &Config, client: &Client) -> R
 
     let pb = ProgressBar::new(total_size);
     pb.set_style(
-        ProgressStyle::default_bar()
-            .template("{msg} [{elapsed_precise:.blue}] [{bar:.green}] {bytes} / {total_bytes} ({bytes_per_sec}, {eta})")
-            .progress_chars("=> "),
-    );
+            ProgressStyle::default_bar()
+                .template("{msg} [{elapsed_precise:.blue}] [{bar:.green}] {bytes} / {total_bytes} ({bytes_per_sec}, {eta})")
+                .progress_chars("=> "),
+        );
 
     pb.set_message(format!(
         "{} {} v{}",
