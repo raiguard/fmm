@@ -1,11 +1,13 @@
 #![feature(iter_intersperse)]
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
 use anyhow::Result;
 use console::style;
 use reqwest::blocking::Client;
+use semver::Version;
 use structopt::StructOpt;
 
 mod config;
@@ -76,7 +78,6 @@ fn main() -> Result<()> {
     if app.list {
         let mut lines: Vec<String> = directory
             .mods
-            .0
             .iter()
             .flat_map(|(mod_name, mod_versions)| {
                 mod_versions
@@ -161,4 +162,20 @@ fn main() -> Result<()> {
     )?;
 
     Ok(())
+}
+
+fn get_mod<'a>(
+    list: &'a HashMap<String, Vec<ModEntry>>,
+    mod_ident: &ModIdent,
+) -> Option<&'a ModEntry> {
+    list.get(&mod_ident.name).and_then(|mod_versions| {
+        if let Some(version_req) = &mod_ident.version_req {
+            mod_versions
+                .iter()
+                .rev()
+                .find(|entry| version_req.matches(&entry.version))
+        } else {
+            mod_versions.last()
+        }
+    })
 }
