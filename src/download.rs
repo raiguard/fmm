@@ -21,15 +21,13 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
         .ok_or(DownloadModErr::NoPortalAuth)?;
 
     // Download the mod's information
-    let mod_info: ModPortalResult = serde_json::from_str(
-        &client
-            .get(format!(
-                "https://mods.factorio.com/api/mods/{}",
-                mod_ident.name
-            ))
-            .send()?
-            .text()?,
-    )?;
+    let mod_info: ModPortalResult = client
+        .get(format!(
+            "https://mods.factorio.com/api/mods/{}",
+            mod_ident.name
+        ))
+        .send()?
+        .json()?;
 
     // Get the corresponding release
     let release = if let Some(version_req) = &mod_ident.version_req {
