@@ -29,7 +29,7 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
         ))
         .send()?
         .json()
-        .map_err(|_| DownloadModErr::ModNotFound(mod_ident.name.to_string()))?;
+        .map_err(|_| DownloadModErr::ModNotFound(mod_ident.name.clone()))?;
 
     // Get the corresponding release
     let release = if let Some(version_req) = &mod_ident.version_req {
@@ -41,7 +41,7 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
     } else {
         mod_info.releases.last()
     }
-    .ok_or(DownloadModErr::ModNotFound(mod_ident.name.to_string()))?;
+    .ok_or(DownloadModErr::ModNotFound(mod_ident.name.clone()))?;
 
     // Download the mod
     let mut res = client

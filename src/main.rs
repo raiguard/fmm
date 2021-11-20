@@ -1,9 +1,11 @@
 #![feature(iter_intersperse)]
 
-use anyhow::Result;
-use reqwest::blocking::Client;
 use std::fs;
 use std::path::PathBuf;
+
+use anyhow::Result;
+use console::style;
+use reqwest::blocking::Client;
 use structopt::StructOpt;
 
 mod config;
@@ -125,6 +127,15 @@ fn main() -> Result<()> {
         directory.disable(&mod_ident);
     }
 
+    // Download mods
+    let client = Client::new();
+    for mod_ident in app.download {
+        let res = download::download_mod(&client, &config, &mod_ident);
+        if let Err(err) = res {
+            eprintln!("{} {}", style("Error:").red().bold(), err);
+        }
+    }
+
     // Enable all mods
     if app.enable_all {
         directory.enable_all();
@@ -139,12 +150,6 @@ fn main() -> Result<()> {
             .filter_map(|mod_ident| directory.enable(mod_ident))
             .flatten()
             .collect();
-    }
-
-    // Download mods
-    let client = Client::new();
-    for mod_ident in app.download {
-        download::download_mod(&client, &config, &mod_ident)?;
     }
 
     // Write mod-list.json
