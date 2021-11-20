@@ -48,7 +48,8 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
             ("username", &portal_auth.username),
             ("token", &portal_auth.token),
         ])
-        .send()?;
+        .send()?
+        .error_for_status()?;
     let total_size = res
         .content_length()
         .ok_or(DownloadModErr::NoContentLength)?;
