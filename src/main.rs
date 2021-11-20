@@ -132,7 +132,12 @@ fn main() -> Result<()> {
     for mod_ident in app.download {
         let res = download::download_mod(&client, &config, &mod_ident);
         if let Err(err) = res {
-            eprintln!("{} {}", style("Error:").red().bold(), err);
+            eprintln!(
+                "{} Could not download {}: {}",
+                style("Error:").red().bold(),
+                mod_ident.name,
+                err
+            );
         }
     }
 

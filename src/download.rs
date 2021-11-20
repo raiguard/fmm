@@ -6,6 +6,7 @@ use anyhow::{anyhow, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
+use reqwest::StatusCode;
 use semver::Version;
 use serde::Deserialize;
 use sha1::{Digest, Sha1};
@@ -20,7 +21,7 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
     let portal_auth = config
         .portal_auth
         .as_ref()
-        .ok_or(DownloadModErr::NoPortalAuth)?;
+        .ok_or(DownloadModErr::CredentialsNotFound)?;
 
     println!("{} {}", style("Fetching").cyan().bold(), mod_ident.name);
 
@@ -38,14 +39,22 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
         .ok_or_else(|| DownloadModErr::ModNotFound(mod_ident.name.clone()))?;
 
     // Download the mod
-    let mut res = client
+    let mut res = match client
         .get(format!("https://mods.factorio.com{}", release.download_url,))
         .query(&[
             ("username", &portal_auth.username),
             ("token", &portal_auth.token),
         ])
         .send()?
-        .error_for_status()?;
+        .error_for_status()
+    {
+        Ok(res) => res,
+        Err(err) if err.status().unwrap() == StatusCode::FORBIDDEN => {
+            return Err(anyhow!(DownloadModErr::InvalidCredentials))
+        }
+        Err(err) => return Err(anyhow!(err)),
+    };
+
     let total_size = res
         .content_length()
         .ok_or(DownloadModErr::NoContentLength)?;
@@ -114,14 +123,16 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
 
 #[derive(Debug, Error)]
 enum DownloadModErr {
+    #[error("Could not find mod portal credentials")]
+    CredentialsNotFound,
     #[error("Damaged download")]
     DamagedDownload,
+    #[error("Invalid mod portal credentials")]
+    InvalidCredentials,
     #[error("Mod `{0}` was not found on the portal")]
     ModNotFound(String),
     #[error("Could not get content length")]
     NoContentLength,
-    #[error("Could not find mod portal authentication")]
-    NoPortalAuth,
 }
 
 #[derive(Debug, Deserialize)]
