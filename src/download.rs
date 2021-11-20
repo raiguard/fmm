@@ -16,7 +16,22 @@ use crate::config::Config;
 use crate::get_mod_version;
 use crate::types::ModIdent;
 
-pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> Result<()> {
+pub fn download_mods(mods: &[ModIdent], config: &Config) {
+    let client = Client::new();
+    for mod_ident in mods {
+        let res = download_mod(mod_ident, config, &client);
+        if let Err(err) = res {
+            eprintln!(
+                "{} Could not download {}: {}",
+                style("Error:").red().bold(),
+                mod_ident.name,
+                err
+            );
+        }
+    }
+}
+
+pub fn download_mod(mod_ident: &ModIdent, config: &Config, client: &Client) -> Result<()> {
     // Get authentication token and username
     let portal_auth = config
         .portal_auth
@@ -25,6 +40,7 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
 
     println!("{} {}", style("Fetching").cyan().bold(), mod_ident.name);
 
+    // Download mod information
     let mod_info: ModPortalResult = client
         .get(format!(
             "https://mods.factorio.com/api/mods/{}",

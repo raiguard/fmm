@@ -128,18 +128,7 @@ fn main() -> Result<()> {
     }
 
     // Download mods
-    let client = Client::new();
-    for mod_ident in app.download {
-        let res = download::download_mod(&client, &config, &mod_ident);
-        if let Err(err) = res {
-            eprintln!(
-                "{} Could not download {}: {}",
-                style("Error:").red().bold(),
-                mod_ident.name,
-                err
-            );
-        }
-    }
+    download::download_mods(&app.download, &config);
 
     // Enable all mods
     if app.enable_all {
