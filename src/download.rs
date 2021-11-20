@@ -2,12 +2,13 @@ use std::cmp::min;
 use std::fs::File;
 use std::io::{Read, Write};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
 use semver::Version;
 use serde::Deserialize;
+use sha1::{Digest, Sha1};
 use thiserror::Error;
 
 use crate::config::Config;
@@ -65,7 +66,6 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
         release.version
     ));
 
-    // TODO: Use temporary extension
     let mut path = config.mods_dir.clone();
     path.push(&release.file_name);
     let mut file = File::create(&path)?;
@@ -73,14 +73,22 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
     let mut downloaded: u64 = 0;
 
     let mut buf = vec![0; 8_096];
+    let mut hasher = Sha1::new();
 
     while downloaded < total_size {
         // TODO: Handle interrupted error
         let bytes = res.read(&mut buf)?;
         file.write_all(&buf[0..bytes])?;
+        hasher.update(&buf[0..bytes]);
         // Update progress bar
         downloaded = min(downloaded + (bytes as u64), total_size);
         pb.set_position(downloaded);
+    }
+
+    let hash = hasher.finalize();
+
+    if &hash[..] != hex::decode(&release.sha1)? {
+        return Err(anyhow!(DownloadModErr::DamagedDownload));
     }
 
     pb.finish_and_clear();
@@ -96,6 +104,8 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
 
 #[derive(Debug, Error)]
 enum DownloadModErr {
+    #[error("Damaged download")]
+    DamagedDownload,
     #[error("Could not get content length")]
     NoContentLength,
     #[error("No matching release was found on the mod portal")]
@@ -113,5 +123,6 @@ struct ModPortalResult {
 struct ModPortalRelease {
     download_url: String,
     file_name: String,
+    sha1: String,
     version: Version,
 }
