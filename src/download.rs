@@ -21,7 +21,8 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
         .as_ref()
         .ok_or(DownloadModErr::NoPortalAuth)?;
 
-    // Download the mod's information
+    println!("{} {}", style("Fetching").cyan().bold(), mod_ident.name);
+
     let mod_info: ModPortalResult = client
         .get(format!(
             "https://mods.factorio.com/api/mods/{}",
