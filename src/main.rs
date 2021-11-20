@@ -167,7 +167,7 @@ trait HasVersion {
     fn get_version(&self) -> &Version;
 }
 
-fn get_mod<'a, T>(list: &'a [T], mod_ident: &ModIdent) -> Option<&'a T>
+fn get_mod_version<'a, T>(list: &'a [T], mod_ident: &ModIdent) -> Option<&'a T>
 where
     T: HasVersion,
 {

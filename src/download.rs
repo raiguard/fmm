@@ -12,7 +12,7 @@ use sha1::{Digest, Sha1};
 use thiserror::Error;
 
 use crate::config::Config;
-use crate::get_mod;
+use crate::get_mod_version;
 use crate::types::ModIdent;
 
 pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> Result<()> {
@@ -34,7 +34,7 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
         .map_err(|_| DownloadModErr::ModNotFound(mod_ident.name.clone()))?;
 
     // Get the corresponding release
-    let release = get_mod(&mod_info.releases, mod_ident)
+    let release = get_mod_version(&mod_info.releases, mod_ident)
         .ok_or_else(|| DownloadModErr::ModNotFound(mod_ident.name.clone()))?;
 
     // Download the mod
