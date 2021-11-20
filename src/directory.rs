@@ -63,6 +63,20 @@ impl Directory {
         })
     }
 
+    pub fn add(&mut self, (mod_name, mod_entry): (String, ModEntry)) {
+        self.mod_list.push(ModListJsonMod {
+            name: mod_name.clone(),
+            version: Some(mod_entry.version.clone()),
+            enabled: true,
+        });
+
+        let entries = self.mods.entry(mod_name).or_default();
+        // TODO: Don't unwrap
+        if let Err(index) = entries.binary_search(&mod_entry) {
+            entries.insert(index, mod_entry);
+        }
+    }
+
     pub fn disable(&mut self, mod_ident: &ModIdent) {
         if mod_ident.name == "base" || self.mods.contains_key(&mod_ident.name) {
             let mod_state = self

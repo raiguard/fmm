@@ -13,21 +13,37 @@ use sha1::{Digest, Sha1};
 use thiserror::Error;
 
 use crate::config::Config;
+use crate::directory::Directory;
 use crate::get_mod_version;
-use crate::types::ModIdent;
+use crate::types::{ModEntry, ModIdent};
 
-pub fn download_mod(mod_ident: &ModIdent, config: &Config, client: &Client) {
-    if let Err(err) = download_mod_internal(mod_ident, config, client) {
-        eprintln!(
-            "{} Could not download {}: {}",
-            style("Error:").red().bold(),
-            mod_ident.name,
-            err
-        );
+pub fn download_mod(
+    mod_ident: &ModIdent,
+    directory: &mut Directory,
+    config: &Config,
+    client: &Client,
+) -> Result<()> {
+    match download_mod_internal(mod_ident, config, client) {
+        Ok(data) => {
+            directory.add(data);
+        }
+        Err(err) => {
+            eprintln!(
+                "{} Could not download {}: {}",
+                style("Error:").red().bold(),
+                mod_ident.name,
+                err
+            );
+        }
     }
+    Ok(())
 }
 
-fn download_mod_internal(mod_ident: &ModIdent, config: &Config, client: &Client) -> Result<()> {
+fn download_mod_internal(
+    mod_ident: &ModIdent,
+    config: &Config,
+    client: &Client,
+) -> Result<(String, ModEntry)> {
     // Get authentication token and username
     let portal_auth = config
         .portal_auth
@@ -133,7 +149,22 @@ fn download_mod_internal(mod_ident: &ModIdent, config: &Config, client: &Client)
         release.version
     );
 
-    Ok(())
+    Ok((
+        mod_info.name,
+        ModEntry {
+            entry: fs::read_dir(&config.mods_dir)?
+                .filter_map(|entry| entry.ok())
+                .find(|entry| {
+                    entry
+                        .file_name()
+                        .to_str()
+                        .map(|file_name| file_name == release.file_name)
+                        .is_some()
+                })
+                .unwrap(),
+            version: release.version.clone(),
+        },
+    ))
 }
 
 #[derive(Debug, Error)]
@@ -152,6 +183,7 @@ enum DownloadModErr {
 
 #[derive(Debug, Deserialize)]
 struct ModPortalResult {
+    name: String,
     releases: Vec<ModPortalRelease>,
 }
 

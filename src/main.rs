@@ -70,6 +70,7 @@ fn main() -> Result<()> {
     let client = Client::new();
 
     let config = Config::new(&app)?;
+
     let mut directory = Directory::new(config.mods_dir.clone())?;
 
     // List mods
@@ -128,7 +129,7 @@ fn main() -> Result<()> {
 
     // Download mods
     for mod_ident in &app.download {
-        download::download_mod(mod_ident, &config, &client);
+        download::download_mod(mod_ident, &mut directory, &config, &client)?;
     }
 
     // Enable all mods
@@ -149,9 +150,7 @@ fn main() -> Result<()> {
             .filter(|order| order.get_name() != "base")
             .filter_map(|order| match order {
                 ManageOrder::Download(mod_ident) => {
-                    download::download_mod(mod_ident, &config, &client);
-                    // TODO: Add to directory
-                    // TODO: Return enable order for this mod
+                    download::download_mod(mod_ident, &mut directory, &config, &client).ok()?;
                     Some(Vec::new())
                 }
                 ManageOrder::Enable(mod_ident) => directory.enable(mod_ident),
