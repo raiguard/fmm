@@ -1,6 +1,5 @@
 #![feature(iter_intersperse)]
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
@@ -164,6 +163,10 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+trait HasVersion {
+    fn get_version(&self) -> &Version;
+}
+
 fn get_mod<'a, T>(list: &'a [T], mod_ident: &ModIdent) -> Option<&'a T>
 where
     T: HasVersion,
@@ -175,7 +178,4 @@ where
     } else {
         list.last()
     }
-}
-trait HasVersion {
-    fn get_version(&self) -> &Version;
 }

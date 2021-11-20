@@ -11,6 +11,7 @@ use semver::{Version, VersionReq};
 use zip::ZipArchive;
 
 use crate::dependency::ModDependencyType;
+use crate::get_mod;
 use crate::types::*;
 
 pub struct Directory {
@@ -97,7 +98,7 @@ impl Directory {
         if let Some(mod_entry) = self
             .mods
             .get(&mod_ident.name)
-            .and_then(|mod_entries| crate::get_mod(&mod_entries, mod_ident))
+            .and_then(|mod_entries| get_mod(mod_entries, mod_ident))
         {
             let mod_state = self
                 .mod_list
