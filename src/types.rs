@@ -91,6 +91,12 @@ pub struct ModEntry {
     pub version: Version,
 }
 
+impl crate::HasVersion for ModEntry {
+    fn get_version(&self) -> &Version {
+        &self.version
+    }
+}
+
 impl PartialOrd for ModEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.version.partial_cmp(&other.version)

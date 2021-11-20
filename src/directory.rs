@@ -94,7 +94,11 @@ impl Directory {
     }
 
     pub fn enable(&mut self, mod_ident: &ModIdent) -> Option<Vec<ModIdent>> {
-        if let Some(mod_entry) = crate::get_mod(&self.mods, mod_ident) {
+        if let Some(mod_entry) = self
+            .mods
+            .get(&mod_ident.name)
+            .and_then(|mod_entries| crate::get_mod(&mod_entries, mod_ident))
+        {
             let mod_state = self
                 .mod_list
                 .iter_mut()

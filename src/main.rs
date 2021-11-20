@@ -164,18 +164,18 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn get_mod<'a>(
-    list: &'a HashMap<String, Vec<ModEntry>>,
-    mod_ident: &ModIdent,
-) -> Option<&'a ModEntry> {
-    list.get(&mod_ident.name).and_then(|mod_versions| {
-        if let Some(version_req) = &mod_ident.version_req {
-            mod_versions
-                .iter()
-                .rev()
-                .find(|entry| version_req.matches(&entry.version))
-        } else {
-            mod_versions.last()
-        }
-    })
+fn get_mod<'a, T>(list: &'a [T], mod_ident: &ModIdent) -> Option<&'a T>
+where
+    T: HasVersion,
+{
+    if let Some(version_req) = &mod_ident.version_req {
+        list.iter()
+            .rev()
+            .find(|entry| version_req.matches(entry.get_version()))
+    } else {
+        list.last()
+    }
+}
+trait HasVersion {
+    fn get_version(&self) -> &Version;
 }

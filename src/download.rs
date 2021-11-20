@@ -33,16 +33,8 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
         .map_err(|_| DownloadModErr::ModNotFound(mod_ident.name.clone()))?;
 
     // Get the corresponding release
-    let release = if let Some(version_req) = &mod_ident.version_req {
-        mod_info
-            .releases
-            .iter()
-            .rev()
-            .find(|release| version_req.matches(&release.version))
-    } else {
-        mod_info.releases.last()
-    }
-    .ok_or(DownloadModErr::ModNotFound(mod_ident.name.clone()))?;
+    let release = crate::get_mod(&mod_info.releases, mod_ident)
+        .ok_or_else(|| DownloadModErr::ModNotFound(mod_ident.name.clone()))?;
 
     // Download the mod
     let mut res = client
@@ -142,4 +134,10 @@ struct ModPortalRelease {
     file_name: String,
     sha1: String,
     version: Version,
+}
+
+impl crate::HasVersion for ModPortalRelease {
+    fn get_version(&self) -> &Version {
+        &self.version
+    }
 }
