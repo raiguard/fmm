@@ -28,7 +28,8 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
             mod_ident.name
         ))
         .send()?
-        .json()?;
+        .json()
+        .map_err(|_| DownloadModErr::ModNotFound(mod_ident.name.to_string()))?;
 
     // Get the corresponding release
     let release = if let Some(version_req) = &mod_ident.version_req {
@@ -40,7 +41,7 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
     } else {
         mod_info.releases.last()
     }
-    .ok_or(DownloadModErr::NoMatchingRelease)?;
+    .ok_or(DownloadModErr::ModNotFound(mod_ident.name.to_string()))?;
 
     // Download the mod
     let mut res = client
@@ -110,10 +111,10 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
 enum DownloadModErr {
     #[error("Damaged download")]
     DamagedDownload,
+    #[error("Mod `{0}` was not found on the portal")]
+    ModNotFound(String),
     #[error("Could not get content length")]
     NoContentLength,
-    #[error("No matching release was found on the mod portal")]
-    NoMatchingRelease,
     #[error("Could not find mod portal authentication")]
     NoPortalAuth,
 }
