@@ -2,7 +2,7 @@ use std::cmp::min;
 use std::fs::File;
 use std::io::{Read, Write};
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
@@ -11,7 +11,7 @@ use serde::Deserialize;
 use thiserror::Error;
 
 use crate::config::Config;
-use crate::types::{ModEntry, ModIdent};
+use crate::types::ModIdent;
 
 pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> Result<()> {
     // Get authentication token and username
@@ -53,11 +53,11 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
         .send()?;
     let total_size = res
         .content_length()
-        .ok_or(DownloadModErr::NoMatchingRelease)?;
+        .ok_or(DownloadModErr::NoContentLength)?;
 
     let pb = ProgressBar::new(total_size);
     pb.set_style(ProgressStyle::default_bar()
-    .template("{msg} {spinner:.green} [{elapsed_precise}] [{bar:.cyan/blue}] {bytes} / {total_bytes} ({bytes_per_sec}, {eta})")
+    .template("{msg} [{elapsed_precise:.blue}] [{bar:.green}] {bytes} / {total_bytes} ({bytes_per_sec}, {eta})")
     .progress_chars("=> "));
     pb.set_message(format!(
         "{} {} v{}",
@@ -69,7 +69,7 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
     // TODO: Use temporary extension
     let mut path = config.mods_dir.clone();
     path.push(&release.file_name);
-    let mut file = File::create(path)?;
+    let mut file = File::create(&path)?;
 
     let mut downloaded: u64 = 0;
 
@@ -107,19 +107,12 @@ enum DownloadModErr {
 
 #[derive(Debug, Deserialize)]
 struct ModPortalResult {
-    // downloads_count: u32,
-    name: String,
-    // owner: String,
     releases: Vec<ModPortalRelease>,
-    // summary: String,
-    // title: String,
-    // category: Option<ModPortalTag>,
 }
 
 #[derive(Debug, Deserialize)]
 struct ModPortalRelease {
     download_url: String,
     file_name: String,
-    sha1: String,
     version: Version,
 }

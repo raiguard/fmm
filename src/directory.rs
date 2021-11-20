@@ -5,7 +5,7 @@ use std::ffi::OsString;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use semver::{Version, VersionReq};
 use zip::ZipArchive;
@@ -24,17 +24,17 @@ pub struct Directory {
 pub struct Mods(pub HashMap<String, Vec<ModEntry>>);
 
 impl Mods {
-    pub fn contains(&self, mod_ident: &ModIdent) -> bool {
-        if let Some(mod_versions) = self.0.get(&mod_ident.name) {
-            if let Some(version_req) = &mod_ident.version_req {
-                return mod_versions
-                    .iter()
-                    .rev()
-                    .any(|version| version_req.matches(&version.version));
-            }
-        }
-        false
-    }
+    // pub fn contains(&self, mod_ident: &ModIdent) -> bool {
+    //     if let Some(mod_versions) = self.0.get(&mod_ident.name) {
+    //         if let Some(version_req) = &mod_ident.version_req {
+    //             return mod_versions
+    //                 .iter()
+    //                 .rev()
+    //                 .any(|version| version_req.matches(&version.version));
+    //         }
+    //     }
+    //     false
+    // }
 
     pub fn get(&self, mod_ident: &ModIdent) -> Option<&ModEntry> {
         self.0.get(&mod_ident.name).and_then(|mod_versions| {
@@ -49,18 +49,18 @@ impl Mods {
         })
     }
 
-    pub fn get_mut(&mut self, mod_ident: &ModIdent) -> Option<&mut ModEntry> {
-        self.0.get_mut(&mod_ident.name).and_then(|mod_versions| {
-            if let Some(version_req) = &mod_ident.version_req {
-                mod_versions
-                    .iter_mut()
-                    .rev()
-                    .find(|version| version_req.matches(&version.version))
-            } else {
-                mod_versions.last_mut()
-            }
-        })
-    }
+    // pub fn get_mut(&mut self, mod_ident: &ModIdent) -> Option<&mut ModEntry> {
+    //     self.0.get_mut(&mod_ident.name).and_then(|mod_versions| {
+    //         if let Some(version_req) = &mod_ident.version_req {
+    //             mod_versions
+    //                 .iter_mut()
+    //                 .rev()
+    //                 .find(|version| version_req.matches(&version.version))
+    //         } else {
+    //             mod_versions.last_mut()
+    //         }
+    //     })
+    // }
 }
 
 // impl Deref for Mods {
