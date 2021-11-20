@@ -1,6 +1,7 @@
 #![feature(iter_intersperse)]
 
 use anyhow::Result;
+use reqwest::blocking::Client;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -8,6 +9,7 @@ use structopt::StructOpt;
 mod config;
 mod dependency;
 mod directory;
+mod download;
 mod sync;
 mod types;
 
@@ -27,6 +29,9 @@ pub struct App {
     /// Disables the given mods. Mods are formatted as `Name`
     #[structopt(short, long)]
     disable: Vec<ModIdent>,
+    /// Downloads the given mods from the mod portal. Mods are formatted as `Name` or `Name@Version`
+    #[structopt(short = "D", long)]
+    download: Vec<ModIdent>,
     /// Enables all mods in the directory
     #[structopt(short = "a", long)]
     enable_all: bool,
@@ -69,6 +74,7 @@ fn main() -> Result<()> {
     if app.list {
         let mut lines: Vec<String> = directory
             .mods
+            .0
             .iter()
             .flat_map(|(mod_name, mod_versions)| {
                 mod_versions
@@ -132,6 +138,12 @@ fn main() -> Result<()> {
             .filter_map(|mod_ident| directory.enable(mod_ident))
             .flatten()
             .collect();
+    }
+
+    // Download mods
+    let client = Client::new();
+    for mod_ident in app.download {
+        download::download_mod(&client, &mod_ident)?;
     }
 
     // Write mod-list.json
