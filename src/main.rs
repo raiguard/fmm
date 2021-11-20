@@ -85,10 +85,19 @@ fn main() -> Result<()> {
         }
     }
 
+    // Enable set
+    if let Some(set_name) = app.enable_set {
+        if let Some(set) = config.sets.unwrap_or_default().remove(&set_name) {
+            // TODO: Prepend instead of overwriting
+            app.enable = set;
+        }
+    }
+
     // Sync with save
     if let Some(sync_path) = app.sync {
         let save_file = sync::SaveFile::from(sync_path)?;
 
+        // TODO: Prepend instead of overwriting
         app.enable = save_file.mods;
     }
 
