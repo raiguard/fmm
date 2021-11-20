@@ -68,7 +68,7 @@ fn main() -> Result<()> {
 
     let config = Config::new(&app)?;
 
-    let mut directory = Directory::new(&config.mods_dir)?;
+    let mut directory = Directory::new(config.mods_dir.clone())?;
 
     // List mods
     if app.list {
@@ -93,9 +93,10 @@ fn main() -> Result<()> {
 
     // Enable set
     if let Some(set_name) = app.enable_set {
-        if let Some(set) = config.sets.unwrap_or_default().remove(&set_name) {
-            // TODO: Prepend instead of overwriting
-            app.enable = set;
+        if let Some(sets) = config.sets.as_ref() {
+            if let Some(set) = sets.get(&set_name) {
+                app.enable = set.to_vec();
+            }
         }
     }
 
@@ -143,7 +144,7 @@ fn main() -> Result<()> {
     // Download mods
     let client = Client::new();
     for mod_ident in app.download {
-        download::download_mod(&client, &mod_ident)?;
+        download::download_mod(&client, &config, &mod_ident)?;
     }
 
     // Write mod-list.json

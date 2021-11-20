@@ -72,9 +72,9 @@ impl Mods {
 // }
 
 impl Directory {
-    pub fn new(dir: &Path) -> Result<Self> {
+    pub fn new(mut path: PathBuf) -> Result<Self> {
         // Get all mods in the directory
-        let mod_entries = fs::read_dir(&dir)?
+        let mod_entries = fs::read_dir(&path)?
             .filter_map(|entry| {
                 let entry = entry.ok()?;
 
@@ -103,15 +103,14 @@ impl Directory {
             });
 
         // Parse mod-list.json
-        let mut mlj_path = dir.to_owned();
-        mlj_path.push("mod-list.json");
-        let enabled_versions = fs::read_to_string(&mlj_path)?;
+        path.push("mod-list.json");
+        let enabled_versions = fs::read_to_string(&path)?;
         let mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
 
         Ok(Self {
             mods: Mods(mod_entries),
             mod_list: mod_list_json.mods,
-            mod_list_path: mlj_path,
+            mod_list_path: path,
         })
     }
 
