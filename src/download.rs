@@ -1,5 +1,5 @@
 use std::cmp::min;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{Read, Write};
 
 use anyhow::{anyhow, Result};
@@ -69,7 +69,13 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
     ));
 
     let mut path = config.mods_dir.clone();
-    path.push(&release.file_name);
+    path.push(format!(
+        "{}_DOWNLOAD",
+        release
+            .file_name
+            .strip_suffix(".zip")
+            .unwrap_or(&release.file_name)
+    ));
     let mut file = File::create(&path)?;
 
     let mut downloaded: u64 = 0;
@@ -91,12 +97,17 @@ pub fn download_mod(client: &Client, config: &Config, mod_ident: &ModIdent) -> R
         }
     }
 
-    let hash = hasher.finalize();
-
-    if &hash[..] != hex::decode(&release.sha1)? {
+    // Verify download
+    if &hasher.finalize()[..] != hex::decode(&release.sha1)? {
         return Err(anyhow!(DownloadModErr::DamagedDownload));
     }
 
+    // Rename file
+    let mut proper_path = config.mods_dir.clone();
+    proper_path.push(&release.file_name);
+    fs::rename(&path, &proper_path)?;
+
+    // Finish up
     pb.finish_and_clear();
     println!(
         "{} {} v{}",
