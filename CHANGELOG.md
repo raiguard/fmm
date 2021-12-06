@@ -3,6 +3,10 @@
 - Added `--download` command for downloading mods from the portal
 - Added colors to command output
 - `--sync` will automatically download mods that you don't have
+## Changes
+- `--sync` will sync the exact mod version instead of the latest version by default
+## Bugfixes
+- Fixed `--sync` not working correctly if a mod had a u16 in its version
 
 # v0.4.0 - 2021-11-13
 ## Features

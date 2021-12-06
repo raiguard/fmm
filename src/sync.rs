@@ -2,6 +2,7 @@ use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt};
 use compress::zlib;
 use semver::Version;
+use semver::VersionReq;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
@@ -102,14 +103,28 @@ fn read_string(reader: &mut Cursor<Vec<u8>>) -> Result<String> {
     Ok(String::from_utf8_lossy(&scenario_name).to_string())
 }
 
+fn read_u16_optimized(reader: &mut Cursor<Vec<u8>>) -> Result<u16> {
+    let mut version: u16 = reader.read_u8()?.into();
+    if version == 255 {
+        version = reader.read_u16::<LittleEndian>()?;
+    }
+    Ok(version)
+}
+
 fn read_mod(reader: &mut Cursor<Vec<u8>>) -> Result<ModIdent> {
     let mod_name = read_string(reader)?;
 
-    // TODO: Read mod versions
-    reader.seek(SeekFrom::Current(7))?;
+    let version_major = read_u16_optimized(reader)?;
+    let version_minor = read_u16_optimized(reader)?;
+    let version_patch = read_u16_optimized(reader)?;
+    reader.seek(SeekFrom::Current(4))?;
 
     Ok(ModIdent {
         name: mod_name,
-        version_req: None,
+        version_req: Some(VersionReq::exact(&Version::new(
+            version_major as u64,
+            version_minor as u64,
+            version_patch as u64,
+        ))),
     })
 }
