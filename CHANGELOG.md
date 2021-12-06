@@ -1,6 +1,8 @@
 # v0.5.0 - ??????????
 ## Features
-- Added colors to actions and statuses
+- Added `--download` command for downloading mods from the portal
+- Added colors to command output
+- `--sync` will automatically download mods that you don't have
 
 # v0.4.0 - 2021-11-13
 ## Features
