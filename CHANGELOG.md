@@ -1,10 +1,13 @@
 # v0.5.0 - ??????????
 ## Features
-- Added `--download` command for downloading mods from the portal
 - Added colors to command output
+- Added `--download` command for downloading mods from the portal
+- Added section to config file for overriding mod portal username and token
+- Added `--game-dir` flag and option, used for downloading mods
 - `--sync` will automatically download mods that you don't have
 ## Changes
 - `--sync` will sync the exact mod version instead of the latest version by default
+- Renamed `--dir` to `--mods-dir`
 ## Bugfixes
 - Fixed `--sync` not working correctly if a mod had a u16 in its version
 

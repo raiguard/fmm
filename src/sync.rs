@@ -117,6 +117,8 @@ fn read_mod(reader: &mut Cursor<Vec<u8>>) -> Result<ModIdent> {
     let version_major = read_u16_optimized(reader)?;
     let version_minor = read_u16_optimized(reader)?;
     let version_patch = read_u16_optimized(reader)?;
+
+    // TODO: Figure out what these bytes are
     reader.seek(SeekFrom::Current(4))?;
 
     Ok(ModIdent {
