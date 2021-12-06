@@ -12,6 +12,7 @@ use crate::App;
 
 #[derive(Debug)]
 pub struct Config {
+    pub auto_download: bool,
     pub game_dir: Option<PathBuf>,
     pub mods_dir: PathBuf,
     pub portal_auth: Option<PortalAuth>,
@@ -27,6 +28,7 @@ impl Config {
         // Merge config options
         let game_dir = app.game_dir.clone().or(config_file.game_dir);
         Ok(Config {
+            auto_download: config_file.auto_download,
             game_dir: game_dir.clone(),
             mods_dir: match [
                 game_dir.clone(),
@@ -77,6 +79,8 @@ pub type ModSets = Option<HashMap<String, Vec<ModIdent>>>;
 #[serde_as]
 #[derive(Deserialize, Default)]
 struct ConfigFile {
+    #[serde(default)]
+    auto_download: bool,
     game_dir: Option<PathBuf>,
     mods_dir: Option<PathBuf>,
     portal: Option<PortalAuth>,

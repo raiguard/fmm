@@ -156,7 +156,7 @@ fn main() -> Result<()> {
                     download::download_mod(mod_ident, &mut directory, &config, &client).ok()?;
                     Some(vec![ManageOrder::Enable(mod_ident.clone())])
                 }
-                ManageOrder::Enable(mod_ident) => directory.enable(mod_ident),
+                ManageOrder::Enable(mod_ident) => directory.enable(mod_ident, &config),
             })
             .flatten()
             .collect();
