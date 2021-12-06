@@ -10,7 +10,6 @@ use std::path::PathBuf;
 use semver::{Version, VersionReq};
 use zip::ZipArchive;
 
-use crate::config::Config;
 use crate::dependency::ModDependencyType;
 use crate::get_mod_version;
 use crate::types::*;
@@ -119,7 +118,7 @@ impl Directory {
         }
     }
 
-    pub fn enable(&mut self, mod_ident: &ModIdent, config: &Config) -> Option<Vec<ManageOrder>> {
+    pub fn enable(&mut self, mod_ident: &ModIdent) -> Option<Vec<ManageOrder>> {
         if let Some(mod_entry) = self
             .mods
             .get(&mod_ident.name)
@@ -172,26 +171,19 @@ impl Directory {
                             name: dependency.name.clone(),
                             version_req: dependency.version_req.clone(),
                         })
-                        .filter_map(|dependency_ident| {
+                        .map(|dependency_ident| {
                             self.mods
                                 .get(&dependency_ident.name)
                                 .and_then(|dependency_entries| {
                                     get_mod_version(dependency_entries, &dependency_ident)
                                 })
                                 .map(|_| ManageOrder::Enable(dependency_ident.clone()))
-                                .or_else(|| {
-                                    if config.auto_download {
-                                        Some(ManageOrder::Download(dependency_ident.clone()))
-                                    } else {
-                                        // TODO: Print message when we do not have a mod and are not auto-downloading it
-                                        None
-                                    }
-                                })
+                                .unwrap_or_else(|| ManageOrder::Download(dependency_ident.clone()))
                         })
                         .collect(),
                 );
             }
-        } else if config.auto_download {
+        } else {
             return Some(vec![ManageOrder::Download(mod_ident.clone())]);
         }
 

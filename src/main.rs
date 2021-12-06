@@ -4,6 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use console::style;
 use reqwest::blocking::Client;
 use semver::Version;
 use structopt::StructOpt;
@@ -153,10 +154,15 @@ fn main() -> Result<()> {
             .filter(|order| order.get_name() != "base")
             .filter_map(|order| match order {
                 ManageOrder::Download(mod_ident) => {
-                    download::download_mod(mod_ident, &mut directory, &config, &client).ok()?;
-                    Some(vec![ManageOrder::Enable(mod_ident.clone())])
+                    if config.auto_download {
+                        download::download_mod(mod_ident, &mut directory, &config, &client).ok()?;
+                        Some(vec![ManageOrder::Enable(mod_ident.clone())])
+                    } else {
+                        println!("{} {}", style("Did not download").red(), mod_ident.name);
+                        None
+                    }
                 }
-                ManageOrder::Enable(mod_ident) => directory.enable(mod_ident, &config),
+                ManageOrder::Enable(mod_ident) => directory.enable(mod_ident),
             })
             .flatten()
             .collect();
