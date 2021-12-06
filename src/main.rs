@@ -104,7 +104,15 @@ fn main() -> Result<()> {
     if let Some(sync_path) = app.sync {
         let save_file = sync::SaveFile::from(sync_path)?;
 
-        combined_enable.append(&mut save_file.mods.to_vec());
+        let mut mods = save_file.mods.to_vec();
+
+        if config.sync_latest_versions {
+            for mod_ident in mods.iter_mut() {
+                mod_ident.version_req = None;
+            }
+        }
+
+        combined_enable.append(&mut mods);
     }
     // Manually enable
     combined_enable.append(&mut app.enable.to_vec());

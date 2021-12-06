@@ -16,6 +16,7 @@ pub struct Config {
     pub mods_dir: PathBuf,
     pub portal_auth: Option<PortalAuth>,
     pub sets: ModSets,
+    pub sync_latest_versions: bool,
 }
 
 impl Config {
@@ -60,6 +61,7 @@ impl Config {
                 None
             }),
             sets: config_file.sets,
+            sync_latest_versions: config_file.sync_latest_versions,
         })
     }
 }
@@ -80,6 +82,8 @@ struct ConfigFile {
     portal: Option<PortalAuth>,
     #[serde_as(as = "Option<HashMap<_, Vec<DisplayFromStr>>>")]
     sets: ModSets,
+    #[serde(default)]
+    sync_latest_versions: bool,
 }
 
 impl ConfigFile {
