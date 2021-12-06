@@ -43,36 +43,27 @@ See `fmm --help` for all subcommands.
 
 ## Features
 
+- List all mods in the mods directory
 - Enable mods and their dependencies
 - Disable mods
 - Enable or disable all mods at once
 - Enable pre-defined sets of mods
-- Set your default directory by using a config file
+- Sync enabled mods with a save file
+- Download mods from the portal
 - Remove mods from your mods directory
 
 ## Configuration
 
-`fmm` accepts a `--config` flag with a path to a [`toml`](https://toml.io/en/) configuration file. If `--config` is not provided, `fmm` will look for this file in `$XDG_CONFIG_HOME/fmm/fmm.toml` and source it if it exists.
+`fmm` accepts a `--config` flag with a path to a [`toml`](https://toml.io/en/) configuration file. If `--config` is not provided, `fmm` will look for this file in `$XDG_CONFIG_HOME/fmm/fmm.toml` and source it if it exists. Values provided as flags will override those in the config file.
 
-```toml
-# The path to the Factorio mods directory
-directory = "/home/rai/.factorio/mods/"
-
-# Customizable mod sets
-# Each key will be available for use in the `--enable-set` flag
-# Dependencies will automatically be enabled
-# Specific versions may be specified by appending `@version` to the mod name
-[sets]
-EditorExtensions = ["EditorExtensions", "Sandbox"]
-Krastorio2Beta = ["Krastorio2@1.2.0", "EditorExtensions", "Sandbox"]
-```
+[EXAMPLE CONFIGURATION](./fmm.toml)
 
 ## Roadmap
 
 Roughly in this order:
 
 - Sync with `mod-list.json`
-- Sync with save
+- Local config
 - Automatically publish to AUR
 - Create new mod
 - Package mod

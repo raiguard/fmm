@@ -1,0 +1,26 @@
+# If enabled, mods that you don't have will automatically be downloaded
+# Default: true
+auto_download = true
+# The path to the Factorio installation you wish to use
+game_dir = "/home/rai/games/factorio"
+# The path to the Factorio mods directory
+# If `game_dir` is specified and the mods folder is within it, you do not need to add this
+mods_dir = "/home/rai/.factorio/mods/"
+# If enabled, `--sync` will enable or download the latest version of each mod instead of the version in the save file
+# Default: false
+sync_latest_versions = false
+
+# Mod portal credentials
+# If `game_dir` is specified, these will be automatically retrieved from `player-data.json`
+# Retrieve or reset your token: https://factorio.com -> Profile -> Token
+[portal]
+token = "12345"
+username = "raiguard"
+
+# Customizable mod sets
+# Each key will be available for use in the `--enable-set` flag
+# Dependencies will automatically be enabled
+# Specific versions may be specified by appending `@version` to the mod name
+[sets]
+EditorExtensions = ["EditorExtensions", "Sandbox"]
+Krastorio2Beta = ["Krastorio2@1.2.0", "EditorExtensions", "Sandbox"]
