@@ -1,10 +1,10 @@
 # v0.5.0 - ??????????
 ## Features
 - Added colors to command output
-- Added `--download` command for downloading mods from the portal
-- Added section to config file for overriding mod portal username and token
+- Added mod downloading - mods that you do not have will automatically be downloaded when enabling or syncing
+  - This can be disabled in the config file
+- Added section to config file for mod portal username and token
 - Added `--game-dir` flag and option, used for downloading mods
-- `--sync` will automatically download mods that you don't have
 ## Changes
 - `--sync` will sync the exact mod version instead of the latest version by default
 - Renamed `--dir` to `--mods-dir` and `directory` option to `mods_dir`
