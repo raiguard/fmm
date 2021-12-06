@@ -90,22 +90,25 @@ fn main() -> Result<()> {
         }
     }
 
+    // Combine enable commands
+    let mut combined_enable = vec![];
     // Enable set
     if let Some(set_name) = app.enable_set {
         if let Some(sets) = config.sets.as_ref() {
             if let Some(set) = sets.get(&set_name) {
-                app.enable = set.to_vec();
+                combined_enable.append(&mut set.to_vec());
             }
         }
     }
-
     // Sync with save
     if let Some(sync_path) = app.sync {
         let save_file = sync::SaveFile::from(sync_path)?;
 
-        // TODO: Prepend instead of overwriting
-        app.enable = save_file.mods;
+        combined_enable.append(&mut save_file.mods.to_vec());
     }
+    // Manually enable
+    combined_enable.append(&mut app.enable.to_vec());
+    app.enable = combined_enable;
 
     // Remove specified mods
     for mod_ident in app.remove {
