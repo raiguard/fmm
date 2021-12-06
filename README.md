@@ -54,7 +54,15 @@ See `fmm --help` for all subcommands.
 
 ## Configuration
 
-`fmm` accepts a `--config` flag with a path to a [`toml`](https://toml.io/en/) configuration file. If `--config` is not provided, `fmm` will look for this file in `$XDG_CONFIG_HOME/fmm/fmm.toml` and source it if it exists. Values provided as flags will override those in the config file.
+`fmm` accepts a `--config` flag with a path to a [`toml`](https://toml.io/en/) configuration file. If `--config` is not provided, `fmm` will look for this file in the following location:
+
+| Platform | Path                                                |
+| -------- | --------------------------------------------------- |
+| Linux    | /home/rai/.config/fmm/fmm.toml                      |
+| macOS    | /Users/Rai/Library/Application Support/fmm/fmm.toml |
+| Windows  | C:\Users\Rai\AppData\Roaming\fmm\fmm.toml           |
+
+Values passed as flags will override those in the config file.
 
 [EXAMPLE CONFIGURATION](./fmm.toml)
 
