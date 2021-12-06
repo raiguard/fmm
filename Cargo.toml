@@ -1,6 +1,6 @@
 [package]
 name = "fmm"
-version = "0.4.1"
+version = "0.5.0"
 authors = ["raiguard <caleb.heuer@gmail.com>"]
 edition = "2021"
 description = "Manage your Factorio mods."
