@@ -89,10 +89,10 @@ fn download_mod_internal(
 
     let pb = ProgressBar::new(total_size);
     pb.set_style(
-            ProgressStyle::default_bar()
-                .template("{msg} [{elapsed_precise:.blue}] [{bar:.green}] {bytes} / {total_bytes} ({bytes_per_sec}, {eta})")
-                .progress_chars("=> "),
-        );
+        ProgressStyle::default_bar()
+            .template("{msg} [{elapsed_precise:.blue}] [{bar:.green}] {bytes} / {total_bytes} ({bytes_per_sec}, {eta})")
+            .progress_chars("=> "),
+    );
 
     pb.set_message(format!(
         "{} {} v{}",
