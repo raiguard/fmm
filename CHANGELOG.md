@@ -7,7 +7,7 @@
 - `--sync` will automatically download mods that you don't have
 ## Changes
 - `--sync` will sync the exact mod version instead of the latest version by default
-- Renamed `--dir` to `--mods-dir`
+- Renamed `--dir` to `--mods-dir` and `directory` option to `mods_dir`
 ## Bugfixes
 - Fixed `--sync` not working correctly if a mod had a u16 in its version
 
