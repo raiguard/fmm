@@ -22,10 +22,11 @@ pub fn download_mod(
     directory: &mut Directory,
     config: &Config,
     client: &Client,
-) -> Result<()> {
-    match download_mod_internal(mod_ident, config, client) {
+) -> Result<bool> {
+    Ok(match download_mod_internal(mod_ident, config, client) {
         Ok(data) => {
             directory.add(data);
+            true
         }
         Err(err) => {
             eprintln!(
@@ -34,9 +35,9 @@ pub fn download_mod(
                 mod_ident.name,
                 err
             );
+            false
         }
-    }
-    Ok(())
+    })
 }
 
 fn download_mod_internal(

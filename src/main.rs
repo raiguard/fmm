@@ -155,8 +155,13 @@ fn main() -> Result<()> {
             .filter_map(|order| match order {
                 ManageOrder::Download(mod_ident) => {
                     if config.auto_download {
-                        download::download_mod(mod_ident, &mut directory, &config, &client).ok()?;
-                        Some(vec![ManageOrder::Enable(mod_ident.clone())])
+                        if download::download_mod(mod_ident, &mut directory, &config, &client).ok()?
+
+                        {
+                            Some(vec![ManageOrder::Enable(mod_ident.clone())])
+                        } else {
+                            None
+                        }
                     } else {
                         println!("{} {}", style("Did not download").red(), mod_ident.name);
                         None
