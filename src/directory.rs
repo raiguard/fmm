@@ -257,7 +257,6 @@ fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {
     }
 }
 
-// TODO: Use errors instead of an option
 fn read_info_json(entry: &DirEntry) -> Option<InfoJson> {
     let contents = match ModEntryStructure::parse(entry)? {
         ModEntryStructure::Directory | ModEntryStructure::Symlink => {
