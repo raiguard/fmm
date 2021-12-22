@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::{DirEntry, File};
-use std::io::Read;
+use std::io::{Cursor, Read, Seek, SeekFrom};
 use std::path::PathBuf;
 
 use semver::{Version, VersionReq};
@@ -12,16 +12,18 @@ use zip::ZipArchive;
 
 use crate::dependency::ModDependencyType;
 use crate::get_mod_version;
+use crate::read::PropertyTree;
 use crate::types::*;
 
 pub struct Directory {
     pub mods: HashMap<String, Vec<ModEntry>>,
     pub mod_list: Vec<ModListJsonMod>,
     pub mod_list_path: PathBuf,
+    pub startup_settings: PropertyTree,
 }
 
 impl Directory {
-    pub fn new(mut path: PathBuf) -> Result<Self> {
+    pub fn new(path: PathBuf) -> Result<Self> {
         // Get all mods in the directory
         let mod_entries = fs::read_dir(&path)?
             .filter_map(|entry| {
@@ -52,14 +54,25 @@ impl Directory {
             });
 
         // Parse mod-list.json
-        path.push("mod-list.json");
-        let enabled_versions = fs::read_to_string(&path)?;
+        let mut mlj_path = path.clone();
+        mlj_path.push("mod-list.json");
+        let enabled_versions = fs::read_to_string(&mlj_path)?;
         let mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
+
+        // Parse mod-settings.dat
+        let mut settings_path = path;
+        settings_path.push("mod-settings.dat");
+        let mut settings_cursor = Cursor::new(fs::read(&mlj_path)?);
+        settings_cursor.seek(SeekFrom::Current(8))?;
+        let startup_settings = PropertyTree::load(&mut settings_cursor)?;
+
+        println!("{:#?}", startup_settings);
 
         Ok(Self {
             mods: mod_entries,
             mod_list: mod_list_json.mods,
-            mod_list_path: path,
+            mod_list_path: mlj_path,
+            startup_settings,
         })
     }
 
