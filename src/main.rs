@@ -1,5 +1,4 @@
 #![feature(iter_intersperse)]
-#![allow(unused)]
 
 use std::fs;
 use std::path::PathBuf;
@@ -14,6 +13,7 @@ mod config;
 mod dependency;
 mod directory;
 mod download;
+mod read;
 mod sync;
 mod types;
 
