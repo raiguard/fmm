@@ -1,4 +1,5 @@
 #![feature(iter_intersperse)]
+#![allow(unused)]
 
 use std::fs;
 use std::path::PathBuf;
@@ -155,8 +156,8 @@ fn main() -> Result<()> {
             .filter_map(|order| match order {
                 ManageOrder::Download(mod_ident) => {
                     if config.auto_download {
-                        if download::download_mod(mod_ident, &mut directory, &config, &client).ok()?
-
+                        if download::download_mod(mod_ident, &mut directory, &config, &client)
+                            .ok()?
                         {
                             Some(vec![ManageOrder::Enable(mod_ident.clone())])
                         } else {

@@ -94,7 +94,7 @@ impl ConfigFile {
     pub fn new(path: &Option<PathBuf>) -> Result<Option<Self>, ConfigFileErr> {
         let config_path: Option<PathBuf> = path
             .clone()
-            .or({
+            .or_else(|| {
                 BaseDirs::new().map(|base_dirs| {
                     let mut config_path: PathBuf = base_dirs.config_dir().into();
                     config_path.push("fmm");

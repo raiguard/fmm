@@ -248,7 +248,7 @@ fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {
     let (name, version) = file_name
         .to_str()?
         .trim_end_matches(".zip")
-        .rsplit_once("_")?;
+        .rsplit_once('_')?;
 
     if let Ok(version) = Version::parse(version) {
         Some((name.to_string(), version))
