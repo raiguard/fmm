@@ -69,6 +69,26 @@ pub trait ReadFactorioDat: io::Read {
         }
     }
 
+    fn read_mod(&mut self) -> Result<ModIdent> {
+        let mod_name = self.read_string()?;
+
+        let version_major = self.read_u16_optimized()?;
+        let version_minor = self.read_u16_optimized()?;
+        let version_patch = self.read_u16_optimized()?;
+
+        // We don't care about the CRC
+        let _crc = self.read_u32::<LittleEndian>()?;
+
+        Ok(ModIdent {
+            name: mod_name,
+            version_req: Some(VersionReq::exact(&Version::new(
+                version_major as u64,
+                version_minor as u64,
+                version_patch as u64,
+            ))),
+        })
+    }
+
     fn read_string(&mut self) -> Result<String> {
         let scenario_len = self.read_u8()?;
         let mut scenario_name = vec![0; scenario_len as usize];
@@ -93,28 +113,8 @@ pub trait ReadFactorioDat: io::Read {
         }
         Ok(version)
     }
-
-    fn read_mod(&mut self) -> Result<ModIdent> {
-        let mod_name = self.read_string()?;
-
-        let version_major = self.read_u16_optimized()?;
-        let version_minor = self.read_u16_optimized()?;
-        let version_patch = self.read_u16_optimized()?;
-
-        // We don't care about the CRC
-        let _crc = self.read_u32::<LittleEndian>()?;
-
-        Ok(ModIdent {
-            name: mod_name,
-            version_req: Some(VersionReq::exact(&Version::new(
-                version_major as u64,
-                version_minor as u64,
-                version_patch as u64,
-            ))),
-        })
-    }
 }
 
-/// All types that implement `Read` get methods defined in `ReadBytesFmm`
+/// All types that implement `Read` get methods defined in `ReadFactorioDat`
 /// for free.
 impl<R: io::Read + ?Sized> ReadFactorioDat for R {}

@@ -189,10 +189,7 @@ trait HasVersion {
     fn get_version(&self) -> &Version;
 }
 
-fn get_mod_version<'a, T>(list: &'a [T], mod_ident: &ModIdent) -> Option<&'a T>
-where
-    T: HasVersion,
-{
+fn get_mod_version<'a, T: HasVersion>(list: &'a [T], mod_ident: &ModIdent) -> Option<&'a T> {
     if let Some(version_req) = &mod_ident.version_req {
         list.iter()
             .rev()
