@@ -1,36 +1,41 @@
-# v0.5.0 - ??????????
-## Features
-- Added colors to command output
-- Added mod downloading - mods that you do not have will automatically be downloaded when enabling or syncing
+# [0.5.0] - Unreleased
+## Added
+- Colors to command output
+- Mod downloading - mods that you do not have will automatically be downloaded when enabling or syncing
   - This can be disabled in the config file
-- Added section to config file for mod portal username and token
-- Added `--game-dir` flag and option, used for downloading mods
-## Changes
+- Section to config file for mod portal username and token
+- `--game-dir` flag and option, used for downloading mods
+
+## Changed
 - `--sync` will sync the exact mod version instead of the latest version by default
-- Renamed `--dir` to `--mods-dir` and `directory` option to `mods_dir`
-## Bugfixes
-- Fixed `--sync` not working correctly if a mod had a u16 in its version
+- Renamed `--dir` flag to `--mods-dir` and `directory` option to `mods_dir`
 
-# v0.4.0 - 2021-11-13
-## Features
-- Added `--list` flag, for listing all of the mods in the directory
-- Added `--sync` flag, for enabling mods that are in the given save file
+## Fixed
+- `--sync` would completely break if a mod had a version number greater than 255
 
-# v0.3.0 - 2021-11-06
-## Features
-- Added `--enable-set` flag, for enabling pre-defined sets of mods
+# [0.4.0] - 2021-11-13
+## Added
+- `--list` flag, for listing all of the mods in the directory
+- `--sync` flag, for enabling mods that are in the given save file
+
+# [0.3.0] - 2021-11-06
+## Added
+- `--enable-set` flag, for enabling pre-defined sets of mods
   - These sets can be configured in `fmm.toml`
-## Changes
+
+## Changed
 - "Mod is already enabled" messages were removed - they hurt more than they helped
-## Bugfixes
+
+## Fixed
 - Fixed that versionless mod folders with an underscore would not be parsed correctly
 
-# v0.2.0 - 2021-11-03
-## Features
-- Added `--remove` flag
-## Bugfixes
+# [0.2.0] - 2021-11-03
+## Added
+- `--remove` flag
+
+## Fixed
 - Fixed GitHub release workflow
 
-# v0.1.0 - 2021-11-03
-## Features
+# [0.1.0] - 2021-11-03
+## Added
 - Initial release
