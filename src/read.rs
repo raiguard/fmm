@@ -24,6 +24,7 @@ pub enum PropertyTree {
 }
 
 impl PropertyTree {
+    /// Load a PropertyTree from binary data.
     pub fn load(reader: &mut DatReader) -> Result<Self> {
         let pt_type = reader.read_u8()?;
         // Internal flag that we don't have to care about
@@ -56,6 +57,54 @@ impl PropertyTree {
                 Ok(Self::Dictionary(dict))
             }
             _ => Err(anyhow!("Invalid data type in PropertyTree: {}", pt_type)),
+        }
+    }
+
+    /// Index into a PropertyTree list or dictionary.
+    pub fn get<T: PropertyTreeKey>(&self, key: T) -> Option<&Self> {
+        key.index_into(self)
+    }
+
+    /// Mutably index into a PropertyTree list or dictionary.
+    pub fn get_mut<T: PropertyTreeKey>(&mut self, key: T) -> Option<&mut Self> {
+        key.index_into_mut(self)
+    }
+}
+
+pub trait PropertyTreeKey {
+    fn index_into<'a>(&self, pt: &'a PropertyTree) -> Option<&'a PropertyTree>;
+
+    fn index_into_mut<'a>(&self, pt: &'a mut PropertyTree) -> Option<&'a mut PropertyTree>;
+}
+
+impl PropertyTreeKey for &str {
+    fn index_into<'a>(&self, pt: &'a PropertyTree) -> Option<&'a PropertyTree> {
+        match pt {
+            PropertyTree::Dictionary(dict) => dict.get(*self),
+            _ => None,
+        }
+    }
+
+    fn index_into_mut<'a>(&self, pt: &'a mut PropertyTree) -> Option<&'a mut PropertyTree> {
+        match pt {
+            PropertyTree::Dictionary(dict) => dict.get_mut(*self),
+            _ => None,
+        }
+    }
+}
+
+impl PropertyTreeKey for usize {
+    fn index_into<'a>(&self, pt: &'a PropertyTree) -> Option<&'a PropertyTree> {
+        match pt {
+            PropertyTree::List(list) => list.get(*self),
+            _ => None,
+        }
+    }
+
+    fn index_into_mut<'a>(&self, pt: &'a mut PropertyTree) -> Option<&'a mut PropertyTree> {
+        match pt {
+            PropertyTree::List(list) => list.get_mut(*self),
+            _ => None,
         }
     }
 }
@@ -115,6 +164,5 @@ pub trait ReadFactorioDat: io::Read {
     }
 }
 
-/// All types that implement `Read` get methods defined in `ReadFactorioDat`
-/// for free.
+/// All types that implement `Read` get methods defined in `ReadFactorioDat` for free.
 impl<R: io::Read + ?Sized> ReadFactorioDat for R {}
