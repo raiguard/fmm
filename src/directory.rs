@@ -1,6 +1,8 @@
 use anyhow::Result;
 use byteorder::ReadBytesExt;
 use console::style;
+use sha1::digest::generic_array::typenum::private::IsGreaterOrEqualPrivate;
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs;
@@ -20,7 +22,7 @@ pub struct Directory {
     pub mods: HashMap<String, Vec<ModEntry>>,
     pub mod_list: Vec<ModListJsonMod>,
     pub mod_list_path: PathBuf,
-    pub startup_settings: PropertyTree,
+    pub mod_settings: PropertyTree,
 }
 
 impl Directory {
@@ -65,13 +67,15 @@ impl Directory {
         settings_path.push("mod-settings.dat");
         let mut settings_cursor = Cursor::new(fs::read(&settings_path)?);
         settings_cursor.seek(SeekFrom::Current(9))?;
-        let startup_settings = PropertyTree::load(&mut settings_cursor)?;
+        let mod_settings = PropertyTree::load(&mut settings_cursor)?;
+
+        println!("SAVED SETTINGS: {:#?}", mod_settings);
 
         Ok(Self {
             mods: mod_entries,
             mod_list: mod_list_json.mods,
             mod_list_path: mlj_path,
-            startup_settings,
+            mod_settings,
         })
     }
 
@@ -253,6 +257,21 @@ impl Directory {
         {
             self.mod_list.remove(index);
         }
+    }
+
+    pub fn sync_settings(&mut self, save_settings: &PropertyTree) -> Option<()> {
+        let startup_settings = self
+            .mod_settings
+            .get_mut("settings-startup")?
+            .as_dictionary_mut()?;
+
+        for (setting_name, setting_value) in save_settings.as_dictionary()? {
+            startup_settings.insert(setting_name.clone(), setting_value.clone());
+        }
+
+        // TODO: Write the settings file
+
+        Some(())
     }
 }
 

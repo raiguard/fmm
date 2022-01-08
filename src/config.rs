@@ -18,6 +18,7 @@ pub struct Config {
     pub portal_auth: Option<PortalAuth>,
     pub sets: ModSets,
     pub sync_latest_versions: bool,
+    pub sync_startup_settings: bool,
 }
 
 impl Config {
@@ -64,6 +65,7 @@ impl Config {
             }),
             sets: config_file.sets,
             sync_latest_versions: config_file.sync_latest_versions,
+            sync_startup_settings: config_file.sync_startup_settings.unwrap_or(true),
         })
     }
 }
@@ -88,6 +90,7 @@ struct ConfigFile {
     sets: ModSets,
     #[serde(default)]
     sync_latest_versions: bool,
+    sync_startup_settings: Option<bool>,
 }
 
 impl ConfigFile {

@@ -13,7 +13,7 @@ use crate::types::ModIdent;
 
 pub type DatReader = Cursor<Vec<u8>>;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum PropertyTree {
     None,
     Boolean(bool),
@@ -68,6 +68,48 @@ impl PropertyTree {
     /// Mutably index into a PropertyTree list or dictionary.
     pub fn get_mut<T: PropertyTreeKey>(&mut self, key: T) -> Option<&mut Self> {
         key.index_into_mut(self)
+    }
+
+    /// Returns `true` if the `PropertyTree` is a list.
+    pub fn is_list(&self) -> bool {
+        matches!(self, Self::List(_))
+    }
+
+    /// If the `PropertyTree` is a list, returns the associated vector. Otherwise returns `None`.
+    pub fn as_list(&self) -> Option<&Vec<PropertyTree>> {
+        match self {
+            Self::List(list) => Some(list),
+            _ => None,
+        }
+    }
+
+    /// If the `PropertyTree` is a list, returns the associated mutable vector. Otherwise returns `None`.
+    pub fn as_list_mut(&mut self) -> Option<&mut Vec<PropertyTree>> {
+        match self {
+            Self::List(list) => Some(list),
+            _ => None,
+        }
+    }
+
+    /// Returns `true` if the `PropertyTree` is a list.
+    pub fn is_dictionary(&self) -> bool {
+        matches!(self, Self::Dictionary(_))
+    }
+
+    /// If the `PropertyTree` is a dictionary, returns the associated hashmap. Otherwise returns `None`.
+    pub fn as_dictionary(&self) -> Option<&HashMap<String, PropertyTree>> {
+        match self {
+            Self::Dictionary(dict) => Some(dict),
+            _ => None,
+        }
+    }
+
+    /// If the `PropertyTree` is a dictionary, returns the associated mutable hashmap. Otherwise returns `None`.
+    pub fn as_dictionary_mut(&mut self) -> Option<&mut HashMap<String, PropertyTree>> {
+        match self {
+            Self::Dictionary(dict) => Some(dict),
+            _ => None,
+        }
     }
 }
 
