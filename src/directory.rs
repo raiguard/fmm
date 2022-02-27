@@ -1,13 +1,10 @@
 use anyhow::Result;
-use byteorder::ReadBytesExt;
 use console::style;
-use sha1::digest::generic_array::typenum::private::IsGreaterOrEqualPrivate;
-use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::{DirEntry, File};
-use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::io::Read;
 use std::path::PathBuf;
 
 use semver::{Version, VersionReq};
@@ -15,6 +12,7 @@ use zip::ZipArchive;
 
 use crate::dependency::ModDependencyType;
 use crate::get_mod_version;
+use crate::mod_settings::ModSettings;
 use crate::read::PropertyTree;
 use crate::types::*;
 
@@ -22,7 +20,7 @@ pub struct Directory {
     pub mods: HashMap<String, Vec<ModEntry>>,
     pub mod_list: Vec<ModListJsonMod>,
     pub mod_list_path: PathBuf,
-    pub mod_settings: PropertyTree,
+    pub mod_settings: ModSettings,
 }
 
 impl Directory {
@@ -62,20 +60,11 @@ impl Directory {
         let enabled_versions = fs::read_to_string(&mlj_path)?;
         let mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
 
-        // Parse mod-settings.dat
-        let mut settings_path = path;
-        settings_path.push("mod-settings.dat");
-        let mut settings_cursor = Cursor::new(fs::read(&settings_path)?);
-        settings_cursor.seek(SeekFrom::Current(9))?;
-        let mod_settings = PropertyTree::load(&mut settings_cursor)?;
-
-        println!("SAVED SETTINGS: {:#?}", mod_settings);
-
         Ok(Self {
             mods: mod_entries,
             mod_list: mod_list_json.mods,
             mod_list_path: mlj_path,
-            mod_settings,
+            mod_settings: ModSettings::new(path)?,
         })
     }
 
@@ -259,9 +248,11 @@ impl Directory {
         }
     }
 
+    // TODO: Use Result
     pub fn sync_settings(&mut self, save_settings: &PropertyTree) -> Option<()> {
         let startup_settings = self
             .mod_settings
+            .settings
             .get_mut("settings-startup")?
             .as_dictionary_mut()?;
 
@@ -269,7 +260,7 @@ impl Directory {
             startup_settings.insert(setting_name.clone(), setting_value.clone());
         }
 
-        // TODO: Write the settings file
+        self.mod_settings.write().ok()?;
 
         Some(())
     }

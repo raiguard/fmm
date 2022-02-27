@@ -13,6 +13,7 @@ mod config;
 mod dependency;
 mod directory;
 mod download;
+mod mod_settings;
 mod read;
 mod sync;
 mod types;
