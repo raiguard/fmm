@@ -69,7 +69,7 @@ fn download_mod_internal(
 
     // Download the mod
     let mut res = match client
-        .get(format!("https://mods.factorio.com{}", release.download_url,))
+        .get(format!("https://mods.factorio.com{}", release.download_url))
         .query(&[
             ("username", &portal_auth.username),
             ("token", &portal_auth.token),

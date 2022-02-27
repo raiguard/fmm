@@ -198,11 +198,11 @@ pub trait ReadFactorioDat: io::Read {
     }
 
     fn read_u16_optimized(&mut self) -> Result<u16> {
-        let mut version: u16 = self.read_u8()?.into();
-        if version == 255 {
-            version = self.read_u16::<LittleEndian>()?;
+        let mut num: u16 = self.read_u8()?.into();
+        if num == 255 {
+            num = self.read_u16::<LittleEndian>()?;
         }
-        Ok(version)
+        Ok(num)
     }
 }
 
