@@ -1,4 +1,4 @@
-# [0.5.0] - Unreleased
+# [0.5.0] - 2022-03-01
 
 ## Added
 - Colors to command output
