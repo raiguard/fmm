@@ -81,8 +81,6 @@ impl SaveFile {
 
         let startup_settings = PropertyTree::load(&mut cursor)?;
 
-        println!("FILE SETTINGS: {:#?}", startup_settings);
-
         Ok(Self {
             mods,
             map_version: Version::new(

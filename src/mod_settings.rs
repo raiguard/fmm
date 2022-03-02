@@ -1,11 +1,12 @@
 use anyhow::Result;
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::fs;
 use std::io::{Cursor, Seek, SeekFrom};
 use std::path::PathBuf;
 
 use crate::read::PropertyTree;
 
+#[derive(Debug)]
 pub struct ModSettings {
     pub settings: PropertyTree,
 
@@ -42,16 +43,21 @@ impl ModSettings {
     }
 
     pub fn write(&self) -> Result<()> {
-        let contents = vec![
-            self.version_major,
-            self.version_minor,
-            self.version_patch,
-            self.version_build,
-            0,
-        ];
-        // contents.append(self.settings.write());
-        // let mut file = fs::write(self.path, &contents);
+        let mut output = vec![];
 
-        unimplemented!()
+        // Factorio version number
+        output.write_u16::<LittleEndian>(self.version_major)?;
+        output.write_u16::<LittleEndian>(self.version_minor)?;
+        output.write_u16::<LittleEndian>(self.version_patch)?;
+        output.write_u16::<LittleEndian>(self.version_build)?;
+        // Internal flag - always false
+        output.push(false as u8);
+
+        // Settings PropertyTree
+        self.settings.write(&mut output)?;
+
+        fs::write(&self.path, output)?;
+
+        Ok(())
     }
 }

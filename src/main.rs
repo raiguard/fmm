@@ -117,7 +117,9 @@ fn main() -> Result<()> {
 
         combined_enable.append(&mut mods);
 
-        directory.sync_settings(&save_file.startup_settings);
+        directory.sync_settings(&save_file.startup_settings)?;
+
+        println!("Synced startup settings");
     }
     // Manually enable
     combined_enable.append(&mut app.enable.to_vec());

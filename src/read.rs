@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use anyhow::Result;
+use byteorder::WriteBytesExt;
 use byteorder::{LittleEndian, ReadBytesExt};
 use semver::Version;
 use semver::VersionReq;
@@ -61,21 +62,25 @@ impl PropertyTree {
     }
 
     /// Index into a PropertyTree list or dictionary.
+    #[allow(unused)]
     pub fn get<T: PropertyTreeKey>(&self, key: T) -> Option<&Self> {
         key.index_into(self)
     }
 
     /// Mutably index into a PropertyTree list or dictionary.
+    #[allow(unused)]
     pub fn get_mut<T: PropertyTreeKey>(&mut self, key: T) -> Option<&mut Self> {
         key.index_into_mut(self)
     }
 
     /// Returns `true` if the `PropertyTree` is a list.
+    #[allow(unused)]
     pub fn is_list(&self) -> bool {
         matches!(self, Self::List(_))
     }
 
     /// If the `PropertyTree` is a list, returns the associated vector. Otherwise returns `None`.
+    #[allow(unused)]
     pub fn as_list(&self) -> Option<&Vec<PropertyTree>> {
         match self {
             Self::List(list) => Some(list),
@@ -84,6 +89,7 @@ impl PropertyTree {
     }
 
     /// If the `PropertyTree` is a list, returns the associated mutable vector. Otherwise returns `None`.
+    #[allow(unused)]
     pub fn as_list_mut(&mut self) -> Option<&mut Vec<PropertyTree>> {
         match self {
             Self::List(list) => Some(list),
@@ -92,6 +98,7 @@ impl PropertyTree {
     }
 
     /// Returns `true` if the `PropertyTree` is a list.
+    #[allow(unused)]
     pub fn is_dictionary(&self) -> bool {
         matches!(self, Self::Dictionary(_))
     }
@@ -110,6 +117,77 @@ impl PropertyTree {
             Self::Dictionary(dict) => Some(dict),
             _ => None,
         }
+    }
+
+    /// Serializes the `PropertyTree` into the given bytestream.
+    pub fn write(&self, output: &mut Vec<u8>) -> Result<()> {
+        // Each PropertyTree type has a flag as the second byte that doesn't matter, so we just ignore it
+        match self {
+            PropertyTree::None => {
+                // PropertyTree type
+                output.write_u8(0)?;
+                // Internal flag
+                output.write_u8(0)?;
+            }
+            PropertyTree::Boolean(bool) => {
+                // PropertyTree type
+                output.write_u8(1)?;
+                // Internal flag
+                output.write_u8(0)?;
+                // Data
+                output.write_u8(if *bool { 1 } else { 0 })?;
+            }
+            PropertyTree::Number(num) => {
+                // PropertyTree type
+                output.write_u8(2)?;
+                // Internal flag
+                output.write_u8(0)?;
+                // Data
+                output.write_f64::<LittleEndian>(*num)?;
+            }
+            PropertyTree::String(str) => {
+                // PropertyTree type
+                output.write_u8(3)?;
+                // Internal flag
+                output.write_u8(0)?;
+                // Data
+                output.write_pt_string(str)?;
+            }
+            PropertyTree::List(list) => {
+                // PropertyTree type
+                output.write_u8(4)?;
+                // Internal flag
+                output.write_u8(0)?;
+
+                // Length of the list
+                output.write_u32::<LittleEndian>(list.len() as u32)?;
+
+                // List contents
+                for item in list {
+                    // List keys are empty strings
+                    output.write_pt_string(&None)?;
+                    item.write(output)?;
+                }
+            }
+            PropertyTree::Dictionary(dict) => {
+                // PropertyTree type
+                output.write_u8(5)?;
+                // Internal flag
+                output.write_u8(0)?;
+
+                // Length of the list
+                output.write_u32::<LittleEndian>(dict.len() as u32)?;
+
+                // Dictionary contents
+                for (key, value) in dict {
+                    // Dictionary keys always exist
+                    output.write_pt_string(&Some(key.to_string()))?;
+                    value.write(output)?;
+                }
+            }
+        };
+
+        Ok(())
     }
 }
 
@@ -216,3 +294,36 @@ pub trait ReadFactorioDat: io::Read {
 
 /// All types that implement `Read` get methods defined in `ReadFactorioDat` for free.
 impl<R: io::Read + ?Sized> ReadFactorioDat for R {}
+
+pub trait WriteFactorioDat: io::Write {
+    fn write_u32_optimized(&mut self, num: u32) -> io::Result<()> {
+        if num < 255 {
+            self.write_u8(num as u8)?;
+        } else {
+            // Represented as the first byte being 255
+            self.write_u8(255)?;
+            self.write_u32::<LittleEndian>(num)?;
+        }
+
+        Ok(())
+    }
+
+    fn write_pt_string(&mut self, str: &Option<String>) -> io::Result<()> {
+        if let Some(str) = str {
+            // Not-empty flag
+            self.write_u8(0)?;
+            // String length
+            self.write_u32_optimized(str.len() as u32)?;
+            // String contents
+            self.write_all(str.as_bytes())?;
+        } else {
+            // Empty flag
+            self.write_u8(1)?;
+        }
+
+        Ok(())
+    }
+}
+
+/// All types that implement `Write` get methods defined in `WriteFactorioDat` for free.
+impl<R: io::Write + ?Sized> WriteFactorioDat for R {}

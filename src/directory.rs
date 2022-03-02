@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use console::style;
 use std::collections::HashMap;
 use std::ffi::OsString;
@@ -248,21 +248,25 @@ impl Directory {
         }
     }
 
-    // TODO: Use Result
-    pub fn sync_settings(&mut self, save_settings: &PropertyTree) -> Option<()> {
+    pub fn sync_settings(&mut self, save_settings: &PropertyTree) -> Result<()> {
         let startup_settings = self
             .mod_settings
             .settings
-            .get_mut("settings-startup")?
-            .as_dictionary_mut()?;
+            .get_mut("startup")
+            .ok_or_else(|| anyhow!("No startup settings in mod-settings.dat"))?
+            .as_dictionary_mut()
+            .ok_or_else(|| anyhow!("Could not read PropertyTree dictionary."))?;
 
-        for (setting_name, setting_value) in save_settings.as_dictionary()? {
+        for (setting_name, setting_value) in save_settings
+            .as_dictionary()
+            .ok_or_else(|| anyhow!("Could not read PropertyTree dictionary"))?
+        {
             startup_settings.insert(setting_name.clone(), setting_value.clone());
         }
 
-        self.mod_settings.write().ok()?;
+        self.mod_settings.write()?;
 
-        Some(())
+        Ok(())
     }
 }
 
