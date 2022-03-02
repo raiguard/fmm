@@ -30,3 +30,8 @@ structopt = "0.3.21"
 thiserror = "1.0.25"
 toml = "0.5.8"
 zip = "0.5.11"
+
+[profile.release]
+strip = true
+opt-level = "z" # Optimize for size
+lto = true
