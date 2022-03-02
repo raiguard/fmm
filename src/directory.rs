@@ -11,7 +11,6 @@ use semver::{Version, VersionReq};
 use zip::ZipArchive;
 
 use crate::dependency::ModDependencyType;
-use crate::get_mod_version;
 use crate::mod_settings::ModSettings;
 use crate::read::PropertyTree;
 use crate::types::*;
@@ -127,7 +126,7 @@ impl Directory {
         if let Some(mod_entry) = self
             .mods
             .get(&mod_ident.name)
-            .and_then(|mod_entries| get_mod_version(mod_entries, mod_ident))
+            .and_then(|mod_entries| crate::get_mod_version(mod_entries, mod_ident))
         {
             let mod_state = self
                 .mod_list
@@ -180,7 +179,7 @@ impl Directory {
                             self.mods
                                 .get(&dependency_ident.name)
                                 .and_then(|dependency_entries| {
-                                    get_mod_version(dependency_entries, &dependency_ident)
+                                    crate::get_mod_version(dependency_entries, &dependency_ident)
                                 })
                                 .map(|_| ManageOrder::Enable(dependency_ident.clone()))
                                 .unwrap_or_else(|| ManageOrder::Download(dependency_ident.clone()))

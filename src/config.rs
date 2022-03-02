@@ -7,8 +7,8 @@ use std::fs;
 use std::path::PathBuf;
 use thiserror::Error;
 
+use crate::cli::App;
 use crate::types::ModIdent;
-use crate::App;
 
 #[derive(Debug)]
 pub struct Config {
