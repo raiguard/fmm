@@ -4,10 +4,10 @@ use std::fs;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use clap::Parser;
 use console::style;
 use reqwest::blocking::Client;
 use semver::Version;
-use structopt::StructOpt;
 
 mod config;
 mod dependency;
@@ -22,41 +22,41 @@ use config::*;
 use directory::*;
 use types::*;
 
-#[derive(Clone, StructOpt)]
-#[structopt(name = "fmm", about = "Manage your Factorio mods.")]
+#[derive(Clone, Parser)]
+#[clap(author, version, about)]
 pub struct App {
     /// The path to the configuration file
-    #[structopt(long)]
+    #[clap(long)]
     config: Option<PathBuf>,
     /// Disables all mods in the directory
-    #[structopt(short = "o", long)]
+    #[clap(short = 'o', long)]
     disable_all: bool,
     /// Disables the given mods. Mods are formatted as `Name`
-    #[structopt(short, long)]
+    #[clap(short, long)]
     disable: Vec<ModIdent>,
     /// Enables all mods in the directory
-    #[structopt(short = "a", long)]
+    #[clap(short = 'a', long)]
     enable_all: bool,
     /// Enables the mods in the given set
-    #[structopt(short = "E", long)]
+    #[clap(short = 'E', long)]
     enable_set: Option<String>,
     /// Enables the given mods. Mods are formatted as `Name` or `Name@Version`
-    #[structopt(short, long)]
+    #[clap(short, long)]
     enable: Vec<ModIdent>,
     /// The game directory to manipulate. Optional if a configuration file is in use
-    #[structopt(long)]
+    #[clap(long)]
     game_dir: Option<PathBuf>,
     /// Lists all mods in the directory
-    #[structopt(short, long)]
+    #[clap(short, long)]
     list: bool,
     /// The mods directory to manipulate. Optional if a configuration file is in use
-    #[structopt(long)]
+    #[clap(long)]
     mods_dir: Option<PathBuf>,
     /// Removes the given mods from the mods directory. Mods are formatted as `Name` or `Name@Version`
-    #[structopt(short, long)]
+    #[clap(short, long)]
     remove: Vec<ModIdent>,
     /// A path to a save file to sync with
-    #[structopt(short, long)]
+    #[clap(short, long)]
     sync: Option<PathBuf>,
 }
 
@@ -66,7 +66,7 @@ pub struct App {
 // - Cache will only be used once we have advanced features that would benefit from it
 
 fn main() -> Result<()> {
-    let mut app = App::from_args();
+    let mut app = App::parse();
     let client = Client::new();
 
     let config = Config::new(&app)?;
