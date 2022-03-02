@@ -31,9 +31,8 @@ thiserror = "1.0.25"
 toml = "0.5.8"
 zip = "0.5.11"
 
+# Optimize releases for size - the speed is plenty good enough
 [profile.release]
 strip = true
-opt-level = "z" # Optimize for size
+opt-level = "z"
 lto = true
-
-[features]

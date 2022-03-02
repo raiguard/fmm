@@ -7,7 +7,7 @@ use std::fs;
 use std::path::PathBuf;
 use thiserror::Error;
 
-use crate::cli::App;
+use crate::cli::Args;
 use crate::types::ModIdent;
 
 #[derive(Debug)]
@@ -22,7 +22,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(app: &App) -> Result<Self> {
+    pub fn new(app: &Args) -> Result<Self> {
         // Input
         let config_file = ConfigFile::new(&app.config)?.unwrap_or_default();
 
