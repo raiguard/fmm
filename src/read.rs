@@ -181,8 +181,8 @@ pub trait ReadFactorioDat: io::Read {
     }
 
     fn read_string(&mut self) -> Result<String> {
-        let scenario_len = self.read_u8()?;
-        let mut scenario_name = vec![0; scenario_len as usize];
+        let string_len = self.read_u32_optimized()?;
+        let mut scenario_name = vec![0; string_len as usize];
         self.read_exact(&mut scenario_name)?;
 
         Ok(String::from_utf8_lossy(&scenario_name).to_string())
@@ -201,6 +201,14 @@ pub trait ReadFactorioDat: io::Read {
         let mut num: u16 = self.read_u8()?.into();
         if num == 255 {
             num = self.read_u16::<LittleEndian>()?;
+        }
+        Ok(num)
+    }
+
+    fn read_u32_optimized(&mut self) -> Result<u32> {
+        let mut num: u32 = self.read_u8()?.into();
+        if num == 255 {
+            num = self.read_u32::<LittleEndian>()?;
         }
         Ok(num)
     }
