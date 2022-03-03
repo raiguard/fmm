@@ -67,9 +67,10 @@ fn handle_sync(
                 .sets
                 .as_ref()
                 .ok_or_else(|| anyhow!("No mod sets are defined"))?;
-            if let Some(set) = sets.get(set_name) {
-                to_enable = set.to_owned();
-            }
+            let set = sets
+                .get(set_name)
+                .ok_or_else(|| anyhow!("Given set does not exist"))?;
+            to_enable = set.to_owned();
         }
         SyncCmd::Disable { mods } => to_disable = mods.clone(),
         SyncCmd::SaveFile {
@@ -96,9 +97,14 @@ fn handle_sync(
         SyncCmd::Upgrade { mods } => todo!(),
     }
 
-    // Extract dependencies and add them to the list
+    // Extract dependencies and add them to the enable list
     if !ignore_deps {
-        // TODO:
+        let mut deps_to_add = vec![];
+        for mod_ident in &to_enable {
+            // TODO: Handle multiple levels of dependencies & dependencies for non-local mods
+            deps_to_add.append(&mut directory.get_dependencies(mod_ident)?);
+        }
+        to_enable.append(&mut deps_to_add);
     }
 
     // Enable and disable mods
@@ -121,43 +127,6 @@ fn handle_sync(
 
     Ok(())
 }
-
-// // Enable and/or download specified mods
-// let mut cycle_orders: Vec<ManageOrder> = app
-//     .enable
-//     .iter()
-//     .map(|mod_ident| ManageOrder::Enable(mod_ident.clone()))
-//     .collect();
-
-// while !cycle_orders.is_empty() {
-//     cycle_orders = cycle_orders
-//         .iter_mut()
-//         .filter(|order| order.get_name() != "base")
-//         .filter_map(|order| match order {
-//             ManageOrder::Download(mod_ident) => {
-//                 if config.auto_download {
-//                     if download::download_mod(
-//                         mod_ident,
-//                         &mut directory,
-//                         &config,
-//                         &client,
-//                     )
-//                     .ok()?
-//                     {
-//                         Some(vec![ManageOrder::Enable(mod_ident.clone())])
-//                     } else {
-//                         None
-//                     }
-//                 } else {
-//                     println!("{} {}", style("Did not download").red(), mod_ident.name);
-//                     None
-//                 }
-//             }
-//             ManageOrder::Enable(mod_ident) => directory.enable(mod_ident),
-//         })
-//         .flatten()
-//         .collect();
-// }
 
 trait HasVersion {
     fn get_version(&self) -> &Version;

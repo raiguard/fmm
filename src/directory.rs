@@ -167,35 +167,30 @@ impl Directory {
         Ok(())
     }
 
-    // pub fn read_mod_data() {
-    //     return Some(
-    //         read_info_json(&mod_entry.entry)
-    //             .and_then(|info_json| info_json.dependencies)
-    //             .unwrap_or_default()
-    //             .iter()
-    //             .filter(|dependency| {
-    //                 dependency.name != "base"
-    //                     && matches!(
-    //                         dependency.dep_type,
-    //                         ModDependencyType::NoLoadOrder | ModDependencyType::Required
-    //                     )
-    //             })
-    //             .map(|dependency| ModIdent {
-    //                 name: dependency.name.clone(),
-    //                 version_req: dependency.version_req.clone(),
-    //             })
-    //             .map(|dependency_ident| {
-    //                 self.mods
-    //                     .get(&dependency_ident.name)
-    //                     .and_then(|dependency_entries| {
-    //                         crate::get_mod_version(dependency_entries, &dependency_ident)
-    //                     })
-    //                     .map(|_| ManageOrder::Enable(dependency_ident.clone()))
-    //                     .unwrap_or_else(|| ManageOrder::Download(dependency_ident.clone()))
-    //             })
-    //             .collect(),
-    //     );
-    // }
+    pub fn get_dependencies(&self, mod_ident: &ModIdent) -> Result<Vec<ModIdent>> {
+        let mod_entry = self
+            .mods
+            .get(&mod_ident.name)
+            .and_then(|mod_entries| crate::get_mod_version(mod_entries, mod_ident))
+            .ok_or_else(|| anyhow!("Given mod does not exist"))?;
+
+        Ok(read_info_json(&mod_entry.entry)
+            .and_then(|info_json| info_json.dependencies)
+            .unwrap_or_default()
+            .iter()
+            .filter(|dependency| {
+                dependency.name != "base"
+                    && matches!(
+                        dependency.dep_type,
+                        ModDependencyType::NoLoadOrder | ModDependencyType::Required
+                    )
+            })
+            .map(|dependency| ModIdent {
+                name: dependency.name.clone(),
+                version_req: dependency.version_req.clone(),
+            })
+            .collect())
+    }
 
     pub fn enable_all(&mut self) {
         println!(
