@@ -10,9 +10,9 @@ use std::path::PathBuf;
 use semver::{Version, VersionReq};
 use zip::ZipArchive;
 
+use crate::dat::PropertyTree;
 use crate::dependency::ModDependencyType;
 use crate::mod_settings::ModSettings;
-use crate::read::PropertyTree;
 use crate::types::*;
 
 pub struct Directory {
@@ -22,6 +22,8 @@ pub struct Directory {
     pub mod_settings: ModSettings,
 }
 
+// This is a mess
+// We need to refactor this to retrive ModEntries in a standardized way, with the properties from the info.json lazily loaded when needed
 impl Directory {
     pub fn new(path: &PathBuf) -> Result<Self> {
         // Get all mods in the directory

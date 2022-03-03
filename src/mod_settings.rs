@@ -4,7 +4,7 @@ use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
 
-use crate::read::PropertyTree;
+use crate::dat::PropertyTree;
 
 #[derive(Debug)]
 pub struct ModSettings {

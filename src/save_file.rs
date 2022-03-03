@@ -11,8 +11,8 @@ use std::io::SeekFrom;
 use std::path::PathBuf;
 use zip::ZipArchive;
 
-use crate::read::PropertyTree;
-use crate::read::ReadFactorioDat;
+use crate::dat::PropertyTree;
+use crate::dat::ReadFactorioDat;
 use crate::types::ModIdent;
 
 const READ_SIZE: usize = 1_048_576;

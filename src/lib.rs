@@ -3,11 +3,11 @@
 
 mod cli;
 mod config;
+mod dat;
 mod dependency;
 mod directory;
-mod download;
 mod mod_settings;
-mod read;
+mod portal;
 mod save_file;
 mod types;
 
