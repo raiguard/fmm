@@ -28,23 +28,21 @@ pub fn run() -> Result<()> {
     let config = Config::new(Args::parse())?;
     println!("{:#?}", config);
 
-    match config.cmd {
-        Cmd::Sync {
-            enable,
-            enable_set,
-            disable,
-            disable_set,
-            disable_all,
-            no_download,
-            save_file,
-        } => {
-            todo!()
-        }
-    }
-    // if let Some(cmd) = config.cmd {
-    // } else {
-    //     return Err(anyhow!("Did not provide a commmand"));
+    // match config.cmd {
+    //     Cmd::Sync {
+    //         enable,
+    //         enable_set,
+    //         disable,
+    //         disable_set,
+    //         disable_all,
+    //         no_download,
+    //         save_file,
+    //     } => {
+    //         todo!()
+    //     }
     // }
+    //
+    Ok(())
 }
 
 // let client = Client::new();

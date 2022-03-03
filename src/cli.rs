@@ -23,26 +23,47 @@ pub enum Cmd {
     /// Enable, disable, or download packaged mods
     #[clap(short_flag = 'S', long_flag = "sync")]
     Sync {
-        /// Enable the given mods
-        #[clap(short = 'e', long = "enable")]
-        enable: Vec<ModIdent>,
-        /// Enable the given mod set
-        #[clap(short = 'E', long = "enable-set")]
-        enable_set: Option<String>,
-        /// Disable the given mods
-        #[clap(short = 'd', long = "disable")]
-        disable: Vec<ModIdent>,
-        /// Disable the given mod set
-        #[clap(short = 'D', long = "disable-set")]
-        disable_set: Option<String>,
-        /// Disable all  mods before taking other actions
-        #[clap(short = 'o', long = "disable-all")]
-        disable_all: bool,
+        #[clap(subcommand)]
+        cmd: SyncCmd,
         /// Disable mod auto-download
         #[clap(short = 'l', long = "nodownload")]
         no_download: bool,
-        /// Sync active mods and startup settings with the given save file
-        #[clap(short = 's', long = "save-file")]
-        save_file: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum SyncCmd {
+    /// Enable the given mods
+    #[clap(short_flag = 'e', long_flag = "enable")]
+    Enable {
+        /// The mods to enable, formatted as `Name` or `Name@Version`
+        mods: Vec<ModIdent>,
+    },
+    /// Enable the given mod set
+    #[clap(short_flag = 'E', long_flag = "enable-set")]
+    EnableSet {
+        /// The name of the mod set to enable
+        set: Option<String>,
+    },
+    /// Disable the given mods
+    #[clap(short_flag = 'd', long_flag = "disable")]
+    Disable {
+        /// The mods to disable, formatted as `Name` or `Name@Version`
+        mods: Vec<ModIdent>,
+    },
+    /// Disable the given mod set
+    #[clap(short_flag = 'D', long_flag = "disable-set")]
+    DisableSet {
+        /// The name of the mod set to disable
+        mods: Option<String>,
+    },
+    /// Disable all  mods before taking other actions
+    #[clap(short_flag = 'o', long_flag = "disable-all")]
+    DisableAll,
+    /// Sync active mods and startup settings with the given save file
+    #[clap(short_flag = 's', long_flag = "save-file")]
+    SaveFile {
+        /// Path to the save file
+        path: Option<PathBuf>,
     },
 }
