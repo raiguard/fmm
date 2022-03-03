@@ -25,6 +25,9 @@ pub enum Cmd {
     Sync {
         #[clap(subcommand)]
         cmd: SyncCmd,
+        /// Disable all mods before taking other actions
+        #[clap(short = 'o', long = "disable-all")]
+        disable_all: bool,
         /// Disable mod auto-download
         #[clap(short = 'l', long = "nodownload")]
         no_download: bool,
@@ -57,13 +60,15 @@ pub enum SyncCmd {
         /// The name of the mod set to disable
         mods: Option<String>,
     },
-    /// Disable all  mods before taking other actions
-    #[clap(short_flag = 'o', long_flag = "disable-all")]
-    DisableAll,
     /// Sync active mods and startup settings with the given save file
     #[clap(short_flag = 's', long_flag = "save-file")]
     SaveFile {
         /// Path to the save file
         path: Option<PathBuf>,
+    },
+    /// Upgrade installed mods
+    Upgrade {
+        /// The mods to upgrade, or blank to upgrade all mods
+        mods: Vec<ModIdent>,
     },
 }
