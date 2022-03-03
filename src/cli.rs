@@ -2,7 +2,7 @@ use crate::types::*;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-#[derive(Parser, Debug)]
+#[derive(Debug, Parser)]
 #[clap(author, version, about)]
 pub struct Args {
     #[clap(subcommand)]
@@ -18,7 +18,7 @@ pub struct Args {
     pub mods_dir: Option<PathBuf>,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Debug, Subcommand)]
 pub enum Cmd {
     /// Enable, disable, or download packaged mods
     #[clap(short_flag = 'S', long_flag = "sync")]
@@ -34,7 +34,7 @@ pub enum Cmd {
     },
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Debug, Subcommand)]
 pub enum SyncCmd {
     /// Enable the given mods
     #[clap(short_flag = 'e', long_flag = "enable")]
