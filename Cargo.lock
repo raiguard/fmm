@@ -248,10 +248,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "directories"
-version = "3.0.2"
+name = "dirs"
+version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e69600ff1703123957937708eb27f7a564e48885c537782722ed0ba3189ce1d7"
+checksum = "ca3aa72a6f96ea37bbc5aa912f6788242832f75369bdfdadcb0e38423f100059"
 dependencies = [
  "dirs-sys",
 ]
@@ -303,7 +303,7 @@ dependencies = [
  "clap",
  "compress",
  "console",
- "directories",
+ "dirs",
  "hex",
  "indicatif",
  "json",
@@ -315,6 +315,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "sha-1",
+ "smart-default",
  "thiserror",
  "toml",
  "zip",
@@ -1249,6 +1250,17 @@ name = "slab"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9def91fd1e018fe007022791f865d0ccc9b3a0d5001e01aabb8b40e46000afb5"
+
+[[package]]
+name = "smart-default"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "133659a15339456eeeb07572eb02a91c91e9815e9cbc89566944d2c8d3efdbf6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "socket2"

@@ -15,7 +15,7 @@ byteorder = "1.4.3"
 clap = {version = "3.1.5", features = ["derive"]}
 compress = "0.2.1"
 console = "0.15.0"
-directories = "3.0.2"
+dirs = "4.0.0"
 hex = "0.4.3"
 indicatif = "0.16.2"
 json = "0.12.4"
@@ -27,6 +27,7 @@ serde = {version = "1.0.125", features = ["derive"]}
 serde_json = "1.0.64"
 serde_with = "1.11.0"
 sha-1 = "0.9.8"
+smart-default = "0.6.0"
 thiserror = "1.0.25"
 toml = "0.5.8"
 zip = "0.5.11"
@@ -36,3 +37,5 @@ zip = "0.5.11"
 strip = true
 opt-level = "z"
 lto = true
+
+[features]

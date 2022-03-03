@@ -1,7 +1,7 @@
 #![feature(iter_intersperse)]
 
 mod cli;
-// mod config;
+mod config;
 mod dependency;
 // mod directory;
 // mod download;
@@ -10,7 +10,7 @@ mod dependency;
 // mod sync;
 mod types;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use console::style;
 use reqwest::blocking::Client;
@@ -21,12 +21,15 @@ use std::fs;
 // use directory::*;
 use types::*;
 
-pub fn run() -> Result<()> {
-    let args = cli::Args::parse();
-    println!("{:#?}", args);
+use cli::{Args, Cmd};
+use config::Config;
 
-    match args.cmd {
-        cli::Cmd::Sync {
+pub fn run() -> Result<()> {
+    let config = Config::new(Args::parse())?;
+    println!("{:#?}", config);
+
+    match config.cmd {
+        Cmd::Sync {
             enable,
             enable_set,
             disable,
@@ -38,6 +41,10 @@ pub fn run() -> Result<()> {
             todo!()
         }
     }
+    // if let Some(cmd) = config.cmd {
+    // } else {
+    //     return Err(anyhow!("Did not provide a commmand"));
+    // }
 }
 
 // let client = Client::new();

@@ -1,19 +1,18 @@
-use anyhow::{anyhow, Result};
-use directories::BaseDirs;
+use anyhow::{anyhow, ensure, Result};
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use thiserror::Error;
 
-use crate::cli::Args;
+use crate::cli;
 use crate::types::ModIdent;
 
 #[derive(Debug)]
 pub struct Config {
     pub auto_download: bool,
-    pub game_dir: Option<PathBuf>,
+    pub cmd: cli::Cmd,
+    pub game_dir: PathBuf,
     pub mods_dir: PathBuf,
     pub portal_auth: Option<PortalAuth>,
     pub sets: ModSets,
@@ -22,47 +21,43 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(app: &Args) -> Result<Self> {
-        // Input
-        let config_file = ConfigFile::new(&app.config)?.unwrap_or_default();
+    pub fn new(args: cli::Args) -> Result<Self> {
+        let config_file = ConfigFile::new(args.config)?.unwrap_or_default();
 
-        // Merge config options
-        let game_dir = app.game_dir.clone().or(config_file.game_dir);
-        Ok(Config {
+        let game_dir = args
+            .game_dir
+            .or(config_file.game_dir)
+            .ok_or_else(|| anyhow!("Did not provide game directory"))?;
+        ensure!(game_dir.exists(), "Invalid game directory");
+
+        let mods_dir = args
+            .mods_dir
+            .or(config_file.mods_dir)
+            .or_else(|| Some(game_dir.join("mods")))
+            .ok_or_else(|| anyhow!("Did not provide mods directory"))?;
+        ensure!(mods_dir.exists(), "Invalid mods directory");
+
+        let portal_auth = config_file.portal.or_else(|| {
+            let player_data_path = game_dir.join("player-data.json");
+            if player_data_path.exists() {
+                let player_data_json = fs::read_to_string(&player_data_path).ok()?;
+                if let PlayerDataJson {
+                    service_token: Some(token),
+                    service_username: Some(username),
+                } = serde_json::from_str(&player_data_json).ok()?
+                {
+                    return Some(PortalAuth { token, username });
+                }
+            }
+            None
+        });
+
+        Ok(Self {
             auto_download: config_file.auto_download,
-            game_dir: game_dir.clone(),
-            mods_dir: match [
-                game_dir.clone(),
-                app.mods_dir.clone().or(config_file.mods_dir),
-            ] {
-                [_, Some(mods_dir)] if mods_dir.exists() => mods_dir,
-                [Some(game_dir), None] if game_dir.exists() => {
-                    let mut mods_dir = game_dir;
-                    mods_dir.push("mods");
-                    if !mods_dir.exists() {
-                        return Err(anyhow!("Could not find mods directory"));
-                    }
-                    mods_dir
-                }
-                _ => return Err(anyhow!("Invalid game or mods directories")),
-            },
-            portal_auth: config_file.portal.or_else(|| {
-                if let Some(game_dir) = &game_dir {
-                    let mut player_data_path = game_dir.clone();
-                    player_data_path.push("player-data.json");
-                    if player_data_path.exists() {
-                        let player_data_json = fs::read_to_string(&player_data_path).ok()?;
-                        if let PlayerDataJson {
-                            service_token: Some(token),
-                            service_username: Some(username),
-                        } = serde_json::from_str(&player_data_json).ok()?
-                        {
-                            return Some(PortalAuth { token, username });
-                        }
-                    }
-                }
-                None
-            }),
+            cmd: args.cmd,
+            game_dir,
+            mods_dir,
+            portal_auth,
             sets: config_file.sets,
             sync_latest_versions: config_file.sync_latest_versions,
             sync_startup_settings: config_file.sync_startup_settings.unwrap_or(true),
@@ -94,36 +89,24 @@ struct ConfigFile {
 }
 
 impl ConfigFile {
-    pub fn new(path: &Option<PathBuf>) -> Result<Option<Self>, ConfigFileErr> {
-        let config_path: Option<PathBuf> = path
-            .clone()
-            .or_else(|| {
-                BaseDirs::new().map(|base_dirs| {
-                    let mut config_path: PathBuf = base_dirs.config_dir().into();
-                    config_path.push("fmm");
-                    config_path.push("fmm.toml");
-                    config_path
-                })
-            })
-            .filter(|config_path| config_path.exists());
-
-        if config_path.is_none() {
+    pub fn new(path: Option<PathBuf>) -> Result<Option<Self>> {
+        let config_path = path.unwrap_or(
+            dirs::config_dir()
+                .ok_or_else(|| anyhow!("Failed to find config directory"))?
+                .join("fmm")
+                .join("fmm.toml"),
+        );
+        if !config_path.exists() {
             return Ok(None);
         }
 
-        let file = fs::read_to_string(config_path.unwrap()).map_err(|_| ConfigFileErr::Open)?;
+        let file =
+            fs::read_to_string(config_path).map_err(|_| anyhow!("Failed to open config file"))?;
+        let config: ConfigFile =
+            toml::from_str(&file).map_err(|_| anyhow!("Failed to parse config file"))?;
 
-        let config: ConfigFile = toml::from_str(&file).map_err(|_| ConfigFileErr::ParseFile)?;
         Ok(Some(config))
     }
-}
-
-#[derive(Debug, Error)]
-pub enum ConfigFileErr {
-    #[error("Could not open config file.")]
-    Open,
-    #[error("Could not parse config file.")]
-    ParseFile,
 }
 
 #[derive(Deserialize)]
