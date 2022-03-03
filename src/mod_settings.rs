@@ -1,7 +1,7 @@
 use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::fs;
-use std::io::{Cursor, Seek, SeekFrom};
+use std::io::Cursor;
 use std::path::PathBuf;
 
 use crate::read::PropertyTree;
@@ -18,8 +18,8 @@ pub struct ModSettings {
 }
 
 impl ModSettings {
-    pub fn new(mut path: PathBuf) -> Result<Self> {
-        path.push("mod-settings.dat");
+    pub fn new(mut path: &PathBuf) -> Result<Self> {
+        let path = path.join("mod-settings.dat");
         let mut cursor = Cursor::new(fs::read(&path)?);
 
         let version_major = cursor.read_u16::<LittleEndian>()?;
@@ -28,7 +28,7 @@ impl ModSettings {
         let version_build = cursor.read_u16::<LittleEndian>()?;
 
         // This is a one-byte flag that is always false
-        cursor.seek(SeekFrom::Current(1))?;
+        cursor.read_u8()?;
 
         let mod_settings = PropertyTree::load(&mut cursor)?;
 

@@ -28,6 +28,9 @@ pub enum Cmd {
         /// Disable all mods before taking other actions
         #[clap(short = 'o', long = "disable-all")]
         disable_all: bool,
+        /// Ignore mod dependencies
+        #[clap(short = 'i', long = "ignore-deps")]
+        ignore_deps: bool,
         /// Disable mod auto-download
         #[clap(short = 'l', long = "nodownload")]
         no_download: bool,
@@ -54,17 +57,14 @@ pub enum SyncCmd {
         /// The mods to disable, formatted as `Name` or `Name@Version`
         mods: Vec<ModIdent>,
     },
-    /// Disable the given mod set
-    #[clap(short_flag = 'D', long_flag = "disable-set")]
-    DisableSet {
-        /// The name of the mod set to disable
-        mods: Option<String>,
-    },
     /// Sync active mods and startup settings with the given save file
     #[clap(short_flag = 's', long_flag = "save-file")]
     SaveFile {
         /// Path to the save file
-        path: Option<PathBuf>,
+        path: PathBuf,
+        /// Do not sync startup settings
+        #[clap(short = 'i', long = "ignore-startup-settings")]
+        ignore_startup_settings: bool,
     },
     /// Upgrade installed mods
     Upgrade {

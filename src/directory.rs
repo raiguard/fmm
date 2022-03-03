@@ -23,7 +23,7 @@ pub struct Directory {
 }
 
 impl Directory {
-    pub fn new(path: PathBuf) -> Result<Self> {
+    pub fn new(path: &PathBuf) -> Result<Self> {
         // Get all mods in the directory
         let mod_entries = fs::read_dir(&path)?
             .filter_map(|entry| {
@@ -122,77 +122,80 @@ impl Directory {
         }
     }
 
-    pub fn enable(&mut self, mod_ident: &ModIdent) -> Option<Vec<ManageOrder>> {
-        if let Some(mod_entry) = self
+    pub fn enable(&mut self, mod_ident: &ModIdent) -> Result<()> {
+        let mod_entry = self
             .mods
             .get(&mod_ident.name)
             .and_then(|mod_entries| crate::get_mod_version(mod_entries, mod_ident))
-        {
-            let mod_state = self
-                .mod_list
-                .iter_mut()
-                .find(|mod_state| mod_ident.name == mod_state.name);
+            .ok_or_else(|| anyhow!("Given mod does not exist"))?;
 
-            let enabled = mod_state.is_some() && mod_state.as_ref().unwrap().enabled;
+        let mod_state = self
+            .mod_list
+            .iter_mut()
+            .find(|mod_state| mod_ident.name == mod_state.name);
 
-            if !enabled {
-                println!(
-                    "{} {} v{}",
-                    style("Enabled").green().bold(),
-                    mod_ident.name,
-                    mod_entry.version
-                );
+        let enabled = mod_state
+            .as_ref()
+            .map(|mod_data| mod_data.enabled)
+            .unwrap_or_default();
 
-                let version = mod_ident
-                    .version_req
-                    .as_ref()
-                    .map(|_| mod_entry.version.clone());
+        if !enabled {
+            println!(
+                "{} {} v{}",
+                style("Enabled").green().bold(),
+                mod_ident.name,
+                mod_entry.version
+            );
 
-                if let Some(mod_state) = mod_state {
-                    mod_state.enabled = true;
-                    mod_state.version = version;
-                } else {
-                    self.mod_list.push(ModListJsonMod {
-                        name: mod_ident.name.to_string(),
-                        enabled: true,
-                        version,
-                    });
-                }
+            let version = mod_ident
+                .version_req
+                .as_ref()
+                .map(|_| mod_entry.version.clone());
 
-                return Some(
-                    read_info_json(&mod_entry.entry)
-                        .and_then(|info_json| info_json.dependencies)
-                        .unwrap_or_default()
-                        .iter()
-                        .filter(|dependency| {
-                            dependency.name != "base"
-                                && matches!(
-                                    dependency.dep_type,
-                                    ModDependencyType::NoLoadOrder | ModDependencyType::Required
-                                )
-                        })
-                        .map(|dependency| ModIdent {
-                            name: dependency.name.clone(),
-                            version_req: dependency.version_req.clone(),
-                        })
-                        .map(|dependency_ident| {
-                            self.mods
-                                .get(&dependency_ident.name)
-                                .and_then(|dependency_entries| {
-                                    crate::get_mod_version(dependency_entries, &dependency_ident)
-                                })
-                                .map(|_| ManageOrder::Enable(dependency_ident.clone()))
-                                .unwrap_or_else(|| ManageOrder::Download(dependency_ident.clone()))
-                        })
-                        .collect(),
-                );
+            if let Some(mod_state) = mod_state {
+                mod_state.enabled = true;
+                mod_state.version = version;
+            } else {
+                self.mod_list.push(ModListJsonMod {
+                    name: mod_ident.name.to_string(),
+                    enabled: true,
+                    version,
+                });
             }
-        } else {
-            return Some(vec![ManageOrder::Download(mod_ident.clone())]);
         }
 
-        None
+        Ok(())
     }
+
+    // pub fn read_mod_data() {
+    //     return Some(
+    //         read_info_json(&mod_entry.entry)
+    //             .and_then(|info_json| info_json.dependencies)
+    //             .unwrap_or_default()
+    //             .iter()
+    //             .filter(|dependency| {
+    //                 dependency.name != "base"
+    //                     && matches!(
+    //                         dependency.dep_type,
+    //                         ModDependencyType::NoLoadOrder | ModDependencyType::Required
+    //                     )
+    //             })
+    //             .map(|dependency| ModIdent {
+    //                 name: dependency.name.clone(),
+    //                 version_req: dependency.version_req.clone(),
+    //             })
+    //             .map(|dependency_ident| {
+    //                 self.mods
+    //                     .get(&dependency_ident.name)
+    //                     .and_then(|dependency_entries| {
+    //                         crate::get_mod_version(dependency_entries, &dependency_ident)
+    //                     })
+    //                     .map(|_| ManageOrder::Enable(dependency_ident.clone()))
+    //                     .unwrap_or_else(|| ManageOrder::Download(dependency_ident.clone()))
+    //             })
+    //             .collect(),
+    //     );
+    // }
 
     pub fn enable_all(&mut self) {
         println!(

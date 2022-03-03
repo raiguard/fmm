@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt};
 use compress::zlib;
@@ -8,7 +9,6 @@ use std::io::Cursor;
 use std::io::Read;
 use std::io::SeekFrom;
 use std::path::PathBuf;
-use thiserror::Error;
 use zip::ZipArchive;
 
 use crate::read::PropertyTree;
@@ -40,7 +40,7 @@ impl SaveFile {
                     .find(|filename| filename.contains("level.dat"))
             })
             .map(ToString::to_string)
-            .ok_or(SaveFileErr::NoLevelDat)?;
+            .ok_or_else(|| anyhow!("Save file does not contain level.dat or level.dat0"))?;
         let file = archive.by_name(&filename)?;
 
         let decompressed = if compressed {
@@ -60,7 +60,7 @@ impl SaveFile {
         let version_patch = cursor.read_u16::<LittleEndian>()?;
         let _version_build = cursor.read_u16::<LittleEndian>()?;
 
-        // What are these for?
+        // TODO: What are these for?
         cursor.seek(SeekFrom::Current(2))?;
 
         let _scenario_name = cursor.read_string()?;
@@ -76,7 +76,7 @@ impl SaveFile {
             mods.push(cursor.read_mod()?);
         }
 
-        // What are these for?
+        // TODO: What are these for?
         cursor.seek(SeekFrom::Current(4))?;
 
         let startup_settings = PropertyTree::load(&mut cursor)?;
@@ -92,10 +92,4 @@ impl SaveFile {
             startup_settings,
         })
     }
-}
-
-#[derive(Debug, Error)]
-pub enum SaveFileErr {
-    #[error("No level.dat was found in the save file")]
-    NoLevelDat,
 }

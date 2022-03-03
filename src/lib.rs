@@ -1,13 +1,14 @@
 #![feature(iter_intersperse)]
+#![allow(unused)]
 
 mod cli;
 mod config;
 mod dependency;
-// mod directory;
-// mod download;
-// mod mod_settings;
-// mod read;
-// mod sync;
+mod directory;
+mod download;
+mod mod_settings;
+mod read;
+mod save_file;
 mod types;
 
 use anyhow::{anyhow, Result};
@@ -17,113 +18,109 @@ use reqwest::blocking::Client;
 use semver::Version;
 use std::fs;
 
-// use config::*;
-// use directory::*;
-use types::*;
-
-use cli::{Args, Cmd};
-use config::Config;
+use crate::cli::{Args, Cmd, SyncCmd};
+use crate::config::Config;
+use crate::directory::Directory;
+use crate::save_file::SaveFile;
+use crate::types::*;
 
 pub fn run() -> Result<()> {
     let config = Config::new(Args::parse())?;
-    println!("{:#?}", config);
+    // println!("{:#?}", config);
 
-    // match config.cmd {
-    //     Cmd::Sync {
-    //         enable,
-    //         enable_set,
-    //         disable,
-    //         disable_set,
-    //         disable_all,
-    //         no_download,
-    //         save_file,
-    //     } => {
-    //         todo!()
-    //     }
-    // }
-    //
-    Ok(())
+    // let client = Client::new();
+
+    match &config.cmd {
+        Cmd::Sync {
+            cmd,
+            disable_all,
+            ignore_deps,
+            no_download,
+        } => handle_sync(&config, cmd, *disable_all, *ignore_deps, *no_download),
+    }
 }
 
-// let client = Client::new();
+fn handle_sync(
+    config: &Config,
+    cmd: &SyncCmd,
+    disable_all: bool,
+    ignore_deps: bool,
+    no_download: bool,
+) -> Result<()> {
+    let mut directory = Directory::new(&config.mods_dir)?;
 
-// let config = Config::new(&app)?;
+    if disable_all {
+        directory.disable_all();
+    }
 
-// let mut directory = Directory::new(config.mods_dir.clone())?;
+    let mut to_enable = vec![];
+    let mut to_disable = vec![];
 
-// // List mods
-// if app.list {
-//     let mut lines: Vec<String> = directory
-//         .mods
-//         .iter()
-//         .flat_map(|(mod_name, mod_versions)| {
-//             mod_versions
-//                 .iter()
-//                 .map(|version| format!("{} v{}", mod_name, version.version))
-//                 .collect::<Vec<String>>()
-//         })
-//         .collect();
+    // Get initial lists
+    match cmd {
+        SyncCmd::Enable { mods } => to_enable = mods.clone(),
+        SyncCmd::EnableSet { set } => {
+            let set_name = set
+                .as_ref()
+                .ok_or_else(|| anyhow!("Did not provide a set name"))?;
+            let sets = config
+                .sets
+                .as_ref()
+                .ok_or_else(|| anyhow!("No mod sets are defined"))?;
+            if let Some(set) = sets.get(set_name) {
+                to_enable = set.to_owned();
+            }
+        }
+        SyncCmd::Disable { mods } => to_disable = mods.clone(),
+        SyncCmd::SaveFile {
+            path,
+            ignore_startup_settings,
+        } => {
+            let save_file = SaveFile::from(path.clone())?;
 
-//     lines.sort();
+            let mut mods = save_file.mods.to_vec();
 
-//     for line in lines {
-//         println!("{}", line)
-//     }
-// }
+            if config.sync_latest_versions {
+                for mod_ident in mods.iter_mut() {
+                    mod_ident.version_req = None;
+                }
+            }
 
-// // Combine enable commands
-// let mut combined_enable = vec![];
-// // Enable set
-// if let Some(set_name) = app.enable_set {
-//     if let Some(sets) = config.sets.as_ref() {
-//         if let Some(set) = sets.get(&set_name) {
-//             combined_enable.append(&mut set.to_vec());
-//         }
-//     }
-// }
-// // Sync with save
-// if let Some(sync_path) = app.sync {
-//     let save_file = sync::SaveFile::from(sync_path)?;
+            to_enable = mods;
 
-//     let mut mods = save_file.mods.to_vec();
+            if !ignore_startup_settings {
+                directory.sync_settings(&save_file.startup_settings)?;
+                println!("Synced startup settings");
+            }
+        }
+        SyncCmd::Upgrade { mods } => todo!(),
+    }
 
-//     if config.sync_latest_versions {
-//         for mod_ident in mods.iter_mut() {
-//             mod_ident.version_req = None;
-//         }
-//     }
+    // Extract dependencies and add them to the list
+    if !ignore_deps {
+        // TODO:
+    }
 
-//     combined_enable.append(&mut mods);
+    // Enable and disable mods
+    for mod_ident in to_enable {
+        // TODO: Print errors
+        directory.enable(&mod_ident)?;
+    }
+    for mod_ident in to_disable {
+        directory.disable(&mod_ident);
+    }
 
-//     directory.sync_settings(&save_file.startup_settings)?;
+    // TODO: Make this a Directory method
+    // Write mod-list.json
+    fs::write(
+        &directory.mod_list_path,
+        serde_json::to_string_pretty(&ModListJson {
+            mods: directory.mod_list,
+        })?,
+    )?;
 
-//     println!("Synced startup settings");
-// }
-// // Manually enable
-// combined_enable.append(&mut app.enable.to_vec());
-// app.enable = combined_enable;
-
-// // Remove specified mods
-// for mod_ident in app.remove {
-//     if mod_ident.name != "base" {
-//         directory.remove(&mod_ident);
-//     }
-// }
-
-// // Disable all mods
-// if app.disable_all {
-//     directory.disable_all();
-// }
-
-// // Disable specified mods
-// for mod_ident in app.disable {
-//     directory.disable(&mod_ident);
-// }
-
-// // Enable all mods
-// if app.enable_all {
-//     directory.enable_all();
-// }
+    Ok(())
+}
 
 // // Enable and/or download specified mods
 // let mut cycle_orders: Vec<ManageOrder> = app
@@ -161,14 +158,6 @@ pub fn run() -> Result<()> {
 //         .flatten()
 //         .collect();
 // }
-
-// // Write mod-list.json
-// fs::write(
-//     &directory.mod_list_path,
-//     serde_json::to_string_pretty(&ModListJson {
-//         mods: directory.mod_list,
-//     })?,
-// )?;
 
 trait HasVersion {
     fn get_version(&self) -> &Version;
