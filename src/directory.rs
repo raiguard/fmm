@@ -169,31 +169,6 @@ impl Directory {
         Ok(())
     }
 
-    pub fn get_dependencies(&self, mod_ident: &ModIdent) -> Result<Vec<ModIdent>> {
-        let mod_entry = self
-            .mods
-            .get(&mod_ident.name)
-            .and_then(|mod_entries| crate::get_mod_version(mod_entries, mod_ident))
-            .ok_or_else(|| anyhow!("Given mod does not exist"))?;
-
-        Ok(read_info_json(&mod_entry.entry)
-            .and_then(|info_json| info_json.dependencies)
-            .unwrap_or_default()
-            .iter()
-            .filter(|dependency| {
-                dependency.name != "base"
-                    && matches!(
-                        dependency.dep_type,
-                        ModDependencyType::NoLoadOrder | ModDependencyType::Required
-                    )
-            })
-            .map(|dependency| ModIdent {
-                name: dependency.name.clone(),
-                version_req: dependency.version_req.clone(),
-            })
-            .collect())
-    }
-
     pub fn enable_all(&mut self) {
         println!(
             "{}",
@@ -282,7 +257,7 @@ fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {
     }
 }
 
-fn read_info_json(entry: &DirEntry) -> Option<InfoJson> {
+pub fn read_info_json(entry: &DirEntry) -> Option<InfoJson> {
     let contents = match ModEntryStructure::parse(entry)? {
         ModEntryStructure::Directory | ModEntryStructure::Symlink => {
             let mut path = entry.path();

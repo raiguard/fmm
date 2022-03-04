@@ -14,7 +14,7 @@ mod types;
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use console::style;
-use reqwest::blocking::Client;
+use dependency::ModDependencyType;
 use semver::Version;
 use std::collections::HashSet;
 use std::fs;
@@ -28,8 +28,6 @@ use crate::types::*;
 pub fn run() -> Result<()> {
     let config = Config::new(Args::parse())?;
     // println!("{:#?}", config);
-
-    // let client = Client::new();
 
     match &config.cmd {
         Cmd::Sync {
@@ -103,7 +101,8 @@ fn handle_sync(
         while !to_check.is_empty() {
             let mut to_check_next = vec![];
             for mod_ident in &to_check {
-                for dep_ident in directory.get_dependencies(mod_ident)? {
+                for dep_ident in get_dependencies(&directory, mod_ident)? {
+                    println!("{:#?}", dep_ident);
                     // TODO: Handle if a mod requires a newer version of the dependency
                     if !to_enable.contains(&dep_ident) {
                         to_enable.push(dep_ident.clone());
@@ -134,6 +133,33 @@ fn handle_sync(
     )?;
 
     Ok(())
+}
+
+fn get_dependencies(directory: &Directory, mod_ident: &ModIdent) -> Result<Vec<ModIdent>> {
+    directory
+        .mods
+        .get(&mod_ident.name)
+        .and_then(|mod_entries| crate::get_mod_version(mod_entries, mod_ident))
+        .map(|mod_entry| {
+            directory::read_info_json(&mod_entry.entry)
+                .and_then(|info_json| info_json.dependencies)
+                .unwrap_or_default()
+                .iter()
+                .filter(|dependency| {
+                    dependency.name != "base"
+                        && matches!(
+                            dependency.dep_type,
+                            ModDependencyType::NoLoadOrder | ModDependencyType::Required
+                        )
+                })
+                .map(|dependency| ModIdent {
+                    name: dependency.name.clone(),
+                    version_req: dependency.version_req.clone(),
+                })
+                .collect()
+        })
+        .ok_or_else(|| anyhow!("Failed to retrieve mod dependencies"))
+        .or_else(|_| portal::get_dependencies(mod_ident))
 }
 
 trait HasVersion {

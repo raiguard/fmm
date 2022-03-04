@@ -6,7 +6,7 @@ use std::fmt::Display;
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct ModDependency {
     pub dep_type: ModDependencyType,
     pub name: String,
@@ -100,7 +100,7 @@ impl Display for ModDependency {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ModDependencyType {
     Incompatible,
     NoLoadOrder,

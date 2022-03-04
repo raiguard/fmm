@@ -1,18 +1,21 @@
 use std::cmp::min;
 use std::fs::{self, File};
 use std::io::{Read, Write};
+use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
-use semver::Version;
+use semver::{Version, VersionReq};
 use serde::Deserialize;
+use serde_with::{serde_as, DisplayFromStr};
 use sha1::{Digest, Sha1};
 use thiserror::Error;
 
 use crate::config::Config;
+use crate::dependency::ModDependency;
 use crate::directory::Directory;
 use crate::get_mod_version;
 use crate::types::{ModEntry, ModIdent};
@@ -54,7 +57,7 @@ fn download_mod_internal(
     // println!("{} {}", style("Fetching").cyan().bold(), mod_ident.name);
 
     // Download mod information
-    let mod_info: ModPortalResult = client
+    let mod_info: PortalMod = client
         .get(format!(
             "https://mods.factorio.com/api/mods/{}",
             mod_ident.name
@@ -182,22 +185,70 @@ enum DownloadModErr {
     NoContentLength,
 }
 
-#[derive(Debug, Deserialize)]
-struct ModPortalResult {
-    name: String,
-    releases: Vec<ModPortalRelease>,
+// TODO: Return ModDependencies and convert in the caller
+pub fn get_dependencies(mod_ident: &ModIdent) -> Result<Vec<ModIdent>> {
+    let client = Client::new();
+
+    let res: PortalModFull = client
+        .get(format!(
+            "https://mods.factorio.com/api/mods/{}/full",
+            mod_ident.name
+        ))
+        .send()?
+        .json()?;
+
+    let release = get_mod_version(&res.releases, mod_ident)
+        .ok_or_else(|| anyhow!("Dependency requirement could not be satisfied"))?;
+
+    let info_json = release
+        .info_json
+        .as_ref()
+        .ok_or_else(|| anyhow!("API result did not contain info.json"))?;
+
+    Ok(info_json
+        .dependencies
+        .iter()
+        .map(|dependency| ModIdent {
+            name: dependency.name.clone(),
+            version_req: dependency.version_req.clone(),
+        })
+        .collect())
 }
 
 #[derive(Debug, Deserialize)]
-struct ModPortalRelease {
+struct PortalMod {
+    name: String,
+    releases: Vec<PortalModRelease>,
+}
+
+#[derive(Deserialize)]
+struct PortalModFull {
+    name: String,
+    title: String,
+    summary: String,
+    owner: String,
+    homepage: String,
+    releases: Vec<PortalModRelease>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct PortalModRelease {
     download_url: String,
     file_name: String,
+    info_json: Option<PortalInfoJson>,
     sha1: String,
     version: Version,
 }
 
-impl crate::HasVersion for ModPortalRelease {
+impl crate::HasVersion for PortalModRelease {
     fn get_version(&self) -> &Version {
         &self.version
     }
+}
+
+#[serde_as]
+#[derive(Clone, Debug, Deserialize)]
+struct PortalInfoJson {
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    dependencies: Vec<ModDependency>,
 }
