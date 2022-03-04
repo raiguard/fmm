@@ -66,9 +66,4 @@ pub enum SyncCmd {
         #[clap(short = 'i', long = "ignore-startup-settings")]
         ignore_startup_settings: bool,
     },
-    /// Upgrade installed mods
-    Upgrade {
-        /// The mods to upgrade, or blank to upgrade all mods
-        mods: Vec<ModIdent>,
-    },
 }

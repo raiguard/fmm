@@ -95,7 +95,6 @@ fn handle_sync(
                 println!("Synced startup settings");
             }
         }
-        SyncCmd::Upgrade { mods } => todo!(),
     }
 
     // Recursively extract dependencies and add them to the enable list
