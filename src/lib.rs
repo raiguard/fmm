@@ -16,6 +16,7 @@ use clap::Parser;
 use console::style;
 use reqwest::blocking::Client;
 use semver::Version;
+use std::collections::HashSet;
 use std::fs;
 
 use crate::cli::{Args, Cmd, SyncCmd};
@@ -97,14 +98,22 @@ fn handle_sync(
         SyncCmd::Upgrade { mods } => todo!(),
     }
 
-    // Extract dependencies and add them to the enable list
+    // Recursively extract dependencies and add them to the enable list
     if !ignore_deps {
-        let mut deps_to_add = vec![];
-        for mod_ident in &to_enable {
-            // TODO: Handle multiple levels of dependencies & dependencies for non-local mods
-            deps_to_add.append(&mut directory.get_dependencies(mod_ident)?);
+        let mut to_check = to_enable.clone();
+        while !to_check.is_empty() {
+            let mut to_check_next = vec![];
+            for mod_ident in &to_check {
+                for dep_ident in directory.get_dependencies(mod_ident)? {
+                    // TODO: Handle if a mod requires a newer version of the dependency
+                    if !to_enable.contains(&dep_ident) {
+                        to_enable.push(dep_ident.clone());
+                        to_check_next.push(dep_ident.clone());
+                    }
+                }
+            }
+            to_check = to_check_next;
         }
-        to_enable.append(&mut deps_to_add);
     }
 
     // Enable and disable mods

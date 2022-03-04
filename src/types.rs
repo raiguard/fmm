@@ -23,7 +23,7 @@ pub struct ModListJsonMod {
     pub enabled: bool,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Eq, Debug, Deserialize, PartialEq)]
 pub struct ModIdent {
     pub name: String,
     pub version_req: Option<VersionReq>,
