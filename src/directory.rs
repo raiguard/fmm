@@ -242,6 +242,17 @@ impl Directory {
 
         Ok(())
     }
+
+    pub fn save(&self) -> Result<()> {
+        fs::write(
+            &self.mod_list_path,
+            serde_json::to_string_pretty(&ModListJson {
+                mods: self.mod_list.clone(),
+            })?,
+        )?;
+
+        Ok(())
+    }
 }
 
 fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {

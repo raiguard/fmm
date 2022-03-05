@@ -102,7 +102,7 @@ fn handle_sync(
             let mut to_check_next = vec![];
             for mod_ident in &to_check {
                 for dep_ident in get_dependencies(&directory, mod_ident)? {
-                    println!("{:#?}", dep_ident);
+                    // println!("{:#?}", dep_ident);
                     // TODO: Handle if a mod requires a newer version of the dependency
                     if !to_enable.contains(&dep_ident) {
                         to_enable.push(dep_ident.clone());
@@ -123,14 +123,8 @@ fn handle_sync(
         directory.disable(&mod_ident);
     }
 
-    // TODO: Make this a Directory method
-    // Write mod-list.json
-    fs::write(
-        &directory.mod_list_path,
-        serde_json::to_string_pretty(&ModListJson {
-            mods: directory.mod_list,
-        })?,
-    )?;
+    // Write mod_list.json
+    directory.save()?;
 
     Ok(())
 }
