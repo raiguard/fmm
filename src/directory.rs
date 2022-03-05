@@ -192,43 +192,6 @@ impl Directory {
         }
     }
 
-    pub fn remove(&mut self, mod_ident: &ModIdent) {
-        if let Some(mod_versions) = self.mods.get(&mod_ident.name) {
-            mod_versions
-                .iter()
-                .filter(|version| version_req.matches(&version.version))
-                .for_each(|version| {
-                    let result = version.entry.metadata().and_then(|metadata| {
-                        if metadata.is_dir() {
-                            fs::remove_dir_all(version.entry.path())
-                        } else {
-                            fs::remove_file(version.entry.path())
-                        }
-                    });
-                    if result.is_ok() {
-                        println!(
-                            "{} {} v{}",
-                            style("Removed").red().bold(),
-                            &mod_ident.name,
-                            version.version
-                        );
-                    } else {
-                        println!("Could not remove {} v{}", &mod_ident.name, version.version);
-                    }
-                });
-            self.mods.remove(&mod_ident.name);
-        }
-
-        if let Some((index, _)) = self
-            .mod_list
-            .iter()
-            .enumerate()
-            .find(|(_, mod_state)| mod_ident.name == mod_state.name)
-        {
-            self.mod_list.remove(index);
-        }
-    }
-
     pub fn sync_settings(&mut self, save_settings: &PropertyTree) -> Result<()> {
         let startup_settings = self
             .mod_settings
