@@ -158,13 +158,13 @@ impl Directory {
                 "{} {} v{}",
                 style("Enabled").green().bold(),
                 mod_ident.name,
-                mod_entry.ident.version.as_ref().unwrap()
+                mod_entry.ident.get_guaranteed_version()
             );
 
             let version = mod_ident
                 .version
                 .as_ref()
-                .map(|_| mod_entry.ident.version.as_ref().unwrap().clone());
+                .map(|_| mod_entry.ident.get_guaranteed_version().clone());
 
             if let Some(mod_state) = mod_state {
                 mod_state.enabled = true;

@@ -15,6 +15,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use console::style;
 use dependency::{ModDependency, ModDependencyType};
+use reqwest::blocking::Client;
 use semver::Version;
 use std::collections::HashSet;
 use std::fs;
@@ -52,6 +53,7 @@ fn handle_sync(
         directory.disable_all();
     }
 
+    let mut to_download = vec![];
     let mut to_enable = vec![];
     let mut to_disable = vec![];
 
@@ -108,7 +110,8 @@ fn handle_sync(
                             .get(&dependency.name)
                             .and_then(|entries| match &dependency.version_req {
                                 Some(version_req) => entries.iter().rev().find(|entry| {
-                                    version_req.matches(&entry.ident.version.clone().unwrap())
+                                    version_req
+                                        .matches(&entry.ident.get_guaranteed_version().clone())
                                 }),
                                 None => entries.last(),
                             });
@@ -120,11 +123,25 @@ fn handle_sync(
                             to_enable.push(dep_ident.clone());
                             to_check_next.push(dep_ident.clone());
                         }
+                    } else {
+                        let ident = ModIdent {
+                            name: dependency.name,
+                            version: None,
+                        };
+                        to_download.push(ident.clone());
+                        to_enable.push(ident);
                     }
                 }
             }
             to_check = to_check_next;
         }
+    }
+
+    // Download mods
+    let client = Client::new();
+    for mod_ident in to_download {
+        // TODO: Add to to_enable here after download_mod returns a ModIdent
+        portal::download_mod(&mod_ident, &mut directory, config, &client)?;
     }
 
     // Enable and disable mods

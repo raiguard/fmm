@@ -188,7 +188,6 @@ enum DownloadModErr {
     NoContentLength,
 }
 
-// TODO: Return ModDependencies and convert in the caller
 pub fn get_dependencies(mod_ident: &ModIdent) -> Result<Vec<ModDependency>> {
     let client = Client::new();
 

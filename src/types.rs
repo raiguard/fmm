@@ -29,6 +29,15 @@ pub struct ModIdent {
     pub version: Option<Version>,
 }
 
+impl ModIdent {
+    /// In cases where `version` is guaranteed to be Some(), get the version
+    pub fn get_guaranteed_version(&self) -> &Version {
+        self.version
+            .as_ref()
+            .expect("Version was not present in guaranteed environment")
+    }
+}
+
 impl FromStr for ModIdent {
     type Err = InputModErr;
 
@@ -90,33 +99,29 @@ pub struct ModEntry {
 
 impl crate::HasVersion for ModEntry {
     fn get_version(&self) -> &Version {
-        self.ident.version.as_ref().unwrap()
+        self.ident.get_guaranteed_version()
     }
 }
 
 impl PartialOrd for ModEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.ident
-            .version
-            .as_ref()
-            .unwrap()
-            .partial_cmp(other.ident.version.as_ref().unwrap())
+            .get_guaranteed_version()
+            .partial_cmp(other.ident.get_guaranteed_version())
     }
 }
 
 impl Ord for ModEntry {
     fn cmp(&self, other: &Self) -> Ordering {
         self.ident
-            .version
-            .as_ref()
-            .unwrap()
-            .cmp(other.ident.version.as_ref().unwrap())
+            .get_guaranteed_version()
+            .cmp(other.ident.get_guaranteed_version())
     }
 }
 
 impl PartialEq for ModEntry {
     fn eq(&self, other: &Self) -> bool {
-        self.ident.version.as_ref().unwrap() == other.ident.version.as_ref().unwrap()
+        self.ident.get_guaranteed_version() == other.ident.get_guaranteed_version()
     }
 }
 
