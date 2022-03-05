@@ -26,7 +26,7 @@ pub struct ModListJsonMod {
 #[derive(Clone, Eq, Debug, Deserialize, PartialEq)]
 pub struct ModIdent {
     pub name: String,
-    pub version_req: Option<VersionReq>,
+    pub version: Option<Version>,
 }
 
 impl FromStr for ModIdent {
@@ -37,7 +37,7 @@ impl FromStr for ModIdent {
         match parts[..] {
             [name] => Ok(Self {
                 name: name.to_string(),
-                version_req: None,
+                version: None,
             }),
             [name, version] => {
                 let parsed_version = Version::parse(version);
@@ -48,11 +48,7 @@ impl FromStr for ModIdent {
                     } else {
                         Ok(Self {
                             name: name.to_string(),
-                            version_req: Some(
-                                VersionReq::from_str(&format!("={}", version)).map_err(|_| {
-                                    InputModErr::InvalidVersion(version.to_string())
-                                })?,
-                            ),
+                            version: Some(version),
                         })
                     }
                 } else {
@@ -70,7 +66,7 @@ impl fmt::Display for ModIdent {
             f,
             "{}{}",
             self.name,
-            match &self.version_req {
+            match &self.version {
                 Some(version_req) => format!(" {}", version_req),
                 _ => "".to_string(),
             }
@@ -88,30 +84,39 @@ pub enum InputModErr {
 
 pub struct ModEntry {
     pub entry: DirEntry,
-    pub version: Version,
+    // This is always guaranteed to have a version
+    pub ident: ModIdent,
 }
 
 impl crate::HasVersion for ModEntry {
     fn get_version(&self) -> &Version {
-        &self.version
+        self.ident.version.as_ref().unwrap()
     }
 }
 
 impl PartialOrd for ModEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.version.partial_cmp(&other.version)
+        self.ident
+            .version
+            .as_ref()
+            .unwrap()
+            .partial_cmp(other.ident.version.as_ref().unwrap())
     }
 }
 
 impl Ord for ModEntry {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.version.cmp(&other.version)
+        self.ident
+            .version
+            .as_ref()
+            .unwrap()
+            .cmp(other.ident.version.as_ref().unwrap())
     }
 }
 
 impl PartialEq for ModEntry {
     fn eq(&self, other: &Self) -> bool {
-        self.version == other.version
+        self.ident.version.as_ref().unwrap() == other.ident.version.as_ref().unwrap()
     }
 }
 

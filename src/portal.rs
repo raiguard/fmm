@@ -154,7 +154,7 @@ fn download_mod_internal(
     );
 
     Ok((
-        mod_info.name,
+        mod_info.name.clone(),
         ModEntry {
             entry: fs::read_dir(&config.mods_dir)?
                 .filter_map(|entry| entry.ok())
@@ -166,7 +166,10 @@ fn download_mod_internal(
                         .is_some()
                 })
                 .unwrap(),
-            version: release.version.clone(),
+            ident: ModIdent {
+                name: mod_info.name,
+                version: Some(release.version.clone()),
+            },
         },
     ))
 }
@@ -186,7 +189,7 @@ enum DownloadModErr {
 }
 
 // TODO: Return ModDependencies and convert in the caller
-pub fn get_dependencies(mod_ident: &ModIdent) -> Result<Vec<ModIdent>> {
+pub fn get_dependencies(mod_ident: &ModIdent) -> Result<Vec<ModDependency>> {
     let client = Client::new();
 
     let res: PortalModFull = client
@@ -205,14 +208,7 @@ pub fn get_dependencies(mod_ident: &ModIdent) -> Result<Vec<ModIdent>> {
         .as_ref()
         .ok_or_else(|| anyhow!("API result did not contain info.json"))?;
 
-    Ok(info_json
-        .dependencies
-        .iter()
-        .map(|dependency| ModIdent {
-            name: dependency.name.clone(),
-            version_req: dependency.version_req.clone(),
-        })
-        .collect())
+    Ok(info_json.dependencies.clone())
 }
 
 #[derive(Debug, Deserialize)]

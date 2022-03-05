@@ -14,7 +14,7 @@ mod types;
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use console::style;
-use dependency::ModDependencyType;
+use dependency::{ModDependency, ModDependencyType};
 use semver::Version;
 use std::collections::HashSet;
 use std::fs;
@@ -82,7 +82,7 @@ fn handle_sync(
 
             if config.sync_latest_versions {
                 for mod_ident in mods.iter_mut() {
-                    mod_ident.version_req = None;
+                    mod_ident.version = None;
                 }
             }
 
@@ -101,12 +101,25 @@ fn handle_sync(
         while !to_check.is_empty() {
             let mut to_check_next = vec![];
             for mod_ident in &to_check {
-                for dep_ident in get_dependencies(&directory, mod_ident)? {
-                    // println!("{:#?}", dep_ident);
+                for dependency in get_dependencies(&directory, mod_ident)? {
+                    let newest_matching =
+                        directory
+                            .mods
+                            .get(&dependency.name)
+                            .and_then(|entries| match &dependency.version_req {
+                                Some(version_req) => entries.iter().rev().find(|entry| {
+                                    version_req.matches(&entry.ident.version.clone().unwrap())
+                                }),
+                                None => entries.last(),
+                            });
+
                     // TODO: Handle if a mod requires a newer version of the dependency
-                    if !to_enable.contains(&dep_ident) {
-                        to_enable.push(dep_ident.clone());
-                        to_check_next.push(dep_ident.clone());
+                    if let Some(dependency) = newest_matching {
+                        let dep_ident = &dependency.ident;
+                        if !to_enable.contains(dep_ident) {
+                            to_enable.push(dep_ident.clone());
+                            to_check_next.push(dep_ident.clone());
+                        }
                     }
                 }
             }
@@ -123,13 +136,13 @@ fn handle_sync(
         directory.disable(&mod_ident);
     }
 
-    // Write mod_list.json
+    // Write mod-list.json
     directory.save()?;
 
     Ok(())
 }
 
-fn get_dependencies(directory: &Directory, mod_ident: &ModIdent) -> Result<Vec<ModIdent>> {
+fn get_dependencies(directory: &Directory, mod_ident: &ModIdent) -> Result<Vec<ModDependency>> {
     directory
         .mods
         .get(&mod_ident.name)
@@ -146,10 +159,7 @@ fn get_dependencies(directory: &Directory, mod_ident: &ModIdent) -> Result<Vec<M
                             ModDependencyType::NoLoadOrder | ModDependencyType::Required
                         )
                 })
-                .map(|dependency| ModIdent {
-                    name: dependency.name.clone(),
-                    version_req: dependency.version_req.clone(),
-                })
+                .cloned()
                 .collect()
         })
         .ok_or_else(|| anyhow!("Failed to retrieve mod dependencies"))
@@ -161,10 +171,10 @@ trait HasVersion {
 }
 
 fn get_mod_version<'a, T: HasVersion>(list: &'a [T], mod_ident: &ModIdent) -> Option<&'a T> {
-    if let Some(version_req) = &mod_ident.version_req {
+    if let Some(version) = &mod_ident.version {
         list.iter()
             .rev()
-            .find(|entry| version_req.matches(entry.get_version()))
+            .find(|entry| version == entry.get_version())
     } else {
         list.last()
     }

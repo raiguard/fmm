@@ -32,14 +32,26 @@ impl Directory {
                 let entry = entry.ok()?;
 
                 if let Some((mod_name, version)) = parse_file_name(&entry.file_name()) {
-                    Some((mod_name, ModEntry { entry, version }))
+                    Some((
+                        mod_name.clone(),
+                        ModEntry {
+                            entry,
+                            ident: ModIdent {
+                                name: mod_name,
+                                version: Some(version),
+                            },
+                        },
+                    ))
                 } else {
                     let info_json = read_info_json(&entry)?;
                     Some((
-                        info_json.name,
+                        info_json.name.clone(),
                         ModEntry {
                             entry,
-                            version: info_json.version,
+                            ident: ModIdent {
+                                name: info_json.name,
+                                version: Some(info_json.version),
+                            },
                         },
                     ))
                 }
@@ -146,13 +158,13 @@ impl Directory {
                 "{} {} v{}",
                 style("Enabled").green().bold(),
                 mod_ident.name,
-                mod_entry.version
+                mod_entry.ident.version.as_ref().unwrap()
             );
 
             let version = mod_ident
-                .version_req
+                .version
                 .as_ref()
-                .map(|_| mod_entry.version.clone());
+                .map(|_| mod_entry.ident.version.as_ref().unwrap().clone());
 
             if let Some(mod_state) = mod_state {
                 mod_state.enabled = true;
@@ -181,11 +193,6 @@ impl Directory {
     }
 
     pub fn remove(&mut self, mod_ident: &ModIdent) {
-        let version_req = mod_ident
-            .version_req
-            .as_ref()
-            .cloned()
-            .unwrap_or_else(VersionReq::any);
         if let Some(mod_versions) = self.mods.get(&mod_ident.name) {
             mod_versions
                 .iter()

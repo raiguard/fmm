@@ -250,11 +250,11 @@ pub trait ReadFactorioDat: io::Read {
 
         Ok(ModIdent {
             name: mod_name,
-            version_req: Some(VersionReq::exact(&Version::new(
+            version: Some(Version::new(
                 version_major as u64,
                 version_minor as u64,
                 version_patch as u64,
-            ))),
+            )),
         })
     }
 
