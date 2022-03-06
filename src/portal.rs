@@ -3,12 +3,12 @@ use crate::dependency::ModDependency;
 use crate::directory::Directory;
 use crate::get_mod_version;
 use crate::types::{ModEntry, ModIdent};
+use crate::version::Version;
 use anyhow::{anyhow, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
-use semver::Version;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use sha1::{Digest, Sha1};
@@ -185,13 +185,18 @@ enum DownloadModErr {
 }
 
 pub fn get_dependencies(mod_ident: &ModIdent, client: &Client) -> Result<Vec<ModDependency>> {
-    let res: PortalModFull = client
+    println!("{}", mod_ident);
+    let res = client
         .get(format!(
             "https://mods.factorio.com/api/mods/{}/full",
             mod_ident.name
         ))
         .send()?
-        .json()?;
+        .text()?;
+
+    fs::write("/home/rai/res.json", &res)?;
+
+    let res: PortalModFull = serde_json::from_str(&res)?;
 
     let release = get_mod_version(&res.releases, mod_ident).ok_or_else(|| {
         anyhow!(

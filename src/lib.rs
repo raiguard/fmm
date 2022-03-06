@@ -1,4 +1,5 @@
 #![feature(iter_intersperse)]
+#![allow(dead_code)]
 
 mod cli;
 mod config;
@@ -9,6 +10,7 @@ mod mod_settings;
 mod portal;
 mod save_file;
 mod types;
+mod version;
 
 use crate::cli::{Args, Cmd, SyncCmd};
 use crate::config::Config;
@@ -19,7 +21,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use dependency::{ModDependency, ModDependencyType};
 use reqwest::blocking::Client;
-use semver::Version;
+use crate::version::Version;
 
 pub fn run() -> Result<()> {
     let config = Config::new(Args::parse())?;

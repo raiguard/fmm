@@ -1,9 +1,9 @@
 use crate::types::ModIdent;
+use crate::version::Version;
 use anyhow::anyhow;
 use anyhow::Result;
 use byteorder::WriteBytesExt;
 use byteorder::{LittleEndian, ReadBytesExt};
-use semver::Version;
 use std::collections::HashMap;
 use std::io;
 use std::io::prelude::*;
@@ -249,9 +249,10 @@ pub trait ReadFactorioDat: io::Read {
         Ok(ModIdent {
             name: mod_name,
             version: Some(Version::new(
-                version_major as u64,
-                version_minor as u64,
-                version_patch as u64,
+                version_major as u32,
+                version_minor as u32,
+                version_patch as u32,
+                None,
             )),
         })
     }

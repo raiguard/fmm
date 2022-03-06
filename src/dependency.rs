@@ -1,12 +1,12 @@
+use crate::version::VersionReq;
 use once_cell::sync::OnceCell;
 use regex::Regex;
-use semver::VersionReq;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 use thiserror::Error;
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ModDependency {
     pub dep_type: ModDependencyType,
     pub name: String,
@@ -22,7 +22,7 @@ impl FromStr for ModDependency {
         let captures = DEP_STRING_REGEX
             .get_or_init(|| {
                 Regex::new(
-                    r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=?) *(?P<version>(?:\d+\.){1,2}\d+))?$",
+                    r"^(?:(?P<type>[!?~]|\(\?\)) *)?(?P<name>(?: *[a-zA-Z0-9_-]+)+(?: *$)?)(?: *(?P<version_req>[<>=]=? *(?:\d+\.){1,2}\d+))?$",
                 ).unwrap()
             })
             .captures(s)
@@ -41,38 +41,15 @@ impl FromStr for ModDependency {
                 Some(mtch) => mtch.as_str().to_string(),
                 None => return Err(ModDependencyErr::NameIsUnparsable(s.to_string())),
             },
-            version_req: match [captures.name("version_req"), captures.name("version")] {
-                [Some(req_match), Some(version_match)] => {
-                    // Factorio does not sanitize leading zeros, so we must do it ourselves
-                    let version_str = version_match.as_str();
-                    let sanitized = version_str
-                        .split('.')
-                        .map(|sub| {
-                            Ok(sub
-                                .parse::<usize>()
-                                .map_err(|_| {
-                                    ModDependencyErr::InvalidDependencyString(s.to_string())
-                                })?
-                                .to_string())
-                        })
-                        .intersperse(Ok(".".to_string()))
-                        .collect::<Result<String, ModDependencyErr>>()?;
-
-                    // Assemble version req from parts
-                    let mut version_req = String::new();
-                    version_req.push_str(req_match.as_str());
-                    version_req.push(' ');
-                    version_req.push_str(&sanitized);
-
-                    match VersionReq::parse(&version_req) {
-                        Ok(version_req) => Some(version_req),
-                        Err(_) => {
-                            return Err(ModDependencyErr::InvalidVersionReq(
-                                req_match.as_str().to_string(),
-                            ))
-                        }
+            version_req: match captures.name("version_req") {
+                Some(req_match) => match VersionReq::parse(req_match.as_str()) {
+                    Ok(version_req) => Some(version_req),
+                    Err(_) => {
+                        return Err(ModDependencyErr::InvalidVersionReq(
+                            req_match.as_str().to_string(),
+                        ))
                     }
-                }
+                },
                 _ => None,
             },
         })

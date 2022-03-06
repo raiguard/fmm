@@ -1,11 +1,11 @@
 use crate::dat::PropertyTree;
 use crate::dat::ReadFactorioDat;
 use crate::types::ModIdent;
+use crate::version::Version;
 use anyhow::anyhow;
 use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt};
 use compress::zlib;
-use semver::Version;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
@@ -83,9 +83,10 @@ impl SaveFile {
         Ok(Self {
             mods,
             map_version: Version::new(
-                version_major as u64,
-                version_minor as u64,
-                version_patch as u64,
+                version_major as u32,
+                version_minor as u32,
+                version_patch as u32,
+                None,
             ),
             path,
             startup_settings,

@@ -1,5 +1,5 @@
 use crate::dependency::ModDependency;
-use semver::Version;
+use crate::version::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::cmp::Ordering;
@@ -48,17 +48,13 @@ impl FromStr for ModIdent {
                 version: None,
             }),
             [name, version] => {
-                let parsed_version = Version::parse(version);
+                let parsed_version = Version::from_str(version);
                 if let Ok(version) = parsed_version {
                     // Validate that the version does *not* have prerelease or build data
-                    if !version.pre.is_empty() || !version.build.is_empty() {
-                        Err(InputModErr::InvalidVersion(version.to_string()))
-                    } else {
-                        Ok(Self {
-                            name: name.to_string(),
-                            version: Some(version),
-                        })
-                    }
+                    Ok(Self {
+                        name: name.to_string(),
+                        version: Some(version),
+                    })
                 } else {
                     Err(InputModErr::InvalidVersion(version.to_string()))
                 }

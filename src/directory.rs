@@ -1,15 +1,16 @@
 use crate::dat::PropertyTree;
 use crate::mod_settings::ModSettings;
 use crate::types::*;
+use crate::version::Version;
 use anyhow::{anyhow, Result};
 use console::style;
-use semver::Version;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
 use std::path::PathBuf;
+use std::str::FromStr;
 use zip::ZipArchive;
 
 pub struct Directory {
@@ -234,7 +235,7 @@ fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {
         .trim_end_matches(".zip")
         .rsplit_once('_')?;
 
-    if let Ok(version) = Version::parse(version) {
+    if let Ok(version) = Version::from_str(version) {
         Some((name.to_string(), version))
     } else {
         None
