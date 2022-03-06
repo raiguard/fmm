@@ -21,6 +21,7 @@ use crate::types::*;
 use crate::version::Version;
 use anyhow::{anyhow, Result};
 use clap::Parser;
+use console::style;
 use reqwest::blocking::Client;
 
 pub fn run() -> Result<()> {
@@ -113,47 +114,53 @@ fn handle_sync(
         while !to_check.is_empty() {
             let mut to_check_next = vec![];
             for mod_ident in &to_check {
-                for dependency in get_dependencies(&directory, mod_ident, client)?
-                    .iter()
-                    .filter(|dep| {
-                        matches!(
-                            dep.dep_type,
-                            ModDependencyType::Required | ModDependencyType::NoLoadOrder
-                        )
-                    })
-                    .filter(|dep| dep.name != "base")
-                {
-                    // TODO: Put this in `Directory`
-                    let newest_matching =
-                        directory
-                            .mods
-                            .get(&dependency.name)
-                            .and_then(|entries| match &dependency.version_req {
-                                Some(version_req) => entries.iter().rev().find(|entry| {
-                                    version_req
-                                        .matches(&entry.ident.get_guaranteed_version().clone())
-                                }),
-                                None => entries.last(),
-                            });
+                match get_dependencies(&directory, mod_ident, client) {
+                    Ok(dependencies) => {
+                        for dependency in dependencies
+                            .iter()
+                            .filter(|dep| {
+                                matches!(
+                                    dep.dep_type,
+                                    ModDependencyType::Required | ModDependencyType::NoLoadOrder
+                                )
+                            })
+                            .filter(|dep| dep.name != "base")
+                        {
+                            // TODO: Put this in `Directory`
+                            let newest_matching =
+                                directory.mods.get(&dependency.name).and_then(|entries| {
+                                    match &dependency.version_req {
+                                        Some(version_req) => entries.iter().rev().find(|entry| {
+                                            version_req.matches(
+                                                &entry.ident.get_guaranteed_version().clone(),
+                                            )
+                                        }),
+                                        None => entries.last(),
+                                    }
+                                });
 
-                    // TODO: Handle if a mod requires a newer version of the dependency
-                    if let Some(dep_ident) = newest_matching
-                        .map(|dependency| dependency.ident.clone())
-                        .or_else(|| {
-                            if !no_download {
-                                Some(ModIdent {
-                                    name: dependency.name.clone(),
-                                    version: None,
+                            // TODO: Handle if a mod requires a newer version of the dependency
+                            if let Some(dep_ident) = newest_matching
+                                .map(|dependency| dependency.ident.clone())
+                                .or_else(|| {
+                                    if !no_download {
+                                        Some(ModIdent {
+                                            name: dependency.name.clone(),
+                                            version: None,
+                                        })
+                                    } else {
+                                        None
+                                    }
                                 })
-                            } else {
-                                None
+                                .filter(|dep_ident| !to_enable.contains(dep_ident))
+                            {
+                                to_enable.push(dep_ident.clone());
+                                to_check_next.push(dep_ident.clone());
                             }
-                        })
-                        .filter(|dep_ident| !to_enable.contains(dep_ident))
-                    {
-                        to_enable.push(dep_ident.clone());
-                        to_check_next.push(dep_ident.clone());
+                        }
                     }
+                    // TODO: Prevent download when this occurs
+                    Err(err) => eprintln!("{} {}", style("Error downloading mod:").red(), err),
                 }
             }
             to_check = to_check_next;

@@ -185,19 +185,22 @@ enum DownloadModErr {
 }
 
 pub fn get_dependencies(mod_ident: &ModIdent, client: &Client) -> Result<Vec<ModDependency>> {
+    println!("{}", mod_ident);
     let res = client
         .get(format!(
             "https://mods.factorio.com/api/mods/{}/full",
             mod_ident.name
         ))
-        .send()?
-        .text()?;
+        .send()?;
 
-    fs::write("/home/rai/res.json", &res)?;
+    let status = res.status();
+    if !status.is_success() {
+        return Err(anyhow!(status.canonical_reason().unwrap_or("")));
+    }
 
-    let res: PortalModFull = serde_json::from_str(&res)?;
+    let json: PortalModFull = res.json()?;
 
-    let release = get_mod_version(&res.releases, mod_ident).ok_or_else(|| {
+    let release = get_mod_version(&json.releases, mod_ident).ok_or_else(|| {
         anyhow!(
             "{}: Dependency requirement could not be satisfied",
             mod_ident.name
