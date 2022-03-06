@@ -1,22 +1,22 @@
+use crate::dat::PropertyTree;
+use crate::dependency::ModDependencyType;
+use crate::mod_settings::ModSettings;
+use crate::types::*;
+use crate::HasVersion;
 use anyhow::{anyhow, Result};
 use console::style;
+use semver::{Version, VersionReq};
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
 use std::path::PathBuf;
-
-use semver::{Version, VersionReq};
 use zip::ZipArchive;
-
-use crate::dat::PropertyTree;
-use crate::dependency::ModDependencyType;
-use crate::mod_settings::ModSettings;
-use crate::types::*;
 
 pub struct Directory {
     pub mods: HashMap<String, Vec<ModEntry>>,
+    // TODO: Mod list and mod settings can both be None
     pub mod_list: Vec<ModListJsonMod>,
     pub mod_list_path: PathBuf,
     pub mod_settings: ModSettings,
@@ -222,6 +222,22 @@ impl Directory {
         )?;
 
         Ok(())
+    }
+
+    pub fn contains(&self, mod_ident: &ModIdent) -> bool {
+        self.mods
+            .get(&mod_ident.name)
+            .map(|entries| {
+                if let Some(version) = &mod_ident.version {
+                    entries
+                        .iter()
+                        .rev()
+                        .any(|entry| entry.ident.get_guaranteed_version() == version)
+                } else {
+                    !entries.is_empty()
+                }
+            })
+            .unwrap_or(false)
     }
 }
 

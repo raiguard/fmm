@@ -1,4 +1,5 @@
 #![feature(iter_intersperse)]
+#![feature(result_option_inspect)]
 #![allow(unused)]
 
 mod cli;
@@ -28,7 +29,7 @@ use crate::types::*;
 
 pub fn run() -> Result<()> {
     let config = Config::new(Args::parse())?;
-    // println!("{:#?}", config);
+    let client = Client::new();
 
     match &config.cmd {
         Cmd::Sync {
@@ -36,12 +37,20 @@ pub fn run() -> Result<()> {
             disable_all,
             ignore_deps,
             no_download,
-        } => handle_sync(&config, cmd, *disable_all, *ignore_deps, *no_download),
+        } => handle_sync(
+            &config,
+            &client,
+            cmd,
+            *disable_all,
+            *ignore_deps,
+            *no_download,
+        ),
     }
 }
 
 fn handle_sync(
     config: &Config,
+    client: &Client,
     cmd: &SyncCmd,
     disable_all: bool,
     ignore_deps: bool,
@@ -97,13 +106,22 @@ fn handle_sync(
         }
     }
 
-    // Recursively extract dependencies and add them to the enable list
+    // Recursively extract dependencies and add them to the download/enable lists
     if !ignore_deps {
         let mut to_check = to_enable.clone();
         while !to_check.is_empty() {
             let mut to_check_next = vec![];
             for mod_ident in &to_check {
-                for dependency in get_dependencies(&directory, mod_ident)? {
+                for dependency in get_dependencies(&directory, mod_ident, client)?
+                    .iter()
+                    .filter(|dep| {
+                        matches!(
+                            dep.dep_type,
+                            ModDependencyType::Required | ModDependencyType::NoLoadOrder
+                        )
+                    })
+                    .filter(|dep| dep.name != "base")
+                {
                     let newest_matching =
                         directory
                             .mods
@@ -117,19 +135,18 @@ fn handle_sync(
                             });
 
                     // TODO: Handle if a mod requires a newer version of the dependency
-                    if let Some(dependency) = newest_matching {
-                        let dep_ident = &dependency.ident;
-                        if !to_enable.contains(dep_ident) {
-                            to_enable.push(dep_ident.clone());
-                            to_check_next.push(dep_ident.clone());
-                        }
+                    let dep_ident = if let Some(dependency) = newest_matching {
+                        dependency.ident.clone()
                     } else {
-                        let ident = ModIdent {
-                            name: dependency.name,
+                        ModIdent {
+                            name: dependency.name.clone(),
                             version: None,
-                        };
-                        to_download.push(ident.clone());
-                        to_enable.push(ident);
+                        }
+                    };
+
+                    if !to_enable.contains(&dep_ident) {
+                        to_enable.push(dep_ident.clone());
+                        to_check_next.push(dep_ident.clone());
                     }
                 }
             }
@@ -137,11 +154,17 @@ fn handle_sync(
         }
     }
 
+    // Add any mods that we don't have to the download list
+    for mod_ident in &to_enable {
+        if !directory.contains(mod_ident) {
+            to_download.push(mod_ident.clone());
+        }
+    }
+
     // Download mods
-    let client = Client::new();
     for mod_ident in to_download {
         // TODO: Add to to_enable here after download_mod returns a ModIdent
-        portal::download_mod(&mod_ident, &mut directory, config, &client)?;
+        portal::download_mod(&mod_ident, &mut directory, config, client)?;
     }
 
     // Enable and disable mods
@@ -159,7 +182,11 @@ fn handle_sync(
     Ok(())
 }
 
-fn get_dependencies(directory: &Directory, mod_ident: &ModIdent) -> Result<Vec<ModDependency>> {
+fn get_dependencies(
+    directory: &Directory,
+    mod_ident: &ModIdent,
+    client: &Client,
+) -> Result<Vec<ModDependency>> {
     directory
         .mods
         .get(&mod_ident.name)
@@ -180,7 +207,7 @@ fn get_dependencies(directory: &Directory, mod_ident: &ModIdent) -> Result<Vec<M
                 .collect()
         })
         .ok_or_else(|| anyhow!("Failed to retrieve mod dependencies"))
-        .or_else(|_| portal::get_dependencies(mod_ident))
+        .or_else(|_| portal::get_dependencies(mod_ident, client))
 }
 
 trait HasVersion {

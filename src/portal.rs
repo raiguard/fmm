@@ -63,8 +63,7 @@ fn download_mod_internal(
             mod_ident.name
         ))
         .send()?
-        .json()
-        .map_err(|_| DownloadModErr::ModNotFound)?;
+        .json()?;
 
     // Get the corresponding release
     let release =
@@ -188,9 +187,7 @@ enum DownloadModErr {
     NoContentLength,
 }
 
-pub fn get_dependencies(mod_ident: &ModIdent) -> Result<Vec<ModDependency>> {
-    let client = Client::new();
-
+pub fn get_dependencies(mod_ident: &ModIdent, client: &Client) -> Result<Vec<ModDependency>> {
     let res: PortalModFull = client
         .get(format!(
             "https://mods.factorio.com/api/mods/{}/full",
@@ -199,15 +196,23 @@ pub fn get_dependencies(mod_ident: &ModIdent) -> Result<Vec<ModDependency>> {
         .send()?
         .json()?;
 
-    let release = get_mod_version(&res.releases, mod_ident)
-        .ok_or_else(|| anyhow!("Dependency requirement could not be satisfied"))?;
+    let release = get_mod_version(&res.releases, mod_ident).ok_or_else(|| {
+        anyhow!(
+            "{}: Dependency requirement could not be satisfied",
+            mod_ident.name
+        )
+    })?;
 
     let info_json = release
         .info_json
         .as_ref()
         .ok_or_else(|| anyhow!("API result did not contain info.json"))?;
 
-    Ok(info_json.dependencies.clone())
+    Ok(info_json
+        .dependencies
+        .as_ref()
+        .ok_or_else(|| anyhow!("Mod portal did not return dependencies"))?
+        .clone())
 }
 
 #[derive(Debug, Deserialize)]
@@ -244,6 +249,7 @@ impl crate::HasVersion for PortalModRelease {
 #[serde_as]
 #[derive(Clone, Debug, Deserialize)]
 struct PortalInfoJson {
-    #[serde_as(as = "Vec<DisplayFromStr>")]
-    dependencies: Vec<ModDependency>,
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    #[serde(default)]
+    dependencies: Option<Vec<ModDependency>>,
 }

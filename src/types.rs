@@ -34,7 +34,7 @@ impl ModIdent {
     pub fn get_guaranteed_version(&self) -> &Version {
         self.version
             .as_ref()
-            .expect("Version was not present in guaranteed environment")
+            .expect("Version was not present in guaranteed case")
     }
 }
 
