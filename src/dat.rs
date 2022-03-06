@@ -4,7 +4,6 @@ use anyhow::Result;
 use byteorder::WriteBytesExt;
 use byteorder::{LittleEndian, ReadBytesExt};
 use semver::Version;
-use semver::VersionReq;
 use std::collections::HashMap;
 use std::io;
 use std::io::prelude::*;

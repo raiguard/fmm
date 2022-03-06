@@ -1,6 +1,4 @@
 #![feature(iter_intersperse)]
-#![feature(result_option_inspect)]
-#![allow(unused)]
 
 mod cli;
 mod config;
@@ -19,12 +17,9 @@ use crate::save_file::SaveFile;
 use crate::types::*;
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use console::style;
 use dependency::{ModDependency, ModDependencyType};
 use reqwest::blocking::Client;
 use semver::Version;
-use std::collections::HashSet;
-use std::fs;
 
 pub fn run() -> Result<()> {
     let config = Config::new(Args::parse())?;
@@ -121,6 +116,7 @@ fn handle_sync(
                     })
                     .filter(|dep| dep.name != "base")
                 {
+                    // TODO: Put this in `Directory`
                     let newest_matching =
                         directory
                             .mods
@@ -134,16 +130,20 @@ fn handle_sync(
                             });
 
                     // TODO: Handle if a mod requires a newer version of the dependency
-                    let dep_ident = if let Some(dependency) = newest_matching {
-                        dependency.ident.clone()
-                    } else {
-                        ModIdent {
-                            name: dependency.name.clone(),
-                            version: None,
-                        }
-                    };
-
-                    if !to_enable.contains(&dep_ident) {
+                    if let Some(dep_ident) = newest_matching
+                        .map(|dependency| dependency.ident.clone())
+                        .or_else(|| {
+                            if !no_download {
+                                Some(ModIdent {
+                                    name: dependency.name.clone(),
+                                    version: None,
+                                })
+                            } else {
+                                None
+                            }
+                        })
+                        .filter(|dep_ident| !to_enable.contains(dep_ident))
+                    {
                         to_enable.push(dep_ident.clone());
                         to_check_next.push(dep_ident.clone());
                     }

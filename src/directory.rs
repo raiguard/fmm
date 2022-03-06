@@ -1,11 +1,9 @@
 use crate::dat::PropertyTree;
-use crate::dependency::ModDependencyType;
 use crate::mod_settings::ModSettings;
 use crate::types::*;
-use crate::HasVersion;
 use anyhow::{anyhow, Result};
 use console::style;
-use semver::{Version, VersionReq};
+use semver::Version;
 use std::collections::HashMap;
 use std::ffi::OsString;
 use std::fs;
@@ -179,17 +177,6 @@ impl Directory {
         }
 
         Ok(())
-    }
-
-    pub fn enable_all(&mut self) {
-        println!(
-            "{}",
-            style("Enabled latest versions of all mods").green().bold()
-        );
-        for mod_data in self.mod_list.iter_mut() {
-            mod_data.enabled = true;
-            mod_data.version = None;
-        }
     }
 
     pub fn sync_settings(&mut self, save_settings: &PropertyTree) -> Result<()> {

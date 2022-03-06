@@ -8,14 +8,13 @@ use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
-use semver::{Version, VersionReq};
+use semver::Version;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use sha1::{Digest, Sha1};
 use std::cmp::min;
 use std::fs::{self, File};
 use std::io::{Read, Write};
-use std::str::FromStr;
 use thiserror::Error;
 
 pub fn download_mod(

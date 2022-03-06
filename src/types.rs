@@ -1,5 +1,5 @@
 use crate::dependency::ModDependency;
-use semver::{Version, VersionReq};
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::cmp::Ordering;

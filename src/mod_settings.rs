@@ -3,7 +3,7 @@ use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::fs;
 use std::io::Cursor;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct ModSettings {
@@ -17,7 +17,7 @@ pub struct ModSettings {
 }
 
 impl ModSettings {
-    pub fn new(mut path: &PathBuf) -> Result<Self> {
+    pub fn new(path: &Path) -> Result<Self> {
         let path = path.join("mod-settings.dat");
         let mut cursor = Cursor::new(fs::read(&path)?);
 
