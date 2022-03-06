@@ -185,7 +185,6 @@ enum DownloadModErr {
 }
 
 pub fn get_dependencies(mod_ident: &ModIdent, client: &Client) -> Result<Vec<ModDependency>> {
-    println!("{}", mod_ident);
     let res = client
         .get(format!(
             "https://mods.factorio.com/api/mods/{}/full",

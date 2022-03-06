@@ -57,7 +57,7 @@ impl SaveFile {
         let version_major = cursor.read_u16::<LittleEndian>()?;
         let version_minor = cursor.read_u16::<LittleEndian>()?;
         let version_patch = cursor.read_u16::<LittleEndian>()?;
-        let _version_build = cursor.read_u16::<LittleEndian>()?;
+        let version_build = cursor.read_u16::<LittleEndian>()?;
 
         // TODO: What are these for?
         cursor.seek(SeekFrom::Current(2))?;
@@ -86,7 +86,7 @@ impl SaveFile {
                 version_major as u32,
                 version_minor as u32,
                 version_patch as u32,
-                None,
+                Some(version_build as u32),
             ),
             path,
             startup_settings,
