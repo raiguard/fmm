@@ -10,7 +10,6 @@ use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 use serde::Deserialize;
-use serde_with::{serde_as, DisplayFromStr};
 use sha1::{Digest, Sha1};
 use std::cmp::min;
 use std::fs::{self, File};
@@ -250,10 +249,8 @@ impl crate::HasVersion for PortalModRelease {
     }
 }
 
-#[serde_as]
 #[derive(Clone, Debug, Deserialize)]
 struct PortalInfoJson {
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     #[serde(default)]
     dependencies: Option<Vec<ModDependency>>,
 }

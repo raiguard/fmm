@@ -1,8 +1,8 @@
 use crate::version::VersionReq;
 use once_cell::sync::OnceCell;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use serde::{de, Deserialize, Serialize};
+use std::fmt::{self, Display};
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -13,6 +13,31 @@ pub struct ModDependency {
     pub version_req: Option<VersionReq>,
 }
 
+impl<'de> Deserialize<'de> for ModDependency {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct VersionVisitor;
+
+        impl<'de> de::Visitor<'de> for VersionVisitor {
+            type Value = ModDependency;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("factorio mod dependency")
+            }
+
+            fn visit_str<E>(self, string: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                string.parse().map_err(de::Error::custom)
+            }
+        }
+
+        deserializer.deserialize_str(VersionVisitor)
+    }
+}
 impl FromStr for ModDependency {
     type Err = ModDependencyErr;
 

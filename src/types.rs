@@ -1,7 +1,6 @@
 use crate::dependency::ModDependency;
 use crate::version::Version;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
 use std::cmp::Ordering;
 use std::ffi::OsStr;
 use std::fmt;
@@ -153,10 +152,8 @@ impl ModEntryStructure {
     }
 }
 
-#[serde_as]
 #[derive(Deserialize, Debug)]
 pub struct InfoJson {
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub dependencies: Option<Vec<ModDependency>>,
     pub name: String,
     pub version: Version,
