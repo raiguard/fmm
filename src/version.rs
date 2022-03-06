@@ -75,6 +75,12 @@ impl FromStr for Version {
         let parts = s.split('.').collect::<Vec<&str>>();
 
         match parts[..] {
+            [major, minor] => Ok(Self {
+                major: parse_version_number(major)?,
+                minor: parse_version_number(minor)?,
+                patch: 0,
+                build: None,
+            }),
             [major, minor, patch] => Ok(Self {
                 major: parse_version_number(major)?,
                 minor: parse_version_number(minor)?,
@@ -237,9 +243,11 @@ mod tests {
 
         // Factorio does not care about leading zeroes
         assert!(Version::from_str("0.13.00").is_ok());
+        // Factorio does not care about missing patch version
+        assert!(Version::from_str("0.16").is_ok());
 
         // Too few version parts
-        assert!(Version::from_str("1.0").is_err());
+        assert!(Version::from_str("1").is_err());
         // Version part is too large
         assert!(Version::from_str("1.0.4294967296").is_err());
     }

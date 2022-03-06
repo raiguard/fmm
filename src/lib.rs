@@ -14,14 +14,14 @@ mod version;
 
 use crate::cli::{Args, Cmd, SyncCmd};
 use crate::config::Config;
+use crate::dependency::{ModDependency, ModDependencyType};
 use crate::directory::Directory;
 use crate::save_file::SaveFile;
 use crate::types::*;
+use crate::version::Version;
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use dependency::{ModDependency, ModDependencyType};
 use reqwest::blocking::Client;
-use crate::version::Version;
 
 pub fn run() -> Result<()> {
     let config = Config::new(Args::parse())?;
@@ -85,7 +85,12 @@ fn handle_sync(
         } => {
             let save_file = SaveFile::from(path.clone())?;
 
-            let mut mods = save_file.mods.to_vec();
+            let mut mods: Vec<ModIdent> = save_file
+                .mods
+                .iter()
+                .filter(|ident| ident.name != "base")
+                .cloned()
+                .collect();
 
             if config.sync_latest_versions {
                 for mod_ident in mods.iter_mut() {
@@ -196,6 +201,11 @@ fn get_dependencies(
             directory::read_info_json(&mod_entry.entry)
                 .and_then(|info_json| info_json.dependencies)
                 .unwrap_or_default()
+        })
+        .ok_or_else(|| anyhow!("Failed to retrieve mod dependencies"))
+        .or_else(|_| portal::get_dependencies(mod_ident, client))
+        .map(|dependencies| {
+            dependencies
                 .iter()
                 .filter(|dependency| {
                     dependency.name != "base"
@@ -207,8 +217,6 @@ fn get_dependencies(
                 .cloned()
                 .collect()
         })
-        .ok_or_else(|| anyhow!("Failed to retrieve mod dependencies"))
-        .or_else(|_| portal::get_dependencies(mod_ident, client))
 }
 
 trait HasVersion {
