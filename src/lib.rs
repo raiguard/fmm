@@ -1,4 +1,3 @@
-#![feature(iter_intersperse)]
 #![allow(dead_code)]
 
 mod cli;

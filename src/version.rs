@@ -54,7 +54,6 @@ impl<'de> Deserialize<'de> for Version {
 
 impl Display for Version {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // TODO: Use iter_intersperse?
         write!(
             f,
             "{}.{}.{}{}",
