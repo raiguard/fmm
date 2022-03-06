@@ -1,3 +1,4 @@
+use crate::types::ModIdent;
 use anyhow::anyhow;
 use anyhow::Result;
 use byteorder::WriteBytesExt;
@@ -9,8 +10,6 @@ use std::io;
 use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::SeekFrom;
-
-use crate::types::ModIdent;
 
 pub type DatReader = Cursor<Vec<u8>>;
 

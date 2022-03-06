@@ -1,8 +1,8 @@
-use std::cmp::min;
-use std::fs::{self, File};
-use std::io::{Read, Write};
-use std::str::FromStr;
-
+use crate::config::Config;
+use crate::dependency::ModDependency;
+use crate::directory::Directory;
+use crate::get_mod_version;
+use crate::types::{ModEntry, ModIdent};
 use anyhow::{anyhow, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -12,13 +12,11 @@ use semver::{Version, VersionReq};
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use sha1::{Digest, Sha1};
+use std::cmp::min;
+use std::fs::{self, File};
+use std::io::{Read, Write};
+use std::str::FromStr;
 use thiserror::Error;
-
-use crate::config::Config;
-use crate::dependency::ModDependency;
-use crate::directory::Directory;
-use crate::get_mod_version;
-use crate::types::{ModEntry, ModIdent};
 
 pub fn download_mod(
     mod_ident: &ModIdent,

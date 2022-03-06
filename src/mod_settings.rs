@@ -1,10 +1,9 @@
+use crate::dat::PropertyTree;
 use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::fs;
 use std::io::Cursor;
 use std::path::PathBuf;
-
-use crate::dat::PropertyTree;
 
 #[derive(Debug)]
 pub struct ModSettings {

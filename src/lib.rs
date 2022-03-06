@@ -12,6 +12,11 @@ mod portal;
 mod save_file;
 mod types;
 
+use crate::cli::{Args, Cmd, SyncCmd};
+use crate::config::Config;
+use crate::directory::Directory;
+use crate::save_file::SaveFile;
+use crate::types::*;
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use console::style;
@@ -20,12 +25,6 @@ use reqwest::blocking::Client;
 use semver::Version;
 use std::collections::HashSet;
 use std::fs;
-
-use crate::cli::{Args, Cmd, SyncCmd};
-use crate::config::Config;
-use crate::directory::Directory;
-use crate::save_file::SaveFile;
-use crate::types::*;
 
 pub fn run() -> Result<()> {
     let config = Config::new(Args::parse())?;

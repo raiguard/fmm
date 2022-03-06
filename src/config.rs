@@ -1,12 +1,11 @@
+use crate::cli;
+use crate::types::ModIdent;
 use anyhow::{anyhow, ensure, Result};
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-
-use crate::cli;
-use crate::types::ModIdent;
 
 #[derive(Debug)]
 pub struct Config {

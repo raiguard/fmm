@@ -1,3 +1,6 @@
+use crate::dat::PropertyTree;
+use crate::dat::ReadFactorioDat;
+use crate::types::ModIdent;
 use anyhow::anyhow;
 use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -10,10 +13,6 @@ use std::io::Read;
 use std::io::SeekFrom;
 use std::path::PathBuf;
 use zip::ZipArchive;
-
-use crate::dat::PropertyTree;
-use crate::dat::ReadFactorioDat;
-use crate::types::ModIdent;
 
 const READ_SIZE: usize = 1_048_576;
 

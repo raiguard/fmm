@@ -8,13 +8,13 @@ pub struct Args {
     #[clap(subcommand)]
     pub cmd: Cmd,
     /// Path to a custom config file
-    #[clap(long = "config")]
+    #[clap(long)]
     pub config: Option<PathBuf>,
     /// Path to the game directory
-    #[clap(long = "game-dir")]
+    #[clap(long)]
     pub game_dir: Option<PathBuf>,
     /// Path to the mods directory
-    #[clap(long = "mods-dir")]
+    #[clap(long)]
     pub mods_dir: Option<PathBuf>,
 }
 

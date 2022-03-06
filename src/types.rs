@@ -1,3 +1,4 @@
+use crate::dependency::ModDependency;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -7,8 +8,6 @@ use std::fmt;
 use std::fs::DirEntry;
 use std::str::FromStr;
 use thiserror::Error;
-
-use crate::dependency::ModDependency;
 
 #[derive(Deserialize, Serialize)]
 pub struct ModListJson {
