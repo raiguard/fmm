@@ -11,15 +11,15 @@ mod portal;
 mod save_file;
 mod version;
 
-use crate::cli::{Args, Cmd};
+use crate::cli::{Args, Cmd, SyncArgs};
 use crate::config::Config;
 use crate::dependency::{ModDependency, ModDependencyType};
 use crate::directory::Directory;
 use crate::mod_ident::ModIdent;
+use crate::portal::Portal;
 use crate::save_file::SaveFile;
 use crate::version::Version;
 use anyhow::{anyhow, Result};
-use cli::SyncArgs;
 use console::style;
 use reqwest::blocking::Client;
 
@@ -33,6 +33,7 @@ pub fn run(args: Args) -> Result<()> {
 
 fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     let mut directory = Directory::new(&config.mods_dir)?;
+    let mut portal = Portal::new();
 
     // Disable mods
     if args.disable_all {
@@ -87,63 +88,63 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
         }
     }
     // Recursively get dependencies to download / enable
-    if !args.ignore_deps {
-        let mut to_check = to_enable.clone();
-        while !to_check.is_empty() {
-            let mut to_check_next = vec![];
-            for mod_ident in &to_check {
-                match get_dependencies(&directory, mod_ident, client) {
-                    Ok(dependencies) => {
-                        for dependency in dependencies
-                            .iter()
-                            .filter(|dep| {
-                                matches!(
-                                    dep.dep_type,
-                                    ModDependencyType::Required | ModDependencyType::NoLoadOrder
-                                )
-                            })
-                            .filter(|dep| dep.name != "base")
-                        {
-                            // TODO: Put this in `Directory`
-                            let newest_matching =
-                                directory.mods.get(&dependency.name).and_then(|entries| {
-                                    match &dependency.version_req {
-                                        Some(version_req) => entries.iter().rev().find(|entry| {
-                                            version_req.matches(
-                                                &entry.ident.get_guaranteed_version().clone(),
-                                            )
-                                        }),
-                                        None => entries.last(),
-                                    }
-                                });
+    // if !args.ignore_deps {
+    //     let mut to_check = to_enable.clone();
+    //     while !to_check.is_empty() {
+    //         let mut to_check_next = vec![];
+    //         for mod_ident in &to_check {
+    //             match get_dependencies(&directory, mod_ident, client) {
+    //                 Ok(dependencies) => {
+    //                     for dependency in dependencies
+    //                         .iter()
+    //                         .filter(|dep| {
+    //                             matches!(
+    //                                 dep.dep_type,
+    //                                 ModDependencyType::Required | ModDependencyType::NoLoadOrder
+    //                             )
+    //                         })
+    //                         .filter(|dep| dep.name != "base")
+    //                     {
+    //                         // TODO: Put this in `Directory`
+    //                         let newest_matching =
+    //                             directory.mods.get(&dependency.name).and_then(|entries| {
+    //                                 match &dependency.version_req {
+    //                                     Some(version_req) => entries.iter().rev().find(|entry| {
+    //                                         version_req.matches(
+    //                                             &entry.ident.get_guaranteed_version().clone(),
+    //                                         )
+    //                                     }),
+    //                                     None => entries.last(),
+    //                                 }
+    //                             });
 
-                            // TODO: Handle if a mod requires a newer version of the dependency
-                            if let Some(dep_ident) = newest_matching
-                                .map(|dependency| dependency.ident.clone())
-                                .or_else(|| {
-                                    if !args.no_download {
-                                        Some(ModIdent {
-                                            name: dependency.name.clone(),
-                                            version: None,
-                                        })
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .filter(|dep_ident| !to_enable.contains(dep_ident))
-                            {
-                                to_enable.push(dep_ident.clone());
-                                to_check_next.push(dep_ident.clone());
-                            }
-                        }
-                    }
-                    // TODO: Prevent download when this occurs
-                    Err(err) => eprintln!("{} {}", style("Error downloading mod:").red(), err),
-                }
-            }
-            to_check = to_check_next;
-        }
-    }
+    //                         // TODO: Handle if a mod requires a newer version of the dependency
+    //                         if let Some(dep_ident) = newest_matching
+    //                             .map(|dependency| dependency.ident.clone())
+    //                             .or_else(|| {
+    //                                 if !args.no_download {
+    //                                     Some(ModIdent {
+    //                                         name: dependency.name.clone(),
+    //                                         version: None,
+    //                                     })
+    //                                 } else {
+    //                                     None
+    //                                 }
+    //                             })
+    //                             .filter(|dep_ident| !to_enable.contains(dep_ident))
+    //                         {
+    //                             to_enable.push(dep_ident.clone());
+    //                             to_check_next.push(dep_ident.clone());
+    //                         }
+    //                     }
+    //                 }
+    //                 // TODO: Prevent download when this occurs
+    //                 Err(err) => eprintln!("{} {}", style("Error downloading mod:").red(), err),
+    //             }
+    //         }
+    //         to_check = to_check_next;
+    //     }
+    // }
 
     // TODO: This is bad
     // Add any mods that we don't have to the download list
@@ -156,7 +157,8 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     // Download mods
     for mod_ident in &to_download {
         // TODO: Add to to_enable here after download_mod returns a ModIdent
-        portal::download_mod(mod_ident, &mut directory, config, client)?;
+        // FIXME: The mod is not added to the directory object so it's not enabled
+        portal.download(mod_ident, config)?;
     }
 
     // Enable and disable mods
@@ -186,7 +188,8 @@ fn get_dependencies(
                 .unwrap_or_default()
         })
         .ok_or_else(|| anyhow!("Failed to retrieve mod dependencies"))
-        .or_else(|_| portal::get_dependencies(mod_ident, client))
+        // TODO:
+        // .or_else(|_| portal::get_dependencies(mod_ident, client))
         .map(|dependencies| {
             dependencies
                 .iter()
