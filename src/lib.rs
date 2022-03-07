@@ -87,7 +87,7 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
             to_enable.push(mod_ident.clone());
         }
     }
-    // Recursively get dependencies to download / enable
+    // // Recursively get dependencies to download / enable
     // if !args.ignore_deps {
     //     let mut to_check = to_enable.clone();
     //     while !to_check.is_empty() {

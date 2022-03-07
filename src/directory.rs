@@ -8,12 +8,11 @@ use console::style;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsStr;
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use zip::ZipArchive;
 
 pub struct Directory {
@@ -33,17 +32,8 @@ impl Directory {
             .filter_map(|entry| {
                 let entry = entry.ok()?;
 
-                if let Some((mod_name, version)) = parse_file_name(&entry.file_name()) {
-                    Some((
-                        mod_name.clone(),
-                        ModEntry {
-                            entry,
-                            ident: ModIdent {
-                                name: mod_name,
-                                version: Some(version),
-                            },
-                        },
-                    ))
+                if let Some(ident) = ModIdent::from_file_name(&entry.file_name()) {
+                    Some((ident.name.clone(), ModEntry { entry, ident }))
                 } else {
                     let info_json = read_info_json(&entry)?;
                     Some((
@@ -316,19 +306,6 @@ pub struct InfoJson {
     pub dependencies: Option<Vec<ModDependency>>,
     pub name: String,
     pub version: Version,
-}
-
-fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {
-    let (name, version) = file_name
-        .to_str()?
-        .trim_end_matches(".zip")
-        .rsplit_once('_')?;
-
-    if let Ok(version) = Version::from_str(version) {
-        Some((name.to_string(), version))
-    } else {
-        None
-    }
 }
 
 pub fn read_info_json(entry: &DirEntry) -> Option<InfoJson> {
