@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-mod cli;
+pub mod cli;
 mod config;
 mod dat;
 mod dependency;
@@ -19,13 +19,12 @@ use crate::mod_ident::ModIdent;
 use crate::save_file::SaveFile;
 use crate::version::Version;
 use anyhow::{anyhow, Result};
-use clap::Parser;
 use cli::SyncArgs;
 use console::style;
 use reqwest::blocking::Client;
 
-pub fn run() -> Result<()> {
-    let config = Config::new(Args::parse())?;
+pub fn run(args: Args) -> Result<()> {
+    let config = Config::new(args)?;
     let client = Client::new();
 
     match &config.cmd {
