@@ -34,6 +34,8 @@ pub fn run() -> Result<()> {
             ignore_deps,
             ignore_startup_settings,
             no_download,
+            refresh,
+
             save_file,
             disable_all,
             disable,
@@ -50,6 +52,7 @@ pub fn run() -> Result<()> {
             ignore_deps,
             ignore_startup_settings,
             no_download,
+            refresh,
         ),
     }
 }
@@ -59,21 +62,27 @@ fn handle_sync(
     client: &Client,
     save_file: &Option<PathBuf>,
     disable_all: &bool,
-    disable: &Vec<ModIdent>,
-    enable: &Vec<ModIdent>,
+    disable: &[ModIdent],
+    enable: &[ModIdent],
     enable_set: &Option<String>,
     ignore_deps: &bool,
     ignore_startup_settings: &bool,
     no_download: &bool,
+    refresh: &bool,
 ) -> Result<()> {
     let mut directory = Directory::new(&config.mods_dir)?;
+
+    // Refresh database
+    if *refresh {
+        println!("{:#?}", portal::refresh(client)?);
+    }
 
     // Disable mods
     if *disable_all {
         directory.disable_all();
     }
     for mod_ident in disable {
-        directory.disable(&mod_ident);
+        directory.disable(mod_ident);
     }
 
     // Construct download and enable lists
@@ -120,8 +129,7 @@ fn handle_sync(
             to_enable.push(mod_ident.clone());
         }
     }
-
-    // Recursively extract dependencies and add them to the download/enable lists
+    // Recursively get dependencies to download / enable
     if !ignore_deps {
         let mut to_check = to_enable.clone();
         while !to_check.is_empty() {
@@ -180,6 +188,7 @@ fn handle_sync(
         }
     }
 
+    // TODO: This is bad
     // Add any mods that we don't have to the download list
     for mod_ident in &to_enable {
         if !directory.contains(mod_ident) {

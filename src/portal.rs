@@ -2,8 +2,8 @@ use crate::config::Config;
 use crate::dependency::ModDependency;
 use crate::directory::{Directory, ModEntry};
 use crate::get_mod_version;
-use crate::Version;
 use crate::ModIdent;
+use crate::Version;
 use anyhow::{anyhow, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -218,19 +218,46 @@ pub fn get_dependencies(mod_ident: &ModIdent, client: &Client) -> Result<Vec<Mod
         .clone())
 }
 
+pub fn refresh(client: &Client) -> Result<Vec<AllModsMod>> {
+    println!("REFRESHING LOCAL DATABASE");
+
+    let res = client
+        .get("https://mods.factorio.com/api/mods?page_size=max")
+        .send()?;
+
+    println!("DESERIALIZING");
+
+    let json: AllModsRes = res.json()?;
+
+    Ok(json.results)
+}
+
+#[derive(Debug, Deserialize)]
+struct AllModsRes {
+    results: Vec<AllModsMod>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AllModsMod {
+    name: String,
+    title: String,
+    summary: String,
+    owner: String,
+    latest_release: Option<PortalModRelease>,
+}
+
 #[derive(Debug, Deserialize)]
 struct PortalMod {
     name: String,
     releases: Vec<PortalModRelease>,
 }
 
-#[derive(Deserialize)]
-struct PortalModFull {
+#[derive(Debug, Deserialize)]
+pub struct PortalModFull {
     name: String,
     title: String,
     summary: String,
     owner: String,
-    homepage: String,
     releases: Vec<PortalModRelease>,
 }
 

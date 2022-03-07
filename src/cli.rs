@@ -32,6 +32,9 @@ pub enum Cmd {
         /// Disable mod auto-download
         #[clap(short = 'l', long)]
         no_download: bool,
+        /// Refresh local database
+        #[clap(short = 'y', long)]
+        refresh: bool,
 
         /// Sync active mods and startup settings to the save file
         #[clap(short, long)]
