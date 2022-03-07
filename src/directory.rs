@@ -3,7 +3,7 @@ use crate::dependency::ModDependency;
 use crate::mod_ident::*;
 use crate::mod_settings::ModSettings;
 use crate::Version;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use console::style;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -33,17 +33,25 @@ impl Directory {
                 let entry = entry.ok()?;
 
                 if let Some(ident) = ModIdent::from_file_name(&entry.file_name()) {
-                    Some((ident.name.clone(), ModEntry { entry, ident }))
+                    Some((
+                        ident.name.clone(),
+                        ModEntry {
+                            entry,
+                            ident,
+                            info_json: None,
+                        },
+                    ))
                 } else {
-                    let info_json = read_info_json(&entry)?;
+                    let info_json = read_info_json(&entry).ok()?;
                     Some((
                         info_json.name.clone(),
                         ModEntry {
                             entry,
                             ident: ModIdent {
-                                name: info_json.name,
-                                version: Some(info_json.version),
+                                name: info_json.name.clone(),
+                                version: Some(info_json.version.clone()),
                             },
+                            info_json: Some(info_json),
                         },
                     ))
                 }
@@ -238,6 +246,20 @@ pub struct ModEntry {
     pub entry: DirEntry,
     // This is always guaranteed to have a version
     pub ident: ModIdent,
+
+    info_json: Option<InfoJson>,
+}
+
+impl ModEntry {
+    // TODO: Use thiserror instead of anyhow?
+    pub fn get_info_json(&mut self) -> Result<&InfoJson> {
+        if self.info_json.is_none() {
+            self.info_json = Some(InfoJson::from_entry(&self.entry)?);
+        }
+
+        // If we're here, info_json is Some
+        Ok(self.info_json.as_ref().unwrap())
+    }
 }
 
 impl crate::HasVersion for ModEntry {
@@ -278,26 +300,26 @@ pub enum ModEntryStructure {
 }
 
 impl ModEntryStructure {
-    pub fn parse(entry: &DirEntry) -> Option<Self> {
+    pub fn parse(entry: &DirEntry) -> Result<Self> {
         let path = entry.path();
         let extension = path.extension();
 
         if extension.is_some() && extension.unwrap() == OsStr::new("zip") {
-            return Some(ModEntryStructure::Zip);
+            return Ok(ModEntryStructure::Zip);
         } else {
-            let file_type = entry.file_type().ok()?;
+            let file_type = entry.file_type()?;
             if file_type.is_symlink() {
-                return Some(ModEntryStructure::Symlink);
+                return Ok(ModEntryStructure::Symlink);
             } else {
                 let mut path = entry.path();
                 path.push("info.json");
                 if path.exists() {
-                    return Some(ModEntryStructure::Directory);
+                    return Ok(ModEntryStructure::Directory);
                 }
             }
         };
 
-        None
+        bail!("Could not parse mod entry structure");
     }
 }
 
@@ -308,25 +330,29 @@ pub struct InfoJson {
     pub version: Version,
 }
 
-pub fn read_info_json(entry: &DirEntry) -> Option<InfoJson> {
-    let contents = match ModEntryStructure::parse(entry)? {
-        ModEntryStructure::Directory | ModEntryStructure::Symlink => {
-            let mut path = entry.path();
-            path.push("info.json");
-            fs::read_to_string(path).ok()?
-        }
-        ModEntryStructure::Zip => {
-            let mut archive = ZipArchive::new(File::open(entry.path()).ok()?).ok()?;
-            let filename = archive
-                .file_names()
-                .find(|name| name.contains("info.json"))
-                .map(ToString::to_string)?;
-            let mut file = archive.by_name(&filename).ok()?;
-            let mut contents = String::new();
-            file.read_to_string(&mut contents).ok()?;
-            contents
-        }
-    };
+impl InfoJson {
+    pub fn from_entry(entry: &DirEntry) -> Result<Self> {
+        // TODO: Store the structure in the entry for later use
+        let contents = match ModEntryStructure::parse(entry)? {
+            ModEntryStructure::Directory | ModEntryStructure::Symlink => {
+                let mut path = entry.path();
+                path.push("info.json");
+                fs::read_to_string(path)?
+            }
+            ModEntryStructure::Zip => {
+                let mut archive = ZipArchive::new(File::open(entry.path())?)?;
+                let filename = archive
+                    .file_names()
+                    .find(|name| name.contains("info.json"))
+                    .map(ToString::to_string)
+                    .ok_or_else(|| anyhow!("Could not locate info.json in zip archive"))?;
+                let mut file = archive.by_name(&filename)?;
+                let mut contents = String::new();
+                file.read_to_string(&mut contents)?;
+                contents
+            }
+        };
 
-    serde_json::from_str::<InfoJson>(&contents).ok()
+        serde_json::from_str::<InfoJson>(&contents).map_err(|_| anyhow!("Invalid info.json format"))
+    }
 }

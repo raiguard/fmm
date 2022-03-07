@@ -173,38 +173,6 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     Ok(())
 }
 
-fn get_dependencies(
-    directory: &Directory,
-    mod_ident: &ModIdent,
-    client: &Client,
-) -> Result<Vec<ModDependency>> {
-    directory
-        .mods
-        .get(&mod_ident.name)
-        .and_then(|mod_entries| crate::get_mod_version(mod_entries, mod_ident))
-        .map(|mod_entry| {
-            directory::read_info_json(&mod_entry.entry)
-                .and_then(|info_json| info_json.dependencies)
-                .unwrap_or_default()
-        })
-        .ok_or_else(|| anyhow!("Failed to retrieve mod dependencies"))
-        // TODO:
-        // .or_else(|_| portal::get_dependencies(mod_ident, client))
-        .map(|dependencies| {
-            dependencies
-                .iter()
-                .filter(|dependency| {
-                    dependency.name != "base"
-                        && matches!(
-                            dependency.dep_type,
-                            ModDependencyType::NoLoadOrder | ModDependencyType::Required
-                        )
-                })
-                .cloned()
-                .collect()
-        })
-}
-
 trait HasVersion {
     fn get_version(&self) -> &Version;
 }
