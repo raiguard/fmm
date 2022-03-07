@@ -11,7 +11,9 @@ mod portal;
 mod save_file;
 mod version;
 
-use crate::cli::{Args, Cmd, SyncCmd};
+use std::path::PathBuf;
+
+use crate::cli::{Args, Cmd};
 use crate::config::Config;
 use crate::dependency::{ModDependency, ModDependencyType};
 use crate::directory::Directory;
@@ -29,17 +31,25 @@ pub fn run() -> Result<()> {
 
     match &config.cmd {
         Cmd::Sync {
-            cmd,
-            disable_all,
             ignore_deps,
+            ignore_startup_settings,
             no_download,
+            save_file,
+            disable_all,
+            disable,
+            enable,
+            enable_set,
         } => handle_sync(
             &config,
             &client,
-            cmd,
-            *disable_all,
-            *ignore_deps,
-            *no_download,
+            save_file,
+            disable_all,
+            disable,
+            enable,
+            enable_set,
+            ignore_deps,
+            ignore_startup_settings,
+            no_download,
         ),
     }
 }
@@ -47,63 +57,67 @@ pub fn run() -> Result<()> {
 fn handle_sync(
     config: &Config,
     client: &Client,
-    cmd: &SyncCmd,
-    disable_all: bool,
-    ignore_deps: bool,
-    no_download: bool,
+    save_file: &Option<PathBuf>,
+    disable_all: &bool,
+    disable: &Vec<ModIdent>,
+    enable: &Vec<ModIdent>,
+    enable_set: &Option<String>,
+    ignore_deps: &bool,
+    ignore_startup_settings: &bool,
+    no_download: &bool,
 ) -> Result<()> {
     let mut directory = Directory::new(&config.mods_dir)?;
 
-    if disable_all {
+    // Disable mods
+    if *disable_all {
         directory.disable_all();
     }
+    for mod_ident in disable {
+        directory.disable(&mod_ident);
+    }
 
+    // Construct download and enable lists
     let mut to_download = vec![];
     let mut to_enable = vec![];
-    let mut to_disable = vec![];
+    // Save file
+    if let Some(path) = save_file {
+        let save_file = SaveFile::from(path.clone())?;
 
-    // Get initial lists
-    match cmd {
-        SyncCmd::Enable { mods } => to_enable = mods.clone(),
-        SyncCmd::EnableSet { set } => {
-            let set_name = set
-                .as_ref()
-                .ok_or_else(|| anyhow!("Did not provide a set name"))?;
-            let sets = config
-                .sets
-                .as_ref()
-                .ok_or_else(|| anyhow!("No mod sets are defined"))?;
-            let set = sets
-                .get(set_name)
-                .ok_or_else(|| anyhow!("Given set does not exist"))?;
-            to_enable = set.to_owned();
+        let mut mods: Vec<ModIdent> = save_file
+            .mods
+            .iter()
+            .filter(|ident| ident.name != "base")
+            .cloned()
+            .collect();
+
+        if config.sync_latest_versions {
+            for mod_ident in mods.iter_mut() {
+                mod_ident.version = None;
+            }
         }
-        SyncCmd::Disable { mods } => to_disable = mods.clone(),
-        SyncCmd::SaveFile {
-            path,
-            ignore_startup_settings,
-        } => {
-            let save_file = SaveFile::from(path.clone())?;
 
-            let mut mods: Vec<ModIdent> = save_file
-                .mods
-                .iter()
-                .filter(|ident| ident.name != "base")
-                .cloned()
-                .collect();
+        to_enable = mods;
 
-            if config.sync_latest_versions {
-                for mod_ident in mods.iter_mut() {
-                    mod_ident.version = None;
-                }
-            }
-
-            to_enable = mods;
-
-            if !ignore_startup_settings {
-                directory.sync_settings(&save_file.startup_settings)?;
-                println!("Synced startup settings");
-            }
+        if !ignore_startup_settings {
+            directory.sync_settings(&save_file.startup_settings)?;
+            println!("Synced startup settings");
+        }
+    }
+    // Set
+    if let Some(set) = enable_set {
+        let sets = config
+            .sets
+            .as_ref()
+            .ok_or_else(|| anyhow!("No mod sets are defined"))?;
+        let set = sets
+            .get(set)
+            .ok_or_else(|| anyhow!("Given set does not exist"))?;
+        to_enable = set.to_owned();
+    }
+    // Enable
+    for mod_ident in enable {
+        if !to_enable.contains(mod_ident) {
+            to_enable.push(mod_ident.clone());
         }
     }
 
@@ -183,9 +197,6 @@ fn handle_sync(
     for mod_ident in to_enable {
         // TODO: Print errors
         directory.enable(&mod_ident)?;
-    }
-    for mod_ident in to_disable {
-        directory.disable(&mod_ident);
     }
 
     // Write mod-list.json
