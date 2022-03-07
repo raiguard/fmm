@@ -11,8 +11,6 @@ mod portal;
 mod save_file;
 mod version;
 
-use std::path::PathBuf;
-
 use crate::cli::{Args, Cmd};
 use crate::config::Config;
 use crate::dependency::{ModDependency, ModDependencyType};
@@ -22,6 +20,7 @@ use crate::save_file::SaveFile;
 use crate::version::Version;
 use anyhow::{anyhow, Result};
 use clap::Parser;
+use cli::SyncArgs;
 use console::style;
 use reqwest::blocking::Client;
 
@@ -30,58 +29,23 @@ pub fn run() -> Result<()> {
     let client = Client::new();
 
     match &config.cmd {
-        Cmd::Sync {
-            ignore_deps,
-            ignore_startup_settings,
-            no_download,
-            refresh,
-
-            save_file,
-            disable_all,
-            disable,
-            enable,
-            enable_set,
-        } => handle_sync(
-            &config,
-            &client,
-            save_file,
-            disable_all,
-            disable,
-            enable,
-            enable_set,
-            ignore_deps,
-            ignore_startup_settings,
-            no_download,
-            refresh,
-        ),
+        Cmd::Sync(args) => handle_sync(&config, &client, args),
     }
 }
 
-fn handle_sync(
-    config: &Config,
-    client: &Client,
-    save_file: &Option<PathBuf>,
-    disable_all: &bool,
-    disable: &[ModIdent],
-    enable: &[ModIdent],
-    enable_set: &Option<String>,
-    ignore_deps: &bool,
-    ignore_startup_settings: &bool,
-    no_download: &bool,
-    refresh: &bool,
-) -> Result<()> {
+fn handle_sync(config: &Config, client: &Client, args: &SyncArgs) -> Result<()> {
     let mut directory = Directory::new(&config.mods_dir)?;
 
     // Refresh database
-    if *refresh {
+    if args.refresh {
         println!("{:#?}", portal::refresh(client)?);
     }
 
     // Disable mods
-    if *disable_all {
+    if args.disable_all {
         directory.disable_all();
     }
-    for mod_ident in disable {
+    for mod_ident in &args.disable {
         directory.disable(mod_ident);
     }
 
@@ -89,7 +53,7 @@ fn handle_sync(
     let mut to_download = vec![];
     let mut to_enable = vec![];
     // Save file
-    if let Some(path) = save_file {
+    if let Some(path) = &args.save_file {
         let save_file = SaveFile::from(path.clone())?;
 
         let mut mods: Vec<ModIdent> = save_file
@@ -107,13 +71,13 @@ fn handle_sync(
 
         to_enable = mods;
 
-        if !ignore_startup_settings {
+        if !args.ignore_startup_settings {
             directory.sync_settings(&save_file.startup_settings)?;
             println!("Synced startup settings");
         }
     }
     // Set
-    if let Some(set) = enable_set {
+    if let Some(set) = &args.enable_set {
         let sets = config
             .sets
             .as_ref()
@@ -124,13 +88,13 @@ fn handle_sync(
         to_enable = set.to_owned();
     }
     // Enable
-    for mod_ident in enable {
+    for mod_ident in &args.enable {
         if !to_enable.contains(mod_ident) {
             to_enable.push(mod_ident.clone());
         }
     }
     // Recursively get dependencies to download / enable
-    if !ignore_deps {
+    if !args.ignore_deps {
         let mut to_check = to_enable.clone();
         while !to_check.is_empty() {
             let mut to_check_next = vec![];
@@ -164,7 +128,7 @@ fn handle_sync(
                             if let Some(dep_ident) = newest_matching
                                 .map(|dependency| dependency.ident.clone())
                                 .or_else(|| {
-                                    if !no_download {
+                                    if !args.no_download {
                                         Some(ModIdent {
                                             name: dependency.name.clone(),
                                             version: None,
@@ -197,15 +161,15 @@ fn handle_sync(
     }
 
     // Download mods
-    for mod_ident in to_download {
+    for mod_ident in &to_download {
         // TODO: Add to to_enable here after download_mod returns a ModIdent
-        portal::download_mod(&mod_ident, &mut directory, config, client)?;
+        portal::download_mod(mod_ident, &mut directory, config, client)?;
     }
 
     // Enable and disable mods
-    for mod_ident in to_enable {
+    for mod_ident in &to_enable {
         // TODO: Print errors
-        directory.enable(&mod_ident)?;
+        directory.enable(mod_ident)?;
     }
 
     // Write mod-list.json

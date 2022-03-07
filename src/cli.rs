@@ -22,34 +22,37 @@ pub struct Args {
 pub enum Cmd {
     /// Enable, disable, or download packaged mods
     #[clap(short_flag = 'S', long_flag = "sync")]
-    Sync {
-        /// Ignore mod dependencies
-        #[clap(short, long)]
-        ignore_deps: bool,
-        /// Ignore startup settings when syncing with a save file
-        #[clap(short = 'x', long)]
-        ignore_startup_settings: bool,
-        /// Disable mod auto-download
-        #[clap(short = 'l', long)]
-        no_download: bool,
-        /// Refresh local database
-        #[clap(short = 'y', long)]
-        refresh: bool,
+    Sync(SyncArgs),
+}
 
-        /// Sync active mods and startup settings to the save file
-        #[clap(short, long)]
-        save_file: Option<PathBuf>,
-        /// Disable all mods before taking other actions
-        #[clap(short = 'o', long)]
-        disable_all: bool,
-        /// Disable the given mods
-        #[clap(short, long)]
-        disable: Vec<ModIdent>,
-        /// Enable the given mods
-        #[clap(short, long)]
-        enable: Vec<ModIdent>,
-        /// Enable the given mod set
-        #[clap(short = 'E', long)]
-        enable_set: Option<String>,
-    },
+#[derive(clap::Args, Debug)]
+pub struct SyncArgs {
+    /// Ignore mod dependencies
+    #[clap(short, long)]
+    pub ignore_deps: bool,
+    /// Ignore startup settings when syncing with a save file
+    #[clap(short = 'x', long)]
+    pub ignore_startup_settings: bool,
+    /// Disable mod auto-download
+    #[clap(short = 'l', long)]
+    pub no_download: bool,
+    /// Refresh local database
+    #[clap(short = 'y', long)]
+    pub refresh: bool,
+
+    /// Sync active mods and startup settings to the save file
+    #[clap(short, long)]
+    pub save_file: Option<PathBuf>,
+    /// Disable all mods before taking other actions
+    #[clap(short = 'o', long)]
+    pub disable_all: bool,
+    /// Disable the given mods
+    #[clap(short, long)]
+    pub disable: Vec<ModIdent>,
+    /// Enable the given mods
+    #[clap(short, long)]
+    pub enable: Vec<ModIdent>,
+    /// Enable the given mod set
+    #[clap(short = 'E', long)]
+    pub enable_set: Option<String>,
 }
