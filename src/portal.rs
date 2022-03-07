@@ -12,9 +12,57 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use sha1::{Digest, Sha1};
 use std::cmp::min;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use thiserror::Error;
+
+pub struct Portal {
+    client: Client,
+    mods: HashMap<String, PortalMod>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PortalMod {
+    name: String,
+    title: String,
+    summary: String,
+    owner: String,
+    releases: Vec<PortalModRelease>,
+}
+
+impl Portal {
+    pub fn new() -> Self {
+        Self {
+            client: Client::new(),
+            mods: HashMap::new(),
+        }
+    }
+
+    pub fn get(&mut self, ident: &ModIdent) -> Result<&PortalMod> {
+        match self.mods.entry(ident.name.clone()) {
+            Entry::Occupied(entry) => Ok(entry.get()),
+            Entry::Vacant(entry) => {
+                let res = self
+                    .client
+                    .get(format!(
+                        "https://mods.factorio.com/api/mods/{}/full",
+                        ident.name
+                    ))
+                    .send()?;
+
+                let status = res.status();
+                if status.is_success() {
+                    Ok(entry.insert(res.json()?))
+                } else {
+                    // TODO: Better errors
+                    Err(anyhow!(status.canonical_reason().unwrap_or("")))
+                }
+            }
+        }
+    }
+}
 
 pub fn download_mod(
     mod_ident: &ModIdent,
@@ -53,7 +101,7 @@ fn download_mod_internal(
     // println!("{} {}", style("Fetching").cyan().bold(), mod_ident.name);
 
     // Download mod information
-    let mod_info: PortalMod = client
+    let mod_info: PortalModShort = client
         .get(format!(
             "https://mods.factorio.com/api/mods/{}",
             mod_ident.name
@@ -197,7 +245,7 @@ pub fn get_dependencies(mod_ident: &ModIdent, client: &Client) -> Result<Vec<Mod
         return Err(anyhow!(status.canonical_reason().unwrap_or("")));
     }
 
-    let json: PortalModFull = res.json()?;
+    let json: PortalMod = res.json()?;
 
     let release = get_mod_version(&json.releases, mod_ident).ok_or_else(|| {
         anyhow!(
@@ -219,12 +267,12 @@ pub fn get_dependencies(mod_ident: &ModIdent, client: &Client) -> Result<Vec<Mod
 }
 
 #[derive(Debug, Deserialize)]
-struct AllModsRes {
-    results: Vec<AllModsMod>,
+struct ModsAllRes {
+    results: Vec<PortalModAll>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AllModsMod {
+pub struct PortalModAll {
     name: String,
     title: String,
     summary: String,
@@ -233,17 +281,8 @@ pub struct AllModsMod {
 }
 
 #[derive(Debug, Deserialize)]
-struct PortalMod {
+struct PortalModShort {
     name: String,
-    releases: Vec<PortalModRelease>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct PortalModFull {
-    name: String,
-    title: String,
-    summary: String,
-    owner: String,
     releases: Vec<PortalModRelease>,
 }
 
@@ -266,4 +305,5 @@ impl crate::HasVersion for PortalModRelease {
 struct PortalInfoJson {
     #[serde(default)]
     dependencies: Option<Vec<ModDependency>>,
+    factorio_version: Version,
 }

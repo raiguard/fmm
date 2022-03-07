@@ -9,10 +9,12 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Config {
+    // TODO: This is redundant
     pub auto_download: bool,
     pub cmd: cli::Cmd,
     pub game_dir: PathBuf,
     pub mods_dir: PathBuf,
+    pub local_only: bool,
     pub portal_auth: Option<PortalAuth>,
     pub sets: ModSets,
     pub sync_latest_versions: bool,
@@ -55,6 +57,7 @@ impl Config {
             auto_download: config_file.auto_download,
             cmd: args.cmd,
             game_dir,
+            local_only: args.local_only,
             mods_dir,
             portal_auth,
             sets: config_file.sets,

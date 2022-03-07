@@ -25,14 +25,13 @@ use reqwest::blocking::Client;
 
 pub fn run(args: Args) -> Result<()> {
     let config = Config::new(args)?;
-    let client = Client::new();
 
     match &config.cmd {
-        Cmd::Sync(args) => handle_sync(&config, &client, args),
+        Cmd::Sync(args) => handle_sync(&config, args),
     }
 }
 
-fn handle_sync(config: &Config, client: &Client, args: &SyncArgs) -> Result<()> {
+fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     let mut directory = Directory::new(&config.mods_dir)?;
 
     // Disable mods
