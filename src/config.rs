@@ -2,6 +2,7 @@ use crate::cli;
 use crate::ModIdent;
 use anyhow::{anyhow, ensure, Result};
 use serde::Deserialize;
+use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -71,6 +72,7 @@ pub struct PortalAuth {
 
 pub type ModSets = Option<HashMap<String, Vec<ModIdent>>>;
 
+#[serde_as]
 #[derive(Deserialize, Default)]
 struct ConfigFile {
     #[serde(default)]
@@ -78,6 +80,8 @@ struct ConfigFile {
     game_dir: Option<PathBuf>,
     mods_dir: Option<PathBuf>,
     portal: Option<PortalAuth>,
+    // TODO: Figure out how to have multiple deserialzers for ModIdent
+    #[serde_as(as = "Option<HashMap<_, Vec<DisplayFromStr>>>")]
     sets: ModSets,
     #[serde(default)]
     sync_latest_versions: bool,
