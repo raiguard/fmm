@@ -12,7 +12,7 @@ use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use zip::ZipArchive;
 
@@ -27,7 +27,7 @@ pub struct Directory {
 // This is a mess
 // We need to refactor this to retrive ModEntries in a standardized way, with the properties from the info.json lazily loaded when needed
 impl Directory {
-    pub fn new(path: &PathBuf) -> Result<Self> {
+    pub fn new(path: &Path) -> Result<Self> {
         // Get all mods in the directory
         let mod_entries = fs::read_dir(&path)?
             .filter_map(|entry| {
@@ -70,8 +70,7 @@ impl Directory {
             });
 
         // Parse mod-list.json
-        let mut mlj_path = path.clone();
-        mlj_path.push("mod-list.json");
+        let mlj_path = path.join("mod-list.json");
         let enabled_versions = fs::read_to_string(&mlj_path)?;
         let mod_list_json: ModListJson = serde_json::from_str(&enabled_versions)?;
 
