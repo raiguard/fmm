@@ -30,9 +30,7 @@ impl FromStr for ModIdent {
                 version: None,
             }),
             [name, version] => {
-                let parsed_version = Version::from_str(version);
-                if let Ok(version) = parsed_version {
-                    // Validate that the version does *not* have prerelease or build data
+                if let Ok(version) = Version::from_str(version) {
                     Ok(Self {
                         name: name.to_string(),
                         version: Some(version),
