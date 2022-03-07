@@ -36,11 +36,6 @@ pub fn run() -> Result<()> {
 fn handle_sync(config: &Config, client: &Client, args: &SyncArgs) -> Result<()> {
     let mut directory = Directory::new(&config.mods_dir)?;
 
-    // Refresh database
-    if args.refresh {
-        println!("{:#?}", portal::refresh(client)?);
-    }
-
     // Disable mods
     if args.disable_all {
         directory.disable_all();

@@ -36,9 +36,6 @@ pub struct SyncArgs {
     /// Disable mod auto-download
     #[clap(short = 'l', long)]
     pub no_download: bool,
-    /// Refresh local database
-    #[clap(short = 'y', long)]
-    pub refresh: bool,
 
     /// Sync active mods and startup settings to the save file
     #[clap(short, long)]

@@ -218,20 +218,6 @@ pub fn get_dependencies(mod_ident: &ModIdent, client: &Client) -> Result<Vec<Mod
         .clone())
 }
 
-pub fn refresh(client: &Client) -> Result<Vec<AllModsMod>> {
-    println!("REFRESHING LOCAL DATABASE");
-
-    let res = client
-        .get("https://mods.factorio.com/api/mods?page_size=max")
-        .send()?;
-
-    println!("DESERIALIZING");
-
-    let json: AllModsRes = res.json()?;
-
-    Ok(json.results)
-}
-
 #[derive(Debug, Deserialize)]
 struct AllModsRes {
     results: Vec<AllModsMod>,
