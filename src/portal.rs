@@ -34,6 +34,7 @@ impl Portal {
         match self.mods.get(mod_name) {
             Some(entry) => Ok(entry.clone()),
             None => {
+                println!("{} {}", style("Fetching").cyan().bold(), mod_name);
                 let res = self
                     .client
                     .get(format!(
