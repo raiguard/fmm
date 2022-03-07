@@ -1,9 +1,9 @@
 use crate::config::Config;
 use crate::dependency::ModDependency;
-use crate::directory::Directory;
+use crate::directory::{Directory, ModEntry};
 use crate::get_mod_version;
-use crate::types::{ModEntry, ModIdent};
 use crate::version::Version;
+use crate::ModIdent;
 use anyhow::{anyhow, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};

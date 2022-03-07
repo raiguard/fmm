@@ -1,5 +1,5 @@
 use crate::cli;
-use crate::types::ModIdent;
+use crate::ModIdent;
 use anyhow::{anyhow, ensure, Result};
 use serde::Deserialize;
 use std::collections::HashMap;

@@ -1,4 +1,4 @@
-use crate::types::ModIdent;
+use crate::mod_ident::ModIdent;
 use crate::version::Version;
 use anyhow::anyhow;
 use anyhow::Result;

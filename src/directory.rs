@@ -1,11 +1,14 @@
 use crate::dat::PropertyTree;
+use crate::dependency::ModDependency;
+use crate::mod_ident::*;
 use crate::mod_settings::ModSettings;
-use crate::types::*;
 use crate::version::Version;
 use anyhow::{anyhow, Result};
 use console::style;
+use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::fs::{DirEntry, File};
 use std::io::Read;
@@ -227,6 +230,93 @@ impl Directory {
             })
             .unwrap_or(false)
     }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct ModListJson {
+    pub mods: Vec<ModListJsonMod>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct ModListJsonMod {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<Version>,
+    pub enabled: bool,
+}
+
+pub struct ModEntry {
+    pub entry: DirEntry,
+    // This is always guaranteed to have a version
+    pub ident: ModIdent,
+}
+
+impl crate::HasVersion for ModEntry {
+    fn get_version(&self) -> &Version {
+        self.ident.get_guaranteed_version()
+    }
+}
+
+impl PartialOrd for ModEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.ident
+            .get_guaranteed_version()
+            .partial_cmp(other.ident.get_guaranteed_version())
+    }
+}
+
+impl Ord for ModEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.ident
+            .get_guaranteed_version()
+            .cmp(other.ident.get_guaranteed_version())
+    }
+}
+
+impl PartialEq for ModEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.ident.get_guaranteed_version() == other.ident.get_guaranteed_version()
+    }
+}
+
+impl Eq for ModEntry {}
+
+#[derive(Debug)]
+pub enum ModEntryStructure {
+    Directory,
+    Symlink,
+    Zip,
+}
+
+impl ModEntryStructure {
+    pub fn parse(entry: &DirEntry) -> Option<Self> {
+        let path = entry.path();
+        let extension = path.extension();
+
+        if extension.is_some() && extension.unwrap() == OsStr::new("zip") {
+            return Some(ModEntryStructure::Zip);
+        } else {
+            let file_type = entry.file_type().ok()?;
+            if file_type.is_symlink() {
+                return Some(ModEntryStructure::Symlink);
+            } else {
+                let mut path = entry.path();
+                path.push("info.json");
+                if path.exists() {
+                    return Some(ModEntryStructure::Directory);
+                }
+            }
+        };
+
+        None
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct InfoJson {
+    pub dependencies: Option<Vec<ModDependency>>,
+    pub name: String,
+    pub version: Version,
 }
 
 fn parse_file_name(file_name: &OsString) -> Option<(String, Version)> {
