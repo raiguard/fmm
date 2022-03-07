@@ -1,4 +1,4 @@
-use crate::version::Version;
+use crate::Version;
 use anyhow::anyhow;
 use serde::Deserialize;
 use std::fmt;

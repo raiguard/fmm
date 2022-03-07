@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::dependency::ModDependency;
 use crate::directory::{Directory, ModEntry};
 use crate::get_mod_version;
-use crate::version::Version;
+use crate::Version;
 use crate::ModIdent;
 use anyhow::{anyhow, Result};
 use console::style;
@@ -184,7 +184,7 @@ enum DownloadModErr {
 }
 
 pub fn get_dependencies(mod_ident: &ModIdent, client: &Client) -> Result<Vec<ModDependency>> {
-    println!("{}", mod_ident);
+    println!("{} {}", style("Fetching").cyan(), mod_ident);
     let res = client
         .get(format!(
             "https://mods.factorio.com/api/mods/{}/full",

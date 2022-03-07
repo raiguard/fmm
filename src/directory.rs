@@ -2,7 +2,7 @@ use crate::dat::PropertyTree;
 use crate::dependency::ModDependency;
 use crate::mod_ident::*;
 use crate::mod_settings::ModSettings;
-use crate::version::Version;
+use crate::Version;
 use anyhow::{anyhow, Result};
 use console::style;
 use serde::{Deserialize, Serialize};

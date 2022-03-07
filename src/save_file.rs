@@ -1,7 +1,7 @@
 use crate::dat::PropertyTree;
 use crate::dat::ReadFactorioDat;
 use crate::mod_ident::ModIdent;
-use crate::version::Version;
+use crate::Version;
 use anyhow::anyhow;
 use anyhow::Result;
 use byteorder::{LittleEndian, ReadBytesExt};
