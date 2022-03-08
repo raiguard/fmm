@@ -33,6 +33,10 @@ impl Portal {
         }
     }
 
+    pub fn contains(&self, mod_name: &str) -> bool {
+        self.mods.contains_key(mod_name)
+    }
+
     pub fn fetch(&mut self, mod_name: &str) -> Result<()> {
         println!("{} {}", style("Fetching").cyan().bold(), mod_name);
         let res = self
@@ -50,12 +54,8 @@ impl Portal {
         Ok(())
     }
 
-    pub fn get(&mut self, mod_name: &str) -> Result<&PortalMod> {
-        if !self.mods.contains_key(mod_name) {
-            self.fetch(mod_name)?;
-        }
-
-        Ok(self.mods.get(mod_name).unwrap())
+    pub fn get(&self, mod_name: &str) -> Option<&PortalMod> {
+        self.mods.get(mod_name)
     }
 
     pub fn download(&mut self, ident: &ModIdent, config: &Config) -> Result<(ModIdent, PathBuf)> {
@@ -65,7 +65,11 @@ impl Portal {
             .as_ref()
             .ok_or_else(|| anyhow!("Mod portal authentication not found"))?;
 
-        let mod_data = self.get(&ident.name)?;
+        if !self.contains(&ident.name) {
+            self.fetch(&ident.name)?;
+        }
+        // We can unwrap here because fetch() will early return if it wasn't downloaded
+        let mod_data = self.get(&ident.name).unwrap();
         let release_data = mod_data
             .get_release(ident)
             .ok_or_else(|| anyhow!("{} was not found on the mod portal", ident))?;
@@ -76,8 +80,8 @@ impl Portal {
         };
 
         // Download the mod
-        // FIXME: We get a new client here to avoid immutably borrowing self after mutably borrowing it in `get()`
-        let mut res = match Client::new()
+        let mut res = match self
+            .client
             .get(format!(
                 "https://mods.factorio.com{}",
                 release_data.download_url
@@ -223,18 +227,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_or_fetch() {
+    fn basic_methods() {
         let mut portal = Portal::new();
         let ident = ModIdent {
             name: "EditorExtensions".to_string(),
             version: None,
         };
 
-        // Will fetch it
-        assert!(portal.get(&ident.name).is_ok());
-        // Will pull it from the local store
-        // TODO: We will want to find a way to diseonnect `Client` so we can ensure that this is getting it from the local database
-        assert!(portal.get(&ident.name).is_ok());
+        // Mod does not exist
+        assert!(!portal.contains(&ident.name));
+        assert!(portal.get(&ident.name).is_none());
+
+        // Fetch mod
+        assert!(portal.fetch(&ident.name).is_ok());
+
+        // Mod exists
+        assert!(portal.contains(&ident.name));
+        assert!(portal.get(&ident.name).is_some());
     }
 
     // TODO: This is a full-blown integration test that needs more setup (needs `config`)

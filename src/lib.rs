@@ -102,9 +102,11 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
                         .get_release(ident)
                         .and_then(|release| release.get_dependencies())
                 } else {
+                    if !portal.contains(&ident.name) {
+                        portal.fetch(&ident.name)?;
+                    }
                     portal
                         .get(&ident.name)
-                        .ok()
                         .and_then(|mod_data| mod_data.get_release(ident))
                         .and_then(|release| release.get_dependencies())
                 };
