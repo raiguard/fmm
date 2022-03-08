@@ -17,6 +17,7 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
+use std::path::PathBuf;
 
 // TODO: Hold authentication in this struct
 pub struct Portal {
@@ -57,7 +58,7 @@ impl Portal {
         Ok(self.mods.get(mod_name).unwrap())
     }
 
-    pub fn download(&mut self, ident: &ModIdent, config: &Config) -> Result<()> {
+    pub fn download(&mut self, ident: &ModIdent, config: &Config) -> Result<(ModIdent, PathBuf)> {
         // Get authentication token and username
         let auth = config
             .portal_auth
@@ -68,6 +69,11 @@ impl Portal {
         let release_data = mod_data
             .get_release(ident)
             .ok_or_else(|| anyhow!("{} was not found on the mod portal", ident))?;
+
+        let ident = ModIdent {
+            name: ident.name.clone(),
+            version: Some(release_data.get_version().clone()),
+        };
 
         // Download the mod
         // FIXME: We get a new client here to avoid immutably borrowing self after mutably borrowing it in `get()`
@@ -98,12 +104,7 @@ impl Portal {
                 .progress_chars("=> "),
         );
 
-        pb.set_message(format!(
-            "{} {} v{}",
-            style("Downloading").cyan().bold(),
-            ident.name,
-            release_data.version
-        ));
+        pb.set_message(format!("{} {}", style("Downloading").cyan().bold(), ident,));
 
         // TODO: Put this in a temp directory instead
         let path = config.mods_dir.join(format!(
@@ -140,15 +141,14 @@ impl Portal {
         }
 
         // Rename file
-        let mut proper_path = config.mods_dir.clone();
-        proper_path.push(&release_data.file_name);
+        let proper_path = config.mods_dir.join(&release_data.file_name);
         fs::rename(&path, &proper_path)?;
 
         // Finish up
         pb.finish_and_clear();
         println!("{} {}", style("Downloaded").cyan().bold(), ident);
 
-        Ok(())
+        Ok((ident, proper_path))
     }
 
     // TODO: This is entirely identical to the method on `Directory`

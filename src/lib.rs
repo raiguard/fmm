@@ -41,8 +41,7 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
         directory.disable(ident);
     }
 
-    // Construct download and enable lists
-    let mut to_download = vec![];
+    // Construct initial enable list
     let mut to_enable = vec![];
     // Save file
     if let Some(path) = &args.save_file {
@@ -60,8 +59,6 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
                 ident.version = None;
             }
         }
-
-        to_enable = mods;
 
         if !args.ignore_startup_settings {
             directory
@@ -88,12 +85,11 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
         }
     }
 
-    // Add any mods that we don't have to the download list
-    for ident in &to_enable {
-        if !directory.contains(ident) {
-            to_download.push(ident.clone());
-        }
-    }
+    // Split into to_download and to_enable lists
+    let (mut to_download, mut to_enable): (Vec<_>, Vec<_>) = to_enable
+        .iter()
+        .cloned()
+        .partition(|ident| directory.contains(ident));
 
     // Recursively get dependencies to download / enable
     if !args.ignore_deps {
@@ -142,9 +138,15 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
 
     // Download mods
     for ident in &to_download {
-        // TODO: Add to to_enable here after download_mod returns a ModIdent
-        // FIXME: The mod is not added to the directory object so it's not enabled
-        portal.download(ident, config)?;
+        let (new_ident, path) = portal.download(ident, config)?;
+        directory.add(
+            new_ident.clone(),
+            std::fs::read_dir(&config.mods_dir)?
+                .filter_map(|entry| entry.ok())
+                .find(|entry| entry.path() == path)
+                .unwrap(),
+        );
+        to_enable.push(new_ident);
     }
 
     // Enable and disable mods
