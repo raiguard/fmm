@@ -57,7 +57,7 @@ impl FromStr for ModDependency {
             dep_type: match captures.name("type").map(|mtch| mtch.as_str()) {
                 None => ModDependencyType::Required,
                 Some("!") => ModDependencyType::Incompatible,
-                Some("~") => ModDependencyType::NoLoadOrder,
+                Some("~") | Some("(~)") => ModDependencyType::NoLoadOrder,
                 Some("?") => ModDependencyType::Optional,
                 Some("(?)") => ModDependencyType::OptionalHidden,
                 Some(str) => return Err(ModDependencyErr::UnknownModifier(str.to_string())),
