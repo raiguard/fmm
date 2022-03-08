@@ -112,12 +112,12 @@ impl Directory {
             .unwrap_or(false)
     }
 
-    pub fn disable(&mut self, mod_ident: &ModIdent) {
-        if mod_ident.name == "base" || self.mods.contains_key(&mod_ident.name) {
-            self.list.disable(mod_ident);
+    pub fn disable(&mut self, ident: &ModIdent) {
+        if ident.name == "base" || self.mods.contains_key(&ident.name) {
+            self.list.disable(ident);
         } else {
             // TODO: Centralize printing
-            eprintln!("Could not find {}", &mod_ident);
+            eprintln!("Could not find {}", &ident);
         }
     }
 

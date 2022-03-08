@@ -37,8 +37,8 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     if args.disable_all {
         directory.disable_all();
     }
-    for mod_ident in &args.disable {
-        directory.disable(mod_ident);
+    for ident in &args.disable {
+        directory.disable(ident);
     }
 
     // Construct download and enable lists
@@ -56,8 +56,8 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
             .collect();
 
         if config.sync_latest_versions {
-            for mod_ident in mods.iter_mut() {
-                mod_ident.version = None;
+            for ident in mods.iter_mut() {
+                ident.version = None;
             }
         }
 
@@ -82,16 +82,16 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
         to_enable = set.to_owned();
     }
     // Enable
-    for mod_ident in &args.enable {
-        if !to_enable.contains(mod_ident) {
-            to_enable.push(mod_ident.clone());
+    for ident in &args.enable {
+        if !to_enable.contains(ident) {
+            to_enable.push(ident.clone());
         }
     }
 
     // Add any mods that we don't have to the download list
-    for mod_ident in &to_enable {
-        if !directory.contains(mod_ident) {
-            to_download.push(mod_ident.clone());
+    for ident in &to_enable {
+        if !directory.contains(ident) {
+            to_download.push(ident.clone());
         }
     }
 
@@ -141,16 +141,16 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     }
 
     // Download mods
-    for mod_ident in &to_download {
+    for ident in &to_download {
         // TODO: Add to to_enable here after download_mod returns a ModIdent
         // FIXME: The mod is not added to the directory object so it's not enabled
-        portal.download(mod_ident, config)?;
+        portal.download(ident, config)?;
     }
 
     // Enable and disable mods
-    for mod_ident in &to_enable {
+    for ident in &to_enable {
         // TODO: Print errors
-        directory.enable(mod_ident)?;
+        directory.enable(ident)?;
     }
 
     // Write mod-list.json
