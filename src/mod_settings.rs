@@ -1,5 +1,5 @@
 use crate::dat::PropertyTree;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::fs;
 use std::io::Cursor;
@@ -39,6 +39,26 @@ impl ModSettings {
             version_patch,
             version_build,
         })
+    }
+
+    /// Merge the stored startup settings with the passed settings
+    /// Settings that are stored will be overwritten with the passed settings
+    pub fn merge_startup_settings(&mut self, other: &PropertyTree) -> Result<()> {
+        let startup_settings = self
+            .settings
+            .get_mut("startup")
+            .ok_or_else(|| anyhow!("No startup settings in mod-settings.dat"))?
+            .as_dictionary_mut()
+            .ok_or_else(|| anyhow!("Could not read PropertyTree dictionary."))?;
+
+        for (setting_name, setting_value) in other
+            .as_dictionary()
+            .ok_or_else(|| anyhow!("Could not read PropertyTree dictionary"))?
+        {
+            startup_settings.insert(setting_name.clone(), setting_value.clone());
+        }
+
+        Ok(())
     }
 
     pub fn write(&self) -> Result<()> {

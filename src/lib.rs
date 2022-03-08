@@ -20,8 +20,6 @@ use crate::portal::Portal;
 use crate::save_file::SaveFile;
 use crate::version::Version;
 use anyhow::{anyhow, Result};
-use console::style;
-use reqwest::blocking::Client;
 
 pub fn run(args: Args) -> Result<()> {
     let config = Config::new(args)?;
@@ -66,7 +64,9 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
         to_enable = mods;
 
         if !args.ignore_startup_settings {
-            directory.sync_settings(&save_file.startup_settings)?;
+            directory
+                .settings
+                .merge_startup_settings(&save_file.startup_settings)?;
             println!("Synced startup settings");
         }
     }
@@ -87,70 +87,56 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
             to_enable.push(mod_ident.clone());
         }
     }
-    // // Recursively get dependencies to download / enable
-    // if !args.ignore_deps {
-    //     let mut to_check = to_enable.clone();
-    //     while !to_check.is_empty() {
-    //         let mut to_check_next = vec![];
-    //         for mod_ident in &to_check {
-    //             match get_dependencies(&directory, mod_ident, client) {
-    //                 Ok(dependencies) => {
-    //                     for dependency in dependencies
-    //                         .iter()
-    //                         .filter(|dep| {
-    //                             matches!(
-    //                                 dep.dep_type,
-    //                                 ModDependencyType::Required | ModDependencyType::NoLoadOrder
-    //                             )
-    //                         })
-    //                         .filter(|dep| dep.name != "base")
-    //                     {
-    //                         // TODO: Put this in `Directory`
-    //                         let newest_matching =
-    //                             directory.mods.get(&dependency.name).and_then(|entries| {
-    //                                 match &dependency.version_req {
-    //                                     Some(version_req) => entries.iter().rev().find(|entry| {
-    //                                         version_req.matches(
-    //                                             &entry.ident.get_guaranteed_version().clone(),
-    //                                         )
-    //                                     }),
-    //                                     None => entries.last(),
-    //                                 }
-    //                             });
 
-    //                         // TODO: Handle if a mod requires a newer version of the dependency
-    //                         if let Some(dep_ident) = newest_matching
-    //                             .map(|dependency| dependency.ident.clone())
-    //                             .or_else(|| {
-    //                                 if !args.no_download {
-    //                                     Some(ModIdent {
-    //                                         name: dependency.name.clone(),
-    //                                         version: None,
-    //                                     })
-    //                                 } else {
-    //                                     None
-    //                                 }
-    //                             })
-    //                             .filter(|dep_ident| !to_enable.contains(dep_ident))
-    //                         {
-    //                             to_enable.push(dep_ident.clone());
-    //                             to_check_next.push(dep_ident.clone());
-    //                         }
-    //                     }
-    //                 }
-    //                 // TODO: Prevent download when this occurs
-    //                 Err(err) => eprintln!("{} {}", style("Error downloading mod:").red(), err),
-    //             }
-    //         }
-    //         to_check = to_check_next;
-    //     }
-    // }
-
-    // TODO: This is bad
     // Add any mods that we don't have to the download list
     for mod_ident in &to_enable {
         if !directory.contains(mod_ident) {
             to_download.push(mod_ident.clone());
+        }
+    }
+
+    // Recursively get dependencies to download / enable
+    if !args.ignore_deps {
+        let mut to_check = to_enable.clone();
+        while !to_check.is_empty() {
+            let mut to_check_next = vec![];
+            for ident in &to_check {
+                let dependencies = if let Some(dir_mod) = directory.get(ident) {
+                    dir_mod
+                        .get_release(ident)
+                        .and_then(|release| release.get_dependencies())
+                } else {
+                    portal
+                        .get(&ident.name)
+                        .ok()
+                        .and_then(|mod_data| mod_data.get_release(ident))
+                        .and_then(|release| release.get_dependencies())
+                };
+
+                if let Some(dependencies) = dependencies {
+                    for dependency in dependencies.iter().filter(|dependency| {
+                        matches!(
+                            dependency.dep_type,
+                            ModDependencyType::Required | ModDependencyType::NoLoadOrder
+                        )
+                    }) {
+                        // TODO: Create a trait that we can share between directory and portal for this part
+                        if let Some(release) =
+                            directory.get_newest_matching(&ident.name, &dependency.version_req)
+                        {
+                            to_enable.push(release.ident.clone());
+                        } else if let Some(release) =
+                            portal.get_newest_matching(&ident.name, &dependency.version_req)
+                        {
+                            to_download.push(ModIdent {
+                                name: dependency.name.clone(),
+                                version: Some(release.get_version().clone()),
+                            });
+                        }
+                    }
+                }
+            }
+            to_check = to_check_next;
         }
     }
 
@@ -173,16 +159,25 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     Ok(())
 }
 
+trait HasReleases<T: HasVersion> {
+    fn get_release(&self, ident: &ModIdent) -> Option<&T> {
+        if let Some(version) = &ident.version {
+            self.get_release_list()
+                .iter()
+                .rev()
+                .find(|entry| version == entry.get_version())
+        } else {
+            self.get_release_list().last()
+        }
+    }
+
+    fn get_release_list(&self) -> &[T];
+}
+
 trait HasVersion {
     fn get_version(&self) -> &Version;
 }
 
-fn get_mod_version<'a, T: HasVersion>(list: &'a [T], mod_ident: &ModIdent) -> Option<&'a T> {
-    if let Some(version) = &mod_ident.version {
-        list.iter()
-            .rev()
-            .find(|entry| version == entry.get_version())
-    } else {
-        list.last()
-    }
+trait HasDependencies {
+    fn get_dependencies(&self) -> Option<&Vec<ModDependency>>;
 }

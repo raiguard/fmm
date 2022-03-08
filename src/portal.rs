@@ -1,6 +1,9 @@
 use crate::config::Config;
 use crate::dependency::ModDependency;
-use crate::get_mod_version;
+use crate::version::VersionReq;
+use crate::HasDependencies;
+use crate::HasReleases;
+use crate::HasVersion;
 use crate::ModIdent;
 use crate::Version;
 use anyhow::{anyhow, Result};
@@ -29,27 +32,29 @@ impl Portal {
         }
     }
 
-    // TODO: Figure out how to avoid cloning the entries
-    pub fn get(&mut self, mod_name: &str) -> Result<PortalMod> {
-        match self.mods.get(mod_name) {
-            Some(entry) => Ok(entry.clone()),
-            None => {
-                println!("{} {}", style("Fetching").cyan().bold(), mod_name);
-                let res = self
-                    .client
-                    .get(format!(
-                        "https://mods.factorio.com/api/mods/{}/full",
-                        mod_name
-                    ))
-                    .send()?
-                    // TODO: Custom errors
-                    .error_for_status()?;
+    pub fn fetch(&mut self, mod_name: &str) -> Result<()> {
+        println!("{} {}", style("Fetching").cyan().bold(), mod_name);
+        let res = self
+            .client
+            .get(format!(
+                "https://mods.factorio.com/api/mods/{}/full",
+                mod_name
+            ))
+            .send()?
+            // TODO: Custom errors
+            .error_for_status()?;
 
-                let entry: PortalMod = res.json()?;
-                self.mods.insert(mod_name.to_string(), entry.clone());
-                Ok(entry)
-            }
+        self.mods.insert(mod_name.to_string(), res.json()?);
+
+        Ok(())
+    }
+
+    pub fn get(&mut self, mod_name: &str) -> Result<&PortalMod> {
+        if !self.mods.contains_key(mod_name) {
+            self.fetch(mod_name)?;
         }
+
+        Ok(self.mods.get(mod_name).unwrap())
     }
 
     pub fn download(&mut self, ident: &ModIdent, config: &Config) -> Result<()> {
@@ -60,12 +65,13 @@ impl Portal {
             .ok_or_else(|| anyhow!("Mod portal authentication not found"))?;
 
         let mod_data = self.get(&ident.name)?;
-        let release_data = get_mod_version(&mod_data.releases, ident)
+        let release_data = mod_data
+            .get_release(ident)
             .ok_or_else(|| anyhow!("{} was not found on the mod portal", ident))?;
 
         // Download the mod
-        let mut res = match self
-            .client
+        // FIXME: We get a new client here to avoid immutably borrowing self after mutably borrowing it in `get()`
+        let mut res = match Client::new()
             .get(format!(
                 "https://mods.factorio.com{}",
                 release_data.download_url
@@ -144,6 +150,26 @@ impl Portal {
 
         Ok(())
     }
+
+    // TODO: This is entirely identical to the method on `Directory`
+    pub fn get_newest_matching(
+        &self,
+        name: &str,
+        version_req: &Option<VersionReq>,
+    ) -> Option<&PortalModRelease> {
+        self.mods.get(name).and_then(|mod_data| {
+            // TODO: This is extremely similar to the HasReleases trait method
+            if let Some(version_req) = version_req {
+                mod_data
+                    .releases
+                    .iter()
+                    .rev()
+                    .find(|release| version_req.matches(release.get_version()))
+            } else {
+                mod_data.releases.last()
+            }
+        })
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -155,8 +181,14 @@ pub struct PortalMod {
     releases: Vec<PortalModRelease>,
 }
 
+impl HasReleases<PortalModRelease> for PortalMod {
+    fn get_release_list(&self) -> &[PortalModRelease] {
+        &self.releases
+    }
+}
+
 #[derive(Clone, Debug, Deserialize)]
-struct PortalModRelease {
+pub struct PortalModRelease {
     download_url: String,
     file_name: String,
     info_json: Option<PortalInfoJson>,
@@ -164,7 +196,15 @@ struct PortalModRelease {
     version: Version,
 }
 
-impl crate::HasVersion for PortalModRelease {
+impl HasDependencies for PortalModRelease {
+    fn get_dependencies(&self) -> Option<&Vec<ModDependency>> {
+        self.info_json
+            .as_ref()
+            .and_then(|info_json| info_json.dependencies.as_ref())
+    }
+}
+
+impl HasVersion for PortalModRelease {
     fn get_version(&self) -> &Version {
         &self.version
     }
@@ -173,7 +213,7 @@ impl crate::HasVersion for PortalModRelease {
 #[derive(Clone, Debug, Deserialize)]
 struct PortalInfoJson {
     #[serde(default)]
-    dependencies: Option<Vec<ModDependency>>,
+    pub dependencies: Option<Vec<ModDependency>>,
     factorio_version: Version,
 }
 
