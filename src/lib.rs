@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 pub mod cli;
 mod config;
 mod dat;
@@ -42,7 +40,7 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     }
 
     // Construct initial enable list
-    let mut to_enable = vec![];
+    let mut to_enable_input = vec![];
     // Save file
     if let Some(path) = &args.save_file {
         let save_file = SaveFile::from(path.clone())?;
@@ -54,10 +52,11 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
             .cloned()
             .collect();
 
-        if config.sync_latest_versions {
-            for ident in mods.iter_mut() {
+        for ident in mods.iter_mut() {
+            if config.sync_latest_versions {
                 ident.version = None;
             }
+            to_enable_input.push(ident.clone());
         }
 
         if !args.ignore_startup_settings {
@@ -76,24 +75,24 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
         let set = sets
             .get(set)
             .ok_or_else(|| anyhow!("Given set does not exist"))?;
-        to_enable = set.to_owned();
+        to_enable_input = set.to_owned();
     }
     // Enable
     for ident in &args.enable {
-        if !to_enable.contains(ident) {
-            to_enable.push(ident.clone());
+        if !to_enable_input.contains(ident) {
+            to_enable_input.push(ident.clone());
         }
     }
 
     // Split into to_download and to_enable lists
-    let (mut to_download, mut to_enable): (Vec<_>, Vec<_>) = to_enable
+    let (mut to_enable, mut to_download): (Vec<_>, Vec<_>) = to_enable_input
         .iter()
         .cloned()
-        .partition(|ident| directory.contains(ident));
+        .partition(|ident| ident.name == "base" || directory.contains(ident));
 
     // Recursively get dependencies to download / enable
     if !args.ignore_deps {
-        let mut to_check = to_enable.clone();
+        let mut to_check = to_enable_input.clone();
         while !to_check.is_empty() {
             let mut to_check_next = vec![];
             for ident in &to_check {
@@ -112,24 +111,34 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
                 };
 
                 if let Some(dependencies) = dependencies {
-                    for dependency in dependencies.iter().filter(|dependency| {
-                        matches!(
-                            dependency.dep_type,
-                            ModDependencyType::Required | ModDependencyType::NoLoadOrder
-                        )
+                    // FIXME: Don't clone here if possible
+                    for dependency in dependencies.clone().iter().filter(|dependency| {
+                        dependency.name != "base"
+                            && matches!(
+                                dependency.dep_type,
+                                ModDependencyType::Required | ModDependencyType::NoLoadOrder
+                            )
                     }) {
                         // TODO: Create a trait that we can share between directory and portal for this part
                         if let Some(release) =
                             directory.get_newest_matching(&ident.name, &dependency.version_req)
                         {
                             to_enable.push(release.ident.clone());
-                        } else if let Some(release) =
-                            portal.get_newest_matching(&ident.name, &dependency.version_req)
-                        {
-                            to_download.push(ModIdent {
-                                name: dependency.name.clone(),
-                                version: Some(release.get_version().clone()),
-                            });
+                            to_check_next.push(release.ident.clone());
+                        } else {
+                            if !portal.contains(&ident.name) {
+                                portal.fetch(&ident.name)?;
+                            }
+                            if let Some(release) =
+                                portal.get_newest_matching(&ident.name, &dependency.version_req)
+                            {
+                                let dep_ident = ModIdent {
+                                    name: dependency.name.clone(),
+                                    version: Some(release.get_version().clone()),
+                                };
+                                to_download.push(dep_ident.clone());
+                                to_check_next.push(dep_ident.clone());
+                            }
                         }
                     }
                 }

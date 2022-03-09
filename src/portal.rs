@@ -161,7 +161,7 @@ impl Portal {
         name: &str,
         version_req: &Option<VersionReq>,
     ) -> Option<&PortalModRelease> {
-        self.mods.get(name).and_then(|mod_data| {
+        self.get(name).and_then(|mod_data| {
             // TODO: This is extremely similar to the HasReleases trait method
             if let Some(version_req) = version_req {
                 mod_data
