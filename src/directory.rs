@@ -148,14 +148,10 @@ impl Directory {
         self.mods.get_mut(&ident.name)
     }
 
-    pub fn get_newest_matching(
-        &self,
-        name: &str,
-        version_req: &Option<VersionReq>,
-    ) -> Option<&DirModRelease> {
-        self.mods.get(name).and_then(|mod_data| {
+    pub fn get_newest_matching(&self, dependency: &ModDependency) -> Option<&DirModRelease> {
+        self.mods.get(&dependency.name).and_then(|mod_data| {
             // TODO: This is extremely similar to the HasReleases trait method
-            if let Some(version_req) = version_req {
+            if let Some(version_req) = &dependency.version_req {
                 mod_data
                     .releases
                     .iter()

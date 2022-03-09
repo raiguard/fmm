@@ -155,15 +155,10 @@ impl Portal {
         Ok((ident, proper_path))
     }
 
-    // TODO: This is entirely identical to the method on `Directory`
-    pub fn get_newest_matching(
-        &self,
-        name: &str,
-        version_req: &Option<VersionReq>,
-    ) -> Option<&PortalModRelease> {
-        self.get(name).and_then(|mod_data| {
+    pub fn get_newest_matching(&self, dependency: &ModDependency) -> Option<&PortalModRelease> {
+        self.mods.get(&dependency.name).and_then(|mod_data| {
             // TODO: This is extremely similar to the HasReleases trait method
-            if let Some(version_req) = version_req {
+            if let Some(version_req) = &dependency.version_req {
                 mod_data
                     .releases
                     .iter()

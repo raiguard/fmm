@@ -96,18 +96,18 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
         let mut to_check = to_enable_input.clone();
         while !to_check.is_empty() {
             let mut to_check_next = vec![];
-            for ident in &to_check {
-                let dependencies = if let Some(dir_mod) = directory.get(ident) {
+            for dep_ident in &to_check {
+                let dependencies = if let Some(dir_mod) = directory.get(dep_ident) {
                     dir_mod
-                        .get_release(ident)
+                        .get_release(dep_ident)
                         .and_then(|release| release.get_dependencies())
                 } else {
-                    if !portal.contains(&ident.name) {
-                        portal.fetch(&ident.name)?;
+                    if !portal.contains(&dep_ident.name) {
+                        portal.fetch(&dep_ident.name)?;
                     }
                     portal
-                        .get(&ident.name)
-                        .and_then(|mod_data| mod_data.get_release(ident))
+                        .get(&dep_ident.name)
+                        .and_then(|mod_data| mod_data.get_release(dep_ident))
                         .and_then(|release| release.get_dependencies())
                 };
 
@@ -121,24 +121,24 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
                             )
                     }) {
                         // TODO: Create a trait that we can share between directory and portal for this part
-                        if let Some(release) =
-                            directory.get_newest_matching(&ident.name, &dependency.version_req)
-                        {
-                            to_enable.push(release.ident.clone());
-                            to_check_next.push(release.ident.clone());
-                        } else {
-                            if !portal.contains(&ident.name) {
-                                portal.fetch(&ident.name)?;
+                        if let Some(dep_release) = directory.get_newest_matching(dependency) {
+                            if !to_enable.contains(&dep_release.ident) {
+                                to_enable.push(dep_release.ident.clone());
+                                to_check_next.push(dep_release.ident.clone());
                             }
-                            if let Some(release) =
-                                portal.get_newest_matching(&ident.name, &dependency.version_req)
-                            {
-                                let dep_ident = ModIdent {
+                        } else {
+                            if !portal.contains(&dependency.name) {
+                                portal.fetch(&dependency.name)?;
+                            }
+                            if let Some(dep_release) = portal.get_newest_matching(dependency) {
+                                let dep_release_ident = ModIdent {
                                     name: dependency.name.clone(),
-                                    version: Some(release.get_version().clone()),
+                                    version: Some(dep_release.get_version().clone()),
                                 };
-                                to_download.push(dep_ident.clone());
-                                to_check_next.push(dep_ident.clone());
+                                if !to_download.contains(&dep_release_ident) {
+                                    to_download.push(dep_release_ident.clone());
+                                    to_check_next.push(dep_release_ident.clone());
+                                }
                             }
                         }
                     }
