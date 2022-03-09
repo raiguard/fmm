@@ -12,23 +12,6 @@ pub struct ModIdent {
 }
 
 impl ModIdent {
-    /// Extract the name and version from the mod's file name. Will fail if the filename does not contain a version.
-    pub fn from_file_name(file_name: &OsString) -> Option<Self> {
-        let (name, version) = file_name
-            .to_str()?
-            .trim_end_matches(".zip")
-            .rsplit_once('_')?;
-
-        if let Ok(version) = Version::from_str(version) {
-            Some(Self {
-                name: name.to_string(),
-                version: Some(version),
-            })
-        } else {
-            None
-        }
-    }
-
     /// In cases where `version` is guaranteed to be Some(), get the version
     pub fn get_guaranteed_version(&self) -> &Version {
         self.version

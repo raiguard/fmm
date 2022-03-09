@@ -18,6 +18,7 @@ use crate::portal::Portal;
 use crate::save_file::SaveFile;
 use crate::version::Version;
 use anyhow::{anyhow, Result};
+use console::style;
 
 pub fn run(args: Args) -> Result<()> {
     let config = Config::new(args)?;
@@ -149,15 +150,19 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
 
     // Download mods
     for ident in &to_download {
-        let (new_ident, path) = portal.download(ident, config)?;
-        directory.add(
-            new_ident.clone(),
-            std::fs::read_dir(&config.mods_dir)?
-                .filter_map(|entry| entry.ok())
-                .find(|entry| entry.path() == path)
-                .unwrap(),
-        );
-        to_enable.push(new_ident);
+        match portal.download(ident, config) {
+            Ok((new_ident, path)) => {
+                directory.add(
+                    new_ident.clone(),
+                    std::fs::read_dir(&config.mods_dir)?
+                        .filter_map(|entry| entry.ok())
+                        .find(|entry| entry.path() == path)
+                        .unwrap(),
+                );
+                to_enable.push(new_ident);
+            }
+            Err(e) => eprintln!("{} {}", style("Error").red().bold(), e),
+        };
     }
 
     // Enable and disable mods

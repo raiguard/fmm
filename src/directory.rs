@@ -3,7 +3,7 @@ use crate::dependency::ModDependency;
 use crate::mod_settings::ModSettings;
 use crate::version::VersionReq;
 use crate::{HasDependencies, HasReleases, HasVersion, ModIdent, Version};
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use console::style;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -34,17 +34,15 @@ impl Directory {
                 entry.file_name() != "mod-list.json" && entry.file_name() != "mod-settings.dat"
             })
         {
-            let mut dependencies = None;
-            match ModIdent::from_file_name(&entry.file_name()).or_else(|| {
-                InfoJson::from_entry(&entry).ok().map(|info_json| {
-                    dependencies = info_json.dependencies;
-                    ModIdent {
-                        name: info_json.name,
-                        version: Some(info_json.version),
-                    }
-                })
-            }) {
-                Some(ident) => {
+            match InfoJson::from_entry(&entry)
+                .context(format!("Could not parse {:?}", entry.file_name()))
+            {
+                Ok(info_json) => {
+                    let ident = ModIdent {
+                        name: info_json.name.clone(),
+                        version: Some(info_json.version.clone()),
+                    };
+
                     let mod_entry = mods.entry(ident.name.clone()).or_insert(DirMod {
                         name: ident.name.clone(),
                         releases: vec![],
@@ -53,7 +51,7 @@ impl Directory {
                     let release = DirModRelease {
                         entry,
                         ident,
-                        dependencies,
+                        dependencies: info_json.dependencies,
                     };
 
                     let index = mod_entry
@@ -62,9 +60,8 @@ impl Directory {
                         .unwrap_or_else(|index| index);
                     mod_entry.releases.insert(index, release);
                 }
-                // TODO: Centralize printing
-                None => eprintln!("Could not parse {:?}", entry.file_name()),
-            };
+                Err(e) => eprintln!("{} {}", style("Error:").red().bold(), e),
+            }
         }
 
         // Parse mod-list.json
