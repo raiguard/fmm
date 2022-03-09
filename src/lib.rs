@@ -93,22 +93,30 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
 
     // Recursively get dependencies to download / enable
     if !args.ignore_deps {
-        let mut to_check = to_enable_input.clone();
+        let mut to_check = to_enable_input;
         while !to_check.is_empty() {
             let mut to_check_next = vec![];
-            for dep_ident in &to_check {
-                let dependencies = if let Some(dir_mod) = directory.get(dep_ident) {
-                    dir_mod
-                        .get_release(dep_ident)
-                        .and_then(|release| release.get_dependencies())
+            for ident in &to_check {
+                let dependencies = if let Some(dir_mod) = directory.get(ident) {
+                    dir_mod.get_release(ident).and_then(|release| {
+                        if !to_enable.contains(ident) {
+                            to_enable.push(ident.clone());
+                        }
+                        release.get_dependencies()
+                    })
                 } else {
-                    if !portal.contains(&dep_ident.name) {
-                        portal.fetch(&dep_ident.name);
+                    if !portal.contains(&ident.name) {
+                        portal.fetch(&ident.name);
                     }
                     portal
-                        .get(&dep_ident.name)
-                        .and_then(|mod_data| mod_data.get_release(dep_ident))
-                        .and_then(|release| release.get_dependencies())
+                        .get(&ident.name)
+                        .and_then(|mod_data| mod_data.get_release(ident))
+                        .and_then(|release| {
+                            if !to_download.contains(ident) {
+                                to_download.push(ident.clone());
+                            }
+                            release.get_dependencies()
+                        })
                 };
 
                 if let Some(dependencies) = dependencies {
@@ -120,25 +128,17 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
                                 ModDependencyType::Required | ModDependencyType::NoLoadOrder
                             )
                     }) {
-                        // TODO: Create a trait that we can share between directory and portal for this part
                         if let Some(dep_release) = directory.get_newest_matching(dependency) {
-                            if !to_enable.contains(&dep_release.ident) {
-                                to_enable.push(dep_release.ident.clone());
-                                to_check_next.push(dep_release.ident.clone());
-                            }
+                            to_check_next.push(dep_release.ident.clone());
                         } else {
                             if !portal.contains(&dependency.name) {
                                 portal.fetch(&dependency.name);
                             }
                             if let Some(dep_release) = portal.get_newest_matching(dependency) {
-                                let dep_release_ident = ModIdent {
+                                to_check_next.push(ModIdent {
                                     name: dependency.name.clone(),
                                     version: Some(dep_release.get_version().clone()),
-                                };
-                                if !to_download.contains(&dep_release_ident) {
-                                    to_download.push(dep_release_ident.clone());
-                                    to_check_next.push(dep_release_ident.clone());
-                                }
+                                });
                             }
                         }
                     }
@@ -166,7 +166,7 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
         };
     }
 
-    // Enable and disable mods
+    // Enable mods
     for ident in &to_enable {
         if let Err(e) = directory.enable(ident) {
             eprintln!("{} {}", style("Error").red().bold(), e);
