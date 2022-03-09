@@ -37,7 +37,18 @@ impl Portal {
         self.mods.contains_key(mod_name)
     }
 
-    pub fn fetch(&mut self, mod_name: &str) -> Result<()> {
+    pub fn fetch(&mut self, mod_name: &str) {
+        if let Err(e) = self.fetch_internal(mod_name) {
+            eprintln!(
+                "{} could not fetch {}: {}",
+                style("Error:").red().bold(),
+                mod_name,
+                e
+            );
+        }
+    }
+
+    fn fetch_internal(&mut self, mod_name: &str) -> Result<()> {
         println!("{} {}", style("Fetching").cyan().bold(), mod_name);
         let res = self
             .client
@@ -66,10 +77,11 @@ impl Portal {
             .ok_or_else(|| anyhow!("Mod portal authentication not found"))?;
 
         if !self.contains(&ident.name) {
-            self.fetch(&ident.name)?;
+            self.fetch(&ident.name);
         }
-        // We can unwrap here because fetch() will early return if it wasn't downloaded
-        let mod_data = self.get(&ident.name).unwrap();
+        let mod_data = self
+            .get(&ident.name)
+            .ok_or_else(|| anyhow!("Cannot download {}", ident))?;
         let release_data = mod_data
             .get_release(ident)
             .ok_or_else(|| anyhow!("{} was not found on the mod portal", ident))?;

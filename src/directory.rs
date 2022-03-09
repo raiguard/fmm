@@ -3,7 +3,7 @@ use crate::dependency::ModDependency;
 use crate::mod_settings::ModSettings;
 use crate::version::VersionReq;
 use crate::{HasDependencies, HasReleases, HasVersion, ModIdent, Version};
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use console::style;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -18,7 +18,6 @@ use zip::ZipArchive;
 #[derive(Debug)]
 pub struct Directory {
     mods: HashMap<String, DirMod>,
-    // TODO: Mod list and mod settings can both be None
     list: EnabledList,
     pub settings: ModSettings,
 }
@@ -26,6 +25,12 @@ pub struct Directory {
 impl Directory {
     /// Constructs the object from the given mods directory
     pub fn new(path: &Path) -> Result<Self> {
+        // Check for mod-list.json and mod-settings.dat
+        ensure!(
+            path.join("mod-list.json").exists() && path.join("mod-settings.dat").exists(),
+            format!("Invalid mods directory: {:?}", path)
+        );
+
         // Assemble mod entries
         let mut mods = HashMap::new();
         for entry in fs::read_dir(path)?

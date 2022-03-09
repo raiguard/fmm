@@ -17,7 +17,7 @@ use crate::mod_ident::ModIdent;
 use crate::portal::Portal;
 use crate::save_file::SaveFile;
 use crate::version::Version;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use console::style;
 
 pub fn run(args: Args) -> Result<()> {
@@ -29,7 +29,7 @@ pub fn run(args: Args) -> Result<()> {
 }
 
 fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
-    let mut directory = Directory::new(&config.mods_dir)?;
+    let mut directory = Directory::new(&config.mods_dir).context("Could not build mod registry")?;
     let mut portal = Portal::new();
 
     // Disable mods
@@ -44,7 +44,8 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     let mut to_enable_input = vec![];
     // Save file
     if let Some(path) = &args.save_file {
-        let save_file = SaveFile::from(path.clone())?;
+        let save_file =
+            SaveFile::from(path.clone()).context(format!("Could not sync with {:?}", path))?;
 
         let mut mods: Vec<ModIdent> = save_file
             .mods
@@ -63,7 +64,8 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
         if !args.ignore_startup_settings {
             directory
                 .settings
-                .merge_startup_settings(&save_file.startup_settings)?;
+                .merge_startup_settings(&save_file.startup_settings)
+                .context("Could not sync startup settings")?;
             println!("Synced startup settings");
         }
     }
@@ -86,10 +88,8 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     }
 
     // Split into to_download and to_enable lists
-    let (mut to_enable, mut to_download): (Vec<_>, Vec<_>) = to_enable_input
-        .iter()
-        .cloned()
-        .partition(|ident| ident.name == "base" || directory.contains(ident));
+    let mut to_download = vec![];
+    let mut to_enable = vec![];
 
     // Recursively get dependencies to download / enable
     if !args.ignore_deps {
@@ -103,7 +103,7 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
                         .and_then(|release| release.get_dependencies())
                 } else {
                     if !portal.contains(&dep_ident.name) {
-                        portal.fetch(&dep_ident.name)?;
+                        portal.fetch(&dep_ident.name);
                     }
                     portal
                         .get(&dep_ident.name)
@@ -128,7 +128,7 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
                             }
                         } else {
                             if !portal.contains(&dependency.name) {
-                                portal.fetch(&dependency.name)?;
+                                portal.fetch(&dependency.name);
                             }
                             if let Some(dep_release) = portal.get_newest_matching(dependency) {
                                 let dep_release_ident = ModIdent {
@@ -154,6 +154,7 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
             Ok((new_ident, path)) => {
                 directory.add(
                     new_ident.clone(),
+                    // TODO: This is bad
                     std::fs::read_dir(&config.mods_dir)?
                         .filter_map(|entry| entry.ok())
                         .find(|entry| entry.path() == path)
@@ -167,8 +168,9 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
 
     // Enable and disable mods
     for ident in &to_enable {
-        // TODO: Print errors
-        directory.enable(ident)?;
+        if let Err(e) = directory.enable(ident) {
+            eprintln!("{} {}", style("Error").red().bold(), e);
+        }
     }
 
     // Write mod-list.json
