@@ -246,7 +246,7 @@ mod tests {
         assert!(portal.get(&ident.name).is_none());
 
         // Fetch mod
-        assert!(portal.fetch(&ident.name).is_ok());
+        portal.fetch(&ident.name);
 
         // Mod exists
         assert!(portal.contains(&ident.name));

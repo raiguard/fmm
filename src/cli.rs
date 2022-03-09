@@ -10,9 +10,6 @@ pub struct Args {
     /// Path to a custom config file
     #[clap(long)]
     pub config: Option<PathBuf>,
-    /// Local only - do not access the mod portal
-    #[clap(long)]
-    pub local_only: bool,
     /// Path to the game directory
     #[clap(long)]
     pub game_dir: Option<PathBuf>,
@@ -36,10 +33,6 @@ pub struct SyncArgs {
     /// Ignore startup settings when syncing with a save file
     #[clap(short = 'x', long)]
     pub ignore_startup_settings: bool,
-    // TODO: Remove this in favor of local-only
-    /// Disable mod auto-download
-    #[clap(short = 'l', long)]
-    pub no_download: bool,
 
     /// Sync active mods and startup settings to the save file
     #[clap(short, long)]
