@@ -357,6 +357,8 @@ impl EnabledList {
         mod_data.enabled = true;
         mod_data.version = ident.version.clone();
 
+        println!("{} {}", style("Enabled").green().bold(), ident);
+
         Ok(())
     }
 
