@@ -87,11 +87,9 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
         }
     }
 
-    // Split into to_download and to_enable lists
+    // Iterate mods and dependencies to determine what to download and enable
     let mut to_download = vec![];
     let mut to_enable = vec![];
-
-    // Recursively get dependencies to download / enable
     if !args.ignore_deps {
         let mut to_check = to_enable_input;
         while !to_check.is_empty() {
@@ -99,10 +97,12 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
             for ident in &to_check {
                 let dependencies = if let Some(dir_mod) = directory.get(ident) {
                     dir_mod.get_release(ident).and_then(|release| {
-                        if !to_enable.contains(ident) {
-                            to_enable.push(ident.clone());
+                        if !to_enable.contains(&release.ident) {
+                            to_enable.push(release.ident.clone());
+                            release.get_dependencies()
+                        } else {
+                            None
                         }
-                        release.get_dependencies()
                     })
                 } else {
                     if !portal.contains(&ident.name) {
@@ -113,9 +113,14 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
                         .and_then(|mod_data| mod_data.get_release(ident))
                         .and_then(|release| {
                             if !to_download.contains(ident) {
-                                to_download.push(ident.clone());
+                                to_download.push(ModIdent {
+                                    name: ident.name.clone(),
+                                    version: Some(release.get_version().clone()),
+                                });
+                                release.get_dependencies()
+                            } else {
+                                None
                             }
-                            release.get_dependencies()
                         })
                 };
 
