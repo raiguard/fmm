@@ -193,8 +193,12 @@ pub struct PortalMod {
 }
 
 impl HasReleases<PortalModRelease> for PortalMod {
-    fn get_release_list(&self) -> &[PortalModRelease] {
+    fn get_release_list(&self) -> &Vec<PortalModRelease> {
         &self.releases
+    }
+
+    fn get_release_list_mut(&mut self) -> &mut Vec<PortalModRelease> {
+        &mut self.releases
     }
 }
 

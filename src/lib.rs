@@ -32,6 +32,13 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     let mut directory = Directory::new(&config.mods_dir).context("Could not build mod registry")?;
     let mut portal = Portal::new();
 
+    // Remove mods
+    for ident in &args.remove {
+        if let Err(e) = directory.remove(ident) {
+            eprintln!("{} {}", style("Error:").red().bold(), e);
+        }
+    }
+
     // Disable mods
     if args.disable_all {
         directory.disable_all();
@@ -196,7 +203,29 @@ trait HasReleases<T: HasVersion> {
         }
     }
 
-    fn get_release_list(&self) -> &[T];
+    fn get_release_list(&self) -> &Vec<T>;
+
+    fn get_release_list_mut(&mut self) -> &mut Vec<T>;
+
+    fn remove_release(&mut self, ident: &ModIdent) -> Result<()> {
+        let index = if let Some(version) = &ident.version {
+            self.get_release_list()
+                .iter()
+                .rev()
+                .enumerate()
+                .find(|(_index, entry)| version == entry.get_version())
+                .map(|(index, _)| index)
+        } else if !self.get_release_list().is_empty() {
+            Some(self.get_release_list().len() - 1)
+        } else {
+            None
+        }
+        .ok_or_else(|| anyhow!("{} not found in release list"))?;
+
+        self.get_release_list_mut().remove(index);
+
+        Ok(())
+    }
 }
 
 trait HasVersion {

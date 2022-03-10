@@ -20,7 +20,7 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Cmd {
-    /// Enable, disable, or download packaged mods
+    /// Downoad, enable, disable, or remove mods
     #[clap(short_flag = 'S', long_flag = "sync")]
     Sync(SyncArgs),
 }
@@ -35,7 +35,7 @@ pub struct SyncArgs {
     pub ignore_startup_settings: bool,
 
     /// Sync active mods and startup settings to the save file
-    #[clap(short = 'f', long)]
+    #[clap(short, long)]
     pub save_file: Option<PathBuf>,
     /// Disable all mods before taking other actions
     #[clap(short = 'o', long)]
@@ -43,10 +43,13 @@ pub struct SyncArgs {
     /// Disable the given mods
     #[clap(short, long)]
     pub disable: Vec<ModIdent>,
-    /// Enable the given mod set
+    /// Download and enable the given mods
+    #[clap(short, long)]
+    pub enable: Vec<ModIdent>,
+    /// Download and enable the given mod set
     #[clap(short = 'E', long)]
     pub enable_set: Option<String>,
-
-    /// Mods to download and/or enable
-    pub enable: Vec<ModIdent>,
+    /// Remove the given mods from the mods directory
+    #[clap(short, long)]
+    pub remove: Vec<ModIdent>,
 }

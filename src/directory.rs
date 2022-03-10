@@ -6,6 +6,7 @@ use crate::{HasDependencies, HasReleases, HasVersion, ModIdent, Version};
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use console::style;
 use serde::{Deserialize, Serialize};
+use sha1::digest::generic_array::typenum::private::IsGreaterOrEqualPrivate;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -174,6 +175,29 @@ impl Directory {
 
         Ok(())
     }
+
+    pub fn remove(&mut self, ident: &ModIdent) -> Result<()> {
+        let mod_data = self
+            .mods
+            .get_mut(&ident.name)
+            .ok_or_else(|| anyhow!("{} not found in mods directory", ident))?;
+
+        let release = mod_data
+            .get_release(ident)
+            .ok_or_else(|| anyhow!("{} not found in mods directory", ident))?;
+
+        fs::remove_file(release.entry.path())?;
+        mod_data.remove_release(ident)?;
+
+        if mod_data.get_release_list().is_empty() {
+            self.mods.remove(&ident.name);
+            self.list.remove(ident);
+        }
+
+        println!("{} {}", style("Removed").magenta().bold(), ident);
+
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -183,8 +207,12 @@ pub struct DirMod {
 }
 
 impl HasReleases<DirModRelease> for DirMod {
-    fn get_release_list(&self) -> &[DirModRelease] {
+    fn get_release_list(&self) -> &Vec<DirModRelease> {
         &self.releases
+    }
+
+    fn get_release_list_mut(&mut self) -> &mut Vec<DirModRelease> {
+        &mut self.releases
     }
 }
 
@@ -358,6 +386,17 @@ impl EnabledList {
         println!("{} {}", style("Enabled").green().bold(), ident);
 
         Ok(())
+    }
+
+    fn remove(&mut self, ident: &ModIdent) {
+        if let Some((index, _)) = self
+            .mods
+            .iter_mut()
+            .enumerate()
+            .find(|(_, mod_data)| mod_data.name == ident.name)
+        {
+            self.mods.remove(index);
+        }
     }
 
     fn save(&self) -> Result<()> {
