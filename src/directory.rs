@@ -102,13 +102,6 @@ impl Directory {
         }
     }
 
-    pub fn contains(&self, ident: &ModIdent) -> bool {
-        self.mods
-            .get(&ident.name)
-            .map(|mod_data| mod_data.get_release(ident).is_some())
-            .unwrap_or(false)
-    }
-
     pub fn disable(&mut self, ident: &ModIdent) {
         if ident.name == "base" || self.mods.contains_key(&ident.name) {
             self.list.disable(ident);
@@ -142,10 +135,6 @@ impl Directory {
 
     pub fn get(&self, ident: &ModIdent) -> Option<&DirMod> {
         self.mods.get(&ident.name)
-    }
-
-    pub fn get_mut(&mut self, ident: &ModIdent) -> Option<&mut DirMod> {
-        self.mods.get_mut(&ident.name)
     }
 
     pub fn get_newest_matching(&self, dependency: &ModDependency) -> Option<&DirModRelease> {
@@ -271,10 +260,8 @@ impl DirModReleaseType {
             let file_type = metadata.file_type();
             if file_type.is_symlink() {
                 return Ok(DirModReleaseType::Symlink);
-            } else {
-                if path.join("info.json").exists() {
-                    return Ok(DirModReleaseType::Directory);
-                }
+            } else if path.join("info.json").exists() {
+                return Ok(DirModReleaseType::Directory);
             }
         };
 

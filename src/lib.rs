@@ -188,7 +188,7 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     Ok(())
 }
 
-fn handle_query(config: &Config, args: &QueryArgs) -> Result<()> {
+fn handle_query(_config: &Config, args: &QueryArgs) -> Result<()> {
     let portal = Portal::new();
 
     let mod_list = portal.get_all_mods()?;
