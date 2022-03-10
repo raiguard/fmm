@@ -178,10 +178,6 @@ impl Portal {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct PortalMod {
-    // name: String,
-    // title: String,
-    // summary: String,
-    // owner: String,
     releases: Vec<PortalModRelease>,
 }
 
@@ -222,7 +218,6 @@ impl HasVersion for PortalModRelease {
 struct PortalInfoJson {
     #[serde(default)]
     pub dependencies: Option<Vec<ModDependency>>,
-    factorio_version: Version,
 }
 
 #[derive(Clone, Debug, Deserialize)]
