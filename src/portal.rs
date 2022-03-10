@@ -9,12 +9,11 @@ use serde::Deserialize;
 use sha1::{Digest, Sha1};
 use std::cmp::min;
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
 
-// TODO: Hold authentication in this struct
 pub struct Portal {
     client: Client,
     mods: HashMap<String, PortalMod>,
@@ -156,7 +155,6 @@ impl Portal {
 
     pub fn get_newest_matching(&self, dependency: &ModDependency) -> Option<&PortalModRelease> {
         self.mods.get(&dependency.name).and_then(|mod_data| {
-            // TODO: This is extremely similar to the HasReleases trait method
             if let Some(version_req) = &dependency.version_req {
                 mod_data
                     .releases

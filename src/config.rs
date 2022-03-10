@@ -76,7 +76,6 @@ struct ConfigFile {
     game_dir: Option<PathBuf>,
     mods_dir: Option<PathBuf>,
     portal: Option<PortalAuth>,
-    // TODO: Figure out how to have multiple deserialzers for ModIdent
     #[serde_as(as = "Option<HashMap<_, Vec<DisplayFromStr>>>")]
     sets: ModSets,
     #[serde(default)]
