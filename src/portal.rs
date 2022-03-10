@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::PathBuf;
+use tempfile::NamedTempFile;
 
 // TODO: Hold authentication in this struct
 pub struct Portal {
@@ -116,15 +117,7 @@ impl Portal {
 
         pb.set_message(format!("{} {}", style("Downloading").cyan().bold(), ident,));
 
-        // TODO: Put this in a temp directory instead
-        let path = config.mods_dir.join(format!(
-            "{}_DOWNLOAD",
-            release_data
-                .file_name
-                .strip_suffix(".zip")
-                .unwrap_or(&release_data.file_name)
-        ));
-        let mut file = File::create(&path)?;
+        let mut file = NamedTempFile::new()?;
 
         let mut downloaded: u64 = 0;
 
@@ -152,7 +145,7 @@ impl Portal {
 
         // Rename file
         let proper_path = config.mods_dir.join(&release_data.file_name);
-        fs::rename(&path, &proper_path)?;
+        fs::copy(file.path(), &proper_path)?;
 
         // Finish up
         pb.finish_and_clear();
