@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
-use std::fs::{DirEntry, File};
+use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use zip::ZipArchive;
@@ -37,7 +37,7 @@ impl Directory {
                 entry.file_name() != "mod-list.json" && entry.file_name() != "mod-settings.dat"
             })
         {
-            match InfoJson::from_entry(&entry)
+            match InfoJson::from_entry(&path)
                 .context(format!("Could not parse {:?}", entry.file_name()))
             {
                 Ok(info_json) => {
@@ -51,7 +51,7 @@ impl Directory {
                         .or_insert(DirMod { releases: vec![] });
 
                     let release = DirModRelease {
-                        entry,
+                        path: path.to_owned(),
                         ident,
                         dependencies: info_json.dependencies,
                     };
@@ -82,7 +82,7 @@ impl Directory {
     }
 
     /// Adds the mod, but keeps it disabled
-    pub fn add(&mut self, ident: ModIdent, entry: DirEntry) {
+    pub fn add(&mut self, ident: ModIdent, path: PathBuf) {
         if self.list.get(&ident).is_none() {
             self.list.add(&ident);
         }
@@ -92,7 +92,7 @@ impl Directory {
             .entry(ident.name.clone())
             .or_insert_with(|| DirMod { releases: vec![] });
         let release = DirModRelease {
-            entry,
+            path,
             ident,
             dependencies: None,
         };
@@ -178,7 +178,7 @@ impl Directory {
             .get_release(ident)
             .ok_or_else(|| anyhow!("{} not found in mods directory", ident))?;
 
-        fs::remove_file(release.entry.path())?;
+        fs::remove_file(&release.path)?;
         mod_data.remove_release(ident)?;
 
         if mod_data.get_release_list().is_empty() {
@@ -209,7 +209,7 @@ impl HasReleases<DirModRelease> for DirMod {
 
 #[derive(Debug)]
 pub struct DirModRelease {
-    pub entry: DirEntry,
+    pub path: PathBuf,
     // This is always guaranteed to have a version
     pub ident: ModIdent,
 
@@ -260,20 +260,18 @@ enum DirModReleaseType {
 }
 
 impl DirModReleaseType {
-    fn parse(entry: &DirEntry) -> Result<Self> {
-        let path = entry.path();
+    fn parse(path: &Path) -> Result<Self> {
+        let metadata = fs::metadata(path)?;
         let extension = path.extension();
 
         if extension.is_some() && extension.unwrap() == OsStr::new("zip") {
             return Ok(DirModReleaseType::Zip);
         } else {
-            let file_type = entry.file_type()?;
+            let file_type = metadata.file_type();
             if file_type.is_symlink() {
                 return Ok(DirModReleaseType::Symlink);
             } else {
-                let mut path = entry.path();
-                path.push("info.json");
-                if path.exists() {
+                if path.join("info.json").exists() {
                     return Ok(DirModReleaseType::Directory);
                 }
             }
@@ -291,15 +289,13 @@ struct InfoJson {
 }
 
 impl InfoJson {
-    fn from_entry(entry: &DirEntry) -> Result<Self> {
-        let contents = match DirModReleaseType::parse(entry)? {
+    fn from_entry(path: &Path) -> Result<Self> {
+        let contents = match DirModReleaseType::parse(path)? {
             DirModReleaseType::Directory | DirModReleaseType::Symlink => {
-                let mut path = entry.path();
-                path.push("info.json");
-                fs::read_to_string(path)?
+                fs::read_to_string(path.join("info.json"))?
             }
             DirModReleaseType::Zip => {
-                let mut archive = ZipArchive::new(File::open(entry.path())?)?;
+                let mut archive = ZipArchive::new(File::open(path)?)?;
                 let filename = archive
                     .file_names()
                     .find(|name| name.contains("info.json"))

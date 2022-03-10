@@ -22,7 +22,6 @@ use crate::version::Version;
 use anyhow::{anyhow, Context, Result};
 use console::style;
 use itertools::Itertools;
-use sha1::digest::generic_array::typenum::private::TrimTrailingZeros;
 
 pub fn run(args: Args) -> Result<()> {
     let config = Config::new(args)?;
@@ -169,14 +168,7 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
     for ident in &to_download {
         match portal.download(ident, config) {
             Ok((new_ident, path)) => {
-                directory.add(
-                    new_ident.clone(),
-                    // TODO: This is bad
-                    std::fs::read_dir(&config.mods_dir)?
-                        .filter_map(|entry| entry.ok())
-                        .find(|entry| entry.path() == path)
-                        .unwrap(),
-                );
+                directory.add(new_ident.clone(), path);
                 to_enable.push(new_ident);
             }
             Err(e) => eprintln!("{} {}", style("Error").red().bold(), e),
