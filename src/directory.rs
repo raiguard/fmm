@@ -37,7 +37,8 @@ impl Directory {
                 entry.file_name() != "mod-list.json" && entry.file_name() != "mod-settings.dat"
             })
         {
-            match InfoJson::from_entry(&path)
+            let mod_path = entry.path();
+            match InfoJson::from_entry(&mod_path)
                 .context(format!("Could not parse {:?}", entry.file_name()))
             {
                 Ok(info_json) => {
@@ -51,7 +52,7 @@ impl Directory {
                         .or_insert(DirMod { releases: vec![] });
 
                     let release = DirModRelease {
-                        path: path.to_owned(),
+                        path: mod_path,
                         ident,
                         dependencies: info_json.dependencies,
                     };
