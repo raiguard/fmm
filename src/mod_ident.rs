@@ -1,7 +1,6 @@
 use crate::Version;
 use anyhow::anyhow;
 use serde::Deserialize;
-use std::ffi::OsString;
 use std::fmt;
 use std::str::FromStr;
 

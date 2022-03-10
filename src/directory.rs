@@ -1,12 +1,9 @@
-use crate::dat::PropertyTree;
 use crate::dependency::ModDependency;
 use crate::mod_settings::ModSettings;
-use crate::version::VersionReq;
 use crate::{HasDependencies, HasReleases, HasVersion, ModIdent, Version};
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use console::style;
 use serde::{Deserialize, Serialize};
-use sha1::digest::generic_array::typenum::private::IsGreaterOrEqualPrivate;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -49,10 +46,9 @@ impl Directory {
                         version: Some(info_json.version.clone()),
                     };
 
-                    let mod_entry = mods.entry(ident.name.clone()).or_insert(DirMod {
-                        name: ident.name.clone(),
-                        releases: vec![],
-                    });
+                    let mod_entry = mods
+                        .entry(ident.name.clone())
+                        .or_insert(DirMod { releases: vec![] });
 
                     let release = DirModRelease {
                         entry,
@@ -94,10 +90,7 @@ impl Directory {
         let mod_data = self
             .mods
             .entry(ident.name.clone())
-            .or_insert_with(|| DirMod {
-                name: ident.name.clone(),
-                releases: vec![],
-            });
+            .or_insert_with(|| DirMod { releases: vec![] });
         let release = DirModRelease {
             entry,
             ident,
@@ -202,7 +195,6 @@ impl Directory {
 
 #[derive(Debug)]
 pub struct DirMod {
-    name: String,
     releases: Vec<DirModRelease>,
 }
 

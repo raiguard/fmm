@@ -1,11 +1,5 @@
-use crate::config::Config;
 use crate::dependency::ModDependency;
-use crate::version::VersionReq;
-use crate::HasDependencies;
-use crate::HasReleases;
-use crate::HasVersion;
-use crate::ModIdent;
-use crate::Version;
+use crate::{Config, HasDependencies, HasReleases, HasVersion, ModIdent, Version};
 use anyhow::{anyhow, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
