@@ -38,7 +38,7 @@ pub struct SyncArgs {
     pub ignore_startup_settings: bool,
 
     /// Sync active mods and startup settings to the save file
-    #[clap(short, long)]
+    #[clap(short = 'f', long)]
     pub save_file: Option<PathBuf>,
     /// Disable all mods before taking other actions
     #[clap(short = 'o', long)]
