@@ -175,14 +175,22 @@ impl Portal {
             }
         })
     }
+
+    pub fn get_all_mods(&self) -> Result<PortalAllRes> {
+        Ok(self
+            .client
+            .get("https://mods.factorio.com/api/mods?page_size=max")
+            .send()?
+            .json()?)
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct PortalMod {
-    name: String,
-    title: String,
-    summary: String,
-    owner: String,
+    // name: String,
+    // title: String,
+    // summary: String,
+    // owner: String,
     releases: Vec<PortalModRelease>,
 }
 
@@ -224,6 +232,20 @@ struct PortalInfoJson {
     #[serde(default)]
     pub dependencies: Option<Vec<ModDependency>>,
     factorio_version: Version,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct PortalAllRes {
+    pub results: Vec<PortalAllMod>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct PortalAllMod {
+    pub name: String,
+    pub title: String,
+    pub summary: String,
+    pub owner: String,
+    pub latest_release: Option<PortalModRelease>,
 }
 
 // TODO: These are integration tests, not unit tests :/

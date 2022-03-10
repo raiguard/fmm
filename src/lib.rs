@@ -1,3 +1,5 @@
+#![allow(unstable_name_collisions)]
+
 pub mod cli;
 mod config;
 mod dat;
@@ -9,7 +11,7 @@ mod portal;
 mod save_file;
 mod version;
 
-use crate::cli::{Args, Cmd, SyncArgs};
+use crate::cli::{Args, Cmd, QueryArgs, SyncArgs};
 use crate::config::Config;
 use crate::dependency::{ModDependency, ModDependencyType};
 use crate::directory::Directory;
@@ -19,12 +21,15 @@ use crate::save_file::SaveFile;
 use crate::version::Version;
 use anyhow::{anyhow, Context, Result};
 use console::style;
+use itertools::Itertools;
+use sha1::digest::generic_array::typenum::private::TrimTrailingZeros;
 
 pub fn run(args: Args) -> Result<()> {
     let config = Config::new(args)?;
 
     match &config.cmd {
         Cmd::Sync(args) => handle_sync(&config, args),
+        Cmd::Query(args) => handle_query(&config, args),
     }
 }
 
@@ -187,6 +192,55 @@ fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
 
     // Write mod-list.json
     directory.save()?;
+
+    Ok(())
+}
+
+fn handle_query(config: &Config, args: &QueryArgs) -> Result<()> {
+    let portal = Portal::new();
+
+    let mod_list = portal.get_all_mods()?;
+
+    let query = args.query.to_lowercase();
+
+    let results = mod_list
+        .results
+        .into_iter()
+        .filter(|mod_data| mod_data.latest_release.is_some())
+        .filter(|mod_data| {
+            mod_data.name.to_lowercase().contains(&query)
+                || mod_data.owner.to_lowercase().contains(&query)
+                || mod_data.title.to_lowercase().contains(&query)
+                || mod_data.summary.to_lowercase().contains(&query)
+        })
+        .sorted_by(|m1, m2| Ord::cmp(&m1.name.to_lowercase(), &m2.name.to_lowercase()))
+        .map(|mod_data| {
+            format!(
+                "{} {} {}\n  {}{}",
+                style("-").magenta(),
+                style(mod_data.name).green().bold(),
+                mod_data.latest_release.unwrap().get_version(),
+                style(mod_data.owner).cyan(),
+                if mod_data.summary.is_empty() {
+                    "".to_string()
+                } else {
+                    format!(
+                        "\n{}",
+                        textwrap::indent(
+                            &textwrap::wrap(
+                                mod_data.summary.lines().next().unwrap_or_default(),
+                                90
+                            )
+                            .join("\n"),
+                            "  ",
+                        )
+                    )
+                }
+            )
+        })
+        .join("\n\n");
+
+    println!("{}", results);
 
     Ok(())
 }

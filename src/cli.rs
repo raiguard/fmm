@@ -20,9 +20,12 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Cmd {
-    /// Downoad, enable, disable, or remove mods
+    /// Download, enable, disable, or remove mods
     #[clap(short_flag = 'S', long_flag = "sync")]
     Sync(SyncArgs),
+    /// Query your local mod collection and the mod portal
+    #[clap(short_flag = 'Q', long_flag = "query")]
+    Query(QueryArgs),
 }
 
 #[derive(clap::Args, Debug)]
@@ -52,4 +55,9 @@ pub struct SyncArgs {
     /// Remove the given mods from the mods directory
     #[clap(short, long)]
     pub remove: Vec<ModIdent>,
+}
+
+#[derive(clap::Args, Debug)]
+pub struct QueryArgs {
+    pub query: String,
 }

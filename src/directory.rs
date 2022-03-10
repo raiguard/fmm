@@ -149,7 +149,6 @@ impl Directory {
 
     pub fn get_newest_matching(&self, dependency: &ModDependency) -> Option<&DirModRelease> {
         self.mods.get(&dependency.name).and_then(|mod_data| {
-            // TODO: This is extremely similar to the HasReleases trait method
             if let Some(version_req) = &dependency.version_req {
                 mod_data
                     .releases
@@ -293,7 +292,6 @@ struct InfoJson {
 
 impl InfoJson {
     fn from_entry(entry: &DirEntry) -> Result<Self> {
-        // TODO: Store the structure in the entry for later use
         let contents = match DirModReleaseType::parse(entry)? {
             DirModReleaseType::Directory | DirModReleaseType::Symlink => {
                 let mut path = entry.path();
