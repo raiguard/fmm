@@ -280,7 +280,7 @@ impl InfoJson {
     fn from_entry(path: &Path) -> Result<Self> {
         let contents = match DirModReleaseType::parse(path)? {
             DirModReleaseType::Directory | DirModReleaseType::Symlink => {
-                fs::read_to_string(path.join("info.json"))?
+                fs::read(path.join("info.json"))
             }
             DirModReleaseType::Zip => {
                 let mut archive = ZipArchive::new(File::open(path)?)?;
@@ -289,14 +289,13 @@ impl InfoJson {
                     .find(|name| name.contains("info.json"))
                     .map(ToString::to_string)
                     .ok_or_else(|| anyhow!("Could not locate info.json in zip archive"))?;
-                let mut file = archive.by_name(&filename)?;
-                let mut contents = String::new();
-                file.read_to_string(&mut contents)?;
-                contents
+                let bytes = archive.by_name(&filename)?.bytes().collect();
+                bytes
             }
-        };
+        }?;
 
-        serde_json::from_str::<InfoJson>(&contents).map_err(|_| anyhow!("Invalid info.json format"))
+        serde_json::from_slice::<InfoJson>(&contents)
+            .map_err(|_| anyhow!("Invalid info.json format"))
     }
 }
 
