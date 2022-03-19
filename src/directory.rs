@@ -63,7 +63,7 @@ impl Directory {
                         .unwrap_or_else(|index| index);
                     mod_entry.releases.insert(index, release);
                 }
-                Err(e) => eprintln!("{} {}", style("Error:").red().bold(), e),
+                Err(e) => eprintln!("{} {:#}", style("Error:").red().bold(), e),
             }
         }
 
