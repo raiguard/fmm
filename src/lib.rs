@@ -266,7 +266,7 @@ trait HasReleases<T: HasVersion> {
         } else {
             None
         }
-        .ok_or_else(|| anyhow!("{} not found in release list"))?;
+        .ok_or_else(|| anyhow!("{} not found in release list", ident))?;
 
         self.get_release_list_mut().remove(index);
 
