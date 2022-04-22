@@ -44,16 +44,16 @@ pub struct SyncArgs {
     #[clap(short = 'o', long)]
     pub disable_all: bool,
     /// Disable the given mods
-    #[clap(short, long)]
+    #[clap(short, long, multiple_values(true), multiple_occurrences(false))]
     pub disable: Vec<ModIdent>,
     /// Download and enable the given mods
-    #[clap(short, long)]
+    #[clap(short, long, multiple_values(true), multiple_occurrences(false))]
     pub enable: Vec<ModIdent>,
     /// Download and enable the given mod set
     #[clap(short = 'E', long)]
     pub enable_set: Option<String>,
     /// Remove the given mods from the mods directory
-    #[clap(short, long)]
+    #[clap(short, long, multiple_values(true), multiple_occurrences(false))]
     pub remove: Vec<ModIdent>,
 }
 
