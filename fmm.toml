@@ -11,7 +11,7 @@ mods_dir = "/home/rai/.factorio/mods/"
 sync_latest_versions = false
 # If enabled, `--sync` will update your mod startup settings
 # Default: true
-sync_latest_versions = true
+sync_startup_settings = true
 
 # Mod portal credentials
 # If `game_dir` is specified, these will be automatically retrieved from `player-data.json`
