@@ -1,4 +1,4 @@
-# [0.6.0] - UNRELEASED
+# [0.6.0] - 2022-04-23
 
 ## Added
 - `query` subcommand, which will search the mod portal for matching mods
