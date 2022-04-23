@@ -1,3 +1,13 @@
+# [0.6.0] - UNRELEASED
+
+## Added
+- `query` subcommand, which will search the mod portal for matching mods
+
+## Changed
+- All mod dependencies are resolved before download or enabling begins
+- Many errors that previously caused the program to abort are now handled gracefully
+- Restructured existing commands and options to fit under a new `sync` subcommand
+
 # [0.5.0] - 2022-03-01
 
 ## Added

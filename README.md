@@ -36,10 +36,15 @@ cargo install fmm
 ## Usage
 
 ```
-fmm --enable space-exploration
+# Enable Space Exploration and all dependencies
+fmm -Se space-exploration
+# Enable a user-defined mod set
+fmm -Ss MyModSet
+# Search the mod portal
+fmm -Q "logistic train network"
 ```
 
-See `fmm --help` for all subcommands.
+See `fmm --help` for all commands.
 
 ## Features
 
@@ -76,5 +81,4 @@ Roughly in this order:
 - Create new mod
 - Package mod
 - Datestamp and increment mod version
-- Download mods
 - Upload mods
