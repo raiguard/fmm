@@ -39,7 +39,7 @@ cargo install fmm
 # Enable Space Exploration and all dependencies
 fmm -Se space-exploration
 # Enable a user-defined mod set
-fmm -Ss MyModSet
+fmm -SE MyModSet
 # Search the mod portal
 fmm -Q "logistic train network"
 ```
