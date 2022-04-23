@@ -12,7 +12,7 @@ Coming soon: an AUR package.
 
 ## Building
 
-Requires [Rust](https://rust-lang.org) nightly.
+Requires [Rust](https://rust-lang.org).
 
 ```
 git clone https://github.com/raiguard/fmm & cd fmm
