@@ -1,3 +1,5 @@
+# THIS PROJECT HAS MOVED TO [SOURCEHUT](https://sr.ht/~raiguard/fmm)
+
 # Factorio Mod Manager
 
 `fmm` is a basic CLI Factorio mod manager. Is is completely portable and runs on all major platforms.
