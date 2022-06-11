@@ -13,6 +13,7 @@ pub struct Config {
     pub game_dir: PathBuf,
     pub mods_dir: PathBuf,
     pub portal_auth: Option<PortalAuth>,
+    pub upload_token: Option<String>,
     pub sets: ModSets,
     pub sync_latest_versions: bool,
     pub sync_startup_settings: bool,
@@ -55,6 +56,10 @@ impl Config {
             game_dir,
             mods_dir,
             portal_auth,
+            upload_token: args
+                .upload_token
+                .or_else(|| std::env::var("FMM_UPLOAD_TOKEN").ok())
+                .or(config_file.upload_token),
             sets: config_file.sets,
             sync_latest_versions: config_file.sync_latest_versions,
             sync_startup_settings: config_file.sync_startup_settings.unwrap_or(true),
@@ -76,6 +81,7 @@ struct ConfigFile {
     game_dir: Option<PathBuf>,
     mods_dir: Option<PathBuf>,
     portal: Option<PortalAuth>,
+    upload_token: Option<String>,
     #[serde_as(as = "Option<HashMap<_, Vec<DisplayFromStr>>>")]
     sets: ModSets,
     #[serde(default)]

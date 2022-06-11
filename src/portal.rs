@@ -3,15 +3,15 @@ use crate::{Config, HasDependencies, HasReleases, HasVersion, ModIdent, Version}
 use anyhow::{anyhow, Result};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use sha1::{Digest, Sha1};
 use std::cmp::min;
 use std::collections::HashMap;
-use std::fs;
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 
 pub struct Portal {
@@ -144,7 +144,7 @@ impl Portal {
 
         // Rename file
         let proper_path = config.mods_dir.join(&release_data.file_name);
-        fs::copy(file.path(), &proper_path)?;
+        std::fs::copy(file.path(), &proper_path)?;
 
         // Finish up
         pb.finish_and_clear();
@@ -174,6 +174,69 @@ impl Portal {
             .send()?
             .json()?)
     }
+
+    pub fn upload(&self, config: &Config, file: &Path) -> Result<()> {
+        let upload_token = config
+            .upload_token
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing mod portal upload token"))?;
+
+        let (name, _) = file
+            .file_name()
+            .ok_or_else(|| anyhow!("Unable to parse filename"))?
+            .to_str()
+            .ok_or_else(|| anyhow!("Filename must be valid unicode"))?
+            .rsplit_once('_')
+            .ok_or_else(|| {
+                anyhow!("Invalid mod filename, must be formatted as 'modname_version.zip'")
+            })?;
+
+        let form = Form::new().text("mod", name.to_string());
+
+        let res = self
+            .client
+            .post("https://mods.factorio.com/api/v2/mods/releases/init_upload")
+            .header("Authorization", format!("Bearer {upload_token}"))
+            .multipart(form)
+            .send()?;
+
+        let body: InitUploadRes = res.json()?;
+        match body {
+            InitUploadRes::Success { upload_url } => {
+                let form = Form::new().part("file", Part::file(file)?);
+                let res = self.client.post(upload_url).multipart(form).send()?;
+
+                let body: FinishUploadRes = res.json()?;
+                match body {
+                    FinishUploadRes::Failure {
+                        error: _error,
+                        message,
+                    } => return Err(anyhow!(message)),
+                    FinishUploadRes::Success { success: _success } => println!("Upload successful"),
+                }
+            }
+            InitUploadRes::Failure {
+                error: _error,
+                message,
+            } => return Err(anyhow!(message)),
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum InitUploadRes {
+    Failure { error: String, message: String },
+    Success { upload_url: String },
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum FinishUploadRes {
+    Failure { error: String, message: String },
+    Success { success: bool },
 }
 
 #[derive(Clone, Debug, Deserialize)]

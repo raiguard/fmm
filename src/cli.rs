@@ -16,6 +16,8 @@ pub struct Args {
     /// Path to the mods directory
     #[clap(long)]
     pub mods_dir: Option<PathBuf>,
+    /// OAUTH token for uploading mods
+    pub upload_token: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -26,6 +28,8 @@ pub enum Cmd {
     /// Query your local mod collection and the mod portal
     #[clap(short_flag = 'Q', long_flag = "query")]
     Query(QueryArgs),
+    /// Upload the mod to the portal
+    Upload { file: PathBuf },
 }
 
 #[derive(clap::Args, Debug)]

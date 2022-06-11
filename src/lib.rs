@@ -11,6 +11,8 @@ mod portal;
 mod save_file;
 mod version;
 
+use std::path::Path;
+
 use crate::cli::{Args, Cmd, QueryArgs, SyncArgs};
 use crate::config::Config;
 use crate::dependency::{ModDependency, ModDependencyType};
@@ -29,6 +31,7 @@ pub fn run(args: Args) -> Result<()> {
     match &config.cmd {
         Cmd::Sync(args) => handle_sync(&config, args),
         Cmd::Query(args) => handle_query(&config, args),
+        Cmd::Upload { file } => handle_upload(&config, file),
     }
 }
 
@@ -233,6 +236,16 @@ fn handle_query(_config: &Config, args: &QueryArgs) -> Result<()> {
         .join("\n\n");
 
     println!("{}", results);
+
+    Ok(())
+}
+
+fn handle_upload(config: &Config, file: &Path) -> Result<()> {
+    let portal = Portal::new();
+
+    portal
+        .upload(config, file)
+        .context("Failed to upload mod")?;
 
     Ok(())
 }
