@@ -17,6 +17,7 @@ pub struct Args {
     #[clap(long)]
     pub mods_dir: Option<PathBuf>,
     /// OAUTH token for uploading mods
+    #[clap(long)]
     pub upload_token: Option<String>,
 }
 
