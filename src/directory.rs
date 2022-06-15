@@ -102,6 +102,21 @@ impl Directory {
         }
     }
 
+    pub fn contains(&mut self, ident: &ModIdent) -> bool {
+        self.get(ident)
+            .map(|entry| {
+                if let Some(version) = &ident.version {
+                    entry
+                        .releases
+                        .iter()
+                        .any(|release| release.get_version() == version)
+                } else {
+                    !entry.releases.is_empty()
+                }
+            })
+            .unwrap_or_default()
+    }
+
     pub fn disable(&mut self, ident: &ModIdent) {
         if ident.name == "base" || self.mods.contains_key(&ident.name) {
             self.list.disable(ident);

@@ -256,11 +256,11 @@ impl HasReleases<PortalModRelease> for PortalMod {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct PortalModRelease {
-    download_url: String,
-    file_name: String,
-    info_json: Option<PortalInfoJson>,
-    sha1: String,
-    version: Version,
+    pub download_url: String,
+    pub file_name: String,
+    pub info_json: Option<PortalInfoJson>,
+    pub sha1: String,
+    pub version: Version,
 }
 
 impl HasDependencies for PortalModRelease {
@@ -278,7 +278,7 @@ impl HasVersion for PortalModRelease {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-struct PortalInfoJson {
+pub struct PortalInfoJson {
     #[serde(default)]
     pub dependencies: Option<Vec<ModDependency>>,
 }

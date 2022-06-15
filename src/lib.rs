@@ -11,192 +11,171 @@ mod portal;
 mod save_file;
 mod version;
 
-use std::path::Path;
-
-use crate::cli::{Args, Cmd, QueryArgs, SyncArgs};
+use crate::cli::{Args, Cmd};
 use crate::config::Config;
-use crate::dependency::{ModDependency, ModDependencyType};
+use crate::dependency::ModDependency;
 use crate::directory::Directory;
 use crate::mod_ident::ModIdent;
 use crate::portal::Portal;
 use crate::save_file::SaveFile;
 use crate::version::Version;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use console::style;
 use itertools::Itertools;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 pub fn run(args: Args) -> Result<()> {
     let config = Config::new(args)?;
 
     match &config.cmd {
-        Cmd::Sync(args) => handle_sync(&config, args),
-        Cmd::Query(args) => handle_query(&config, args),
-        Cmd::Upload { file } => handle_upload(&config, file),
+        Cmd::Disable { mods } => disable(&config, mods),
+        Cmd::Download { mods } => download(&config, mods),
+        Cmd::Enable { ignore_deps, mods } => enable(&config, mods),
+        Cmd::Query { mods } => query(&config, mods),
+        Cmd::Remove { mods } => remove(&config, mods),
+        Cmd::Search { query } => search(&config, query),
+        Cmd::Sync {
+            is_set,
+            no_download,
+            preserve,
+            arg,
+        } => {
+            let mut directory = Directory::new(&config.mods_dir)?;
+
+            if !preserve {
+                directory.disable_all();
+            }
+
+            let mods = if *is_set {
+                if let Some(sets) = &config.sets {
+                    if let Some(set) = sets.get(arg) {
+                        set.clone()
+                    } else {
+                        bail!("mod set '{}' does not exist", arg);
+                    }
+                } else {
+                    bail!("no mod sets have been defined");
+                }
+            } else {
+                let path = PathBuf::from_str(arg)?;
+                if !path.exists() {
+                    bail!("given path does not exist");
+                }
+                let save_file = SaveFile::from(path)?;
+                // Sync startup settings
+                directory
+                    .settings
+                    .merge_startup_settings(&save_file.startup_settings)?;
+                // Extract mods to enable or download
+                save_file
+                    .mods
+                    .iter()
+                    .filter(|ident| ident.name != "base")
+                    .cloned()
+                    .collect()
+            };
+
+            // Download mods that we don't have
+            if !no_download {
+                let to_download: Vec<ModIdent> = mods
+                    .iter()
+                    .cloned()
+                    .filter(|ident| !directory.contains(ident))
+                    .collect();
+                download(&config, &to_download)?;
+            }
+
+            // Enable mods
+            enable(&config, &mods)?;
+
+            Ok(())
+        }
+        Cmd::Upload { file } => upload(&config, file),
     }
 }
 
-fn handle_sync(config: &Config, args: &SyncArgs) -> Result<()> {
-    let mut directory = Directory::new(&config.mods_dir).context("Could not build mod registry")?;
+fn disable(config: &Config, mods: &[ModIdent]) -> Result<()> {
+    let mut directory = Directory::new(&config.mods_dir)?;
+    if mods.is_empty() {
+        directory.disable_all();
+    } else {
+        for ident in mods {
+            directory.disable(ident);
+        }
+    }
+    directory.save()?;
+    Ok(())
+}
+
+fn download(config: &Config, mods: &[ModIdent]) -> Result<()> {
+    let mut directory = Directory::new(&config.mods_dir)?;
     let mut portal = Portal::new();
 
-    // Remove mods
-    for ident in &args.remove {
-        if let Err(e) = directory.remove(ident) {
-            eprintln!("{} {}", style("Error:").red().bold(), e);
+    for ident in mods {
+        if directory.contains(ident) {
+            eprintln!("{} is already downloaded, use --force to override", ident);
+            continue;
         }
-    }
-
-    // Disable mods
-    if args.disable_all {
-        directory.disable_all();
-    }
-    for ident in &args.disable {
-        directory.disable(ident);
-    }
-
-    // Construct initial enable list
-    let mut to_enable_input = vec![];
-    // Save file
-    if let Some(path) = &args.save_file {
-        let save_file =
-            SaveFile::from(path.clone()).context(format!("Could not sync with {:?}", path))?;
-
-        let mut mods: Vec<ModIdent> = save_file
-            .mods
-            .iter()
-            .filter(|ident| ident.name != "base")
-            .cloned()
-            .collect();
-
-        for ident in mods.iter_mut() {
-            if config.sync_latest_versions {
-                ident.version = None;
-            }
-            to_enable_input.push(ident.clone());
-        }
-
-        if !args.ignore_startup_settings {
-            directory
-                .settings
-                .merge_startup_settings(&save_file.startup_settings)
-                .context("Could not sync startup settings")?;
-            println!("Synced startup settings");
-        }
-    }
-    // Set
-    if let Some(set) = &args.enable_set {
-        let sets = config
-            .sets
-            .as_ref()
-            .ok_or_else(|| anyhow!("No mod sets are defined"))?;
-        let set = sets
-            .get(set)
-            .ok_or_else(|| anyhow!("Given set does not exist"))?;
-        to_enable_input = set.to_owned();
-    }
-    // Enable
-    for ident in &args.enable {
-        if !to_enable_input.contains(ident) {
-            to_enable_input.push(ident.clone());
-        }
-    }
-
-    // Iterate mods and dependencies to determine what to download and enable
-    let mut to_download = vec![];
-    let mut to_enable = vec![];
-    if !args.ignore_deps {
-        let mut to_check = to_enable_input;
-        while !to_check.is_empty() {
-            let mut to_check_next = vec![];
-            for ident in &to_check {
-                let dependencies = if let Some(dir_mod) = directory.get(ident) {
-                    dir_mod.get_release(ident).and_then(|release| {
-                        if !to_enable.contains(&release.ident) {
-                            to_enable.push(release.ident.clone());
-                            release.get_dependencies()
-                        } else {
-                            None
-                        }
-                    })
-                } else {
-                    if !portal.contains(&ident.name) {
-                        portal.fetch(&ident.name);
-                    }
-                    portal
-                        .get(&ident.name)
-                        .and_then(|mod_data| mod_data.get_release(ident))
-                        .and_then(|release| {
-                            if !to_download.contains(ident) {
-                                to_download.push(ModIdent {
-                                    name: ident.name.clone(),
-                                    version: Some(release.get_version().clone()),
-                                });
-                                release.get_dependencies()
-                            } else {
-                                None
-                            }
-                        })
-                };
-
-                if let Some(dependencies) = dependencies {
-                    // FIXME: Don't clone here if possible
-                    for dependency in dependencies.clone().iter().filter(|dependency| {
-                        dependency.name != "base"
-                            && matches!(
-                                dependency.dep_type,
-                                ModDependencyType::Required | ModDependencyType::NoLoadOrder
-                            )
-                    }) {
-                        if let Some(dep_release) = directory.get_newest_matching(dependency) {
-                            to_check_next.push(dep_release.ident.clone());
-                        } else {
-                            if !portal.contains(&dependency.name) {
-                                portal.fetch(&dependency.name);
-                            }
-                            if let Some(dep_release) = portal.get_newest_matching(dependency) {
-                                to_check_next.push(ModIdent {
-                                    name: dependency.name.clone(),
-                                    version: Some(dep_release.get_version().clone()),
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-            to_check = to_check_next;
-        }
-    }
-
-    // Download mods
-    for ident in &to_download {
         match portal.download(ident, config) {
-            Ok((new_ident, path)) => {
-                directory.add(new_ident.clone(), path);
-                to_enable.push(new_ident);
+            Ok((ident, path)) => {
+                directory.add(ident, path);
             }
-            Err(e) => eprintln!("{} {}", style("Error").red().bold(), e),
-        };
-    }
-
-    // Enable mods
-    for ident in &to_enable {
-        if let Err(e) = directory.enable(ident) {
-            eprintln!("{} {}", style("Error").red().bold(), e);
+            Err(e) => eprintln!("failed to download mod: {}", e),
         }
     }
 
-    // Write mod-list.json
+    Ok(())
+}
+
+fn enable(config: &Config, mods: &[ModIdent]) -> Result<()> {
+    let mut directory = Directory::new(&config.mods_dir)?;
+
+    for ident in mods {
+        if let Err(e) = directory.enable(ident) {
+            eprintln!("error: {}", e);
+        }
+    }
+
     directory.save()?;
 
     Ok(())
 }
 
-fn handle_query(_config: &Config, args: &QueryArgs) -> Result<()> {
+fn query(config: &Config, mods: &[ModIdent]) -> Result<()> {
+    let directory = Directory::new(&config.mods_dir)?;
+    for ident in mods {
+        match directory.get(ident) {
+            Some(entry) => {
+                for release in entry.get_release_list() {
+                    if ident.version.is_none()
+                        || release.get_version() == ident.version.as_ref().unwrap()
+                    {
+                        println!("{} {}", ident.name, release.get_version());
+                    }
+                }
+            }
+            None => eprintln!("error: mod '{}' not found", ident),
+        }
+    }
+
+    Ok(())
+}
+
+fn remove(config: &Config, mods: &[ModIdent]) -> Result<()> {
+    let mut directory = Directory::new(&config.mods_dir)?;
+    for ident in mods {
+        directory.remove(ident)?;
+    }
+    Ok(())
+}
+
+fn search(_config: &Config, query: &str) -> Result<()> {
     let portal = Portal::new();
 
     let mod_list = portal.get_all_mods()?;
 
-    let query = args.query.to_lowercase();
+    let query = query.to_lowercase();
 
     let results = mod_list
         .results
@@ -240,7 +219,7 @@ fn handle_query(_config: &Config, args: &QueryArgs) -> Result<()> {
     Ok(())
 }
 
-fn handle_upload(config: &Config, file: &Path) -> Result<()> {
+fn upload(config: &Config, file: &Path) -> Result<()> {
     let portal = Portal::new();
 
     portal
