@@ -43,10 +43,6 @@ pub fn run(args: Args) -> Result<()> {
         } => {
             let mut directory = Directory::new(&config.mods_dir)?;
 
-            if !preserve {
-                directory.disable_all();
-            }
-
             let mods = if *is_set {
                 if let Some(sets) = &config.sets {
                     if let Some(set) = sets.get(arg) {
@@ -85,6 +81,12 @@ pub fn run(args: Args) -> Result<()> {
                     .collect();
                 download(&config, &to_download)?;
             }
+
+            if !preserve {
+                directory.disable_all();
+            }
+
+            directory.save()?;
 
             // Enable mods
             enable(&config, &mods)?;
@@ -125,6 +127,8 @@ fn download(config: &Config, mods: &[ModIdent]) -> Result<()> {
             Err(e) => eprintln!("failed to download mod: {}", e),
         }
     }
+
+    directory.save()?;
 
     Ok(())
 }
@@ -168,6 +172,7 @@ fn remove(config: &Config, mods: &[ModIdent]) -> Result<()> {
     for ident in mods {
         directory.remove(ident)?;
     }
+    directory.save()?;
     Ok(())
 }
 
@@ -291,6 +296,8 @@ fn update(config: &Config, mods: &[String]) -> Result<()> {
     } else {
         eprintln!("there is nothing to do");
     }
+
+    directory.save()?;
 
     Ok(())
 }
