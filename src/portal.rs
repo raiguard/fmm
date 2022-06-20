@@ -181,15 +181,17 @@ impl Portal {
             .as_ref()
             .ok_or_else(|| anyhow!("Missing mod portal upload token"))?;
 
-        let (name, _) = file
+        let file_name = file
             .file_name()
             .ok_or_else(|| anyhow!("Unable to parse filename"))?
             .to_str()
-            .ok_or_else(|| anyhow!("Filename must be valid unicode"))?
-            .rsplit_once('_')
-            .ok_or_else(|| {
-                anyhow!("Invalid mod filename, must be formatted as 'modname_version.zip'")
-            })?;
+            .ok_or_else(|| anyhow!("Filename must be valid unicode"))?;
+
+        let (name, _) = file_name.rsplit_once('_').ok_or_else(|| {
+            anyhow!("Invalid mod filename, must be formatted as 'modname_version.zip'")
+        })?;
+
+        println!("Uploading {}", file_name);
 
         let form = Form::new().text("mod", name.to_string());
 
