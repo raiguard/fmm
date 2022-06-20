@@ -20,6 +20,7 @@ pub struct Directory {
     pub settings: ModSettings,
 }
 
+// TODO: Don't read zip files unless we need to
 impl Directory {
     /// Constructs the object from the given mods directory
     pub fn new(path: &Path) -> Result<Self> {
@@ -150,6 +151,16 @@ impl Directory {
 
     pub fn get(&self, ident: &ModIdent) -> Option<&DirMod> {
         self.mods.get(&ident.name)
+    }
+
+    pub fn get_all_names(&self) -> Vec<String> {
+        self.mods.keys().cloned().collect()
+    }
+
+    pub fn get_newest(&self, name: &str) -> Option<&DirModRelease> {
+        self.mods
+            .get(name)
+            .and_then(|mod_data| mod_data.releases.last())
     }
 
     pub fn get_newest_matching(&self, dependency: &ModDependency) -> Option<&DirModRelease> {

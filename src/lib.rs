@@ -91,6 +91,7 @@ pub fn run(args: Args) -> Result<()> {
 
             Ok(())
         }
+        Cmd::Update { mods } => update(&config, mods),
         Cmd::Upload { file } => upload(&config, file),
     }
 }
@@ -215,6 +216,81 @@ fn search(_config: &Config, query: &str) -> Result<()> {
         .join("\n\n");
 
     println!("{}", results);
+
+    Ok(())
+}
+
+fn update(config: &Config, mods: &[String]) -> Result<()> {
+    let directory = Directory::new(&config.mods_dir)?;
+    let portal = Portal::new();
+
+    let no_input = mods.is_empty();
+
+    let latest_portal: Vec<ModIdent> = portal
+        .get_all_mods()?
+        .results
+        .iter()
+        .filter_map(|entry| {
+            entry.latest_release.as_ref().map(|release| ModIdent {
+                name: entry.name.clone(),
+                version: Some(release.version.clone()),
+            })
+        })
+        .collect();
+
+    let latest_local: Vec<ModIdent> = if no_input {
+        directory.get_all_names()
+    } else {
+        mods.to_vec()
+    }
+    .iter()
+    .filter_map(|name| {
+        if let Some(latest_version) = directory.get_newest(name) {
+            Some(ModIdent {
+                name: name.to_string(),
+                version: Some(latest_version.get_version().clone()),
+            })
+        } else {
+            eprintln!("mod '{}' was not found in the mods directory", name);
+            None
+        }
+    })
+    .collect();
+
+    let to_download: Vec<ModIdent> = latest_local
+        .iter()
+        .filter_map(|ident| {
+            if let Some(pident) = latest_portal
+                .iter()
+                .find(|pident| pident.name == ident.name)
+            {
+                if ident.get_guaranteed_version() < pident.get_guaranteed_version() {
+                    Some(pident)
+                } else {
+                    // Printing this message when updating all mods is unnecessary
+                    if !no_input {
+                        eprintln!(
+                            "mod '{}' is already up-to-date (local: {}, portal: {})",
+                            ident.name,
+                            ident.get_guaranteed_version(),
+                            pident.get_guaranteed_version()
+                        );
+                    }
+                    None
+                }
+            } else {
+                eprintln!("mod '{}' was not found on the mod portal", ident.name);
+                None
+            }
+        })
+        .cloned()
+        .collect();
+
+    if !to_download.is_empty() {
+        download(config, &to_download)?;
+    } else {
+        eprintln!("there is nothing to do");
+    }
 
     Ok(())
 }

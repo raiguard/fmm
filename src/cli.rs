@@ -71,6 +71,9 @@ pub enum Cmd {
     /// Query your local mod collection
     #[clap(short_flag = 'Q')]
     Query { mods: Vec<ModIdent> },
+    /// Update the given mods, or all mods if none are provided
+    #[clap(short_flag = 'U')]
+    Update { mods: Vec<String> },
     /// Upload the mod to the portal
     #[clap(short_flag = 'P')]
     Upload { file: PathBuf },
