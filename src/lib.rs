@@ -40,59 +40,7 @@ pub fn run(args: Args) -> Result<()> {
             no_download,
             preserve,
             arg,
-        } => {
-            let mut directory = Directory::new(&config.mods_dir)?;
-
-            let mods = if *is_set {
-                if let Some(sets) = &config.sets {
-                    if let Some(set) = sets.get(arg) {
-                        set.clone()
-                    } else {
-                        bail!("mod set '{}' does not exist", arg);
-                    }
-                } else {
-                    bail!("no mod sets have been defined");
-                }
-            } else {
-                let path = PathBuf::from_str(arg)?;
-                if !path.exists() {
-                    bail!("given path does not exist");
-                }
-                let save_file = SaveFile::from(path)?;
-                // Sync startup settings
-                directory
-                    .settings
-                    .merge_startup_settings(&save_file.startup_settings)?;
-                // Extract mods to enable or download
-                save_file
-                    .mods
-                    .iter()
-                    .filter(|ident| ident.name != "base")
-                    .cloned()
-                    .collect()
-            };
-
-            // Download mods that we don't have
-            if !no_download {
-                let to_download: Vec<ModIdent> = mods
-                    .iter()
-                    .cloned()
-                    .filter(|ident| !directory.contains(ident))
-                    .collect();
-                download(&config, &to_download)?;
-            }
-
-            if !preserve {
-                directory.disable_all();
-            }
-
-            directory.save()?;
-
-            // Enable mods
-            enable(&config, &mods)?;
-
-            Ok(())
-        }
+        } => sync(&config, is_set, no_download, preserve, arg),
         Cmd::Update { mods } => update(&config, mods),
         Cmd::Upload { file } => upload(&config, file),
     }
@@ -135,6 +83,9 @@ fn download(config: &Config, mods: &[ModIdent]) -> Result<()> {
 
 fn enable(config: &Config, mods: &[ModIdent]) -> Result<()> {
     let mut directory = Directory::new(&config.mods_dir)?;
+
+    let to_enable = mods.to_vec();
+    let to_check = mods.to_vec();
 
     for ident in mods {
         if let Err(e) = directory.enable(ident) {
@@ -221,6 +172,66 @@ fn search(_config: &Config, query: &str) -> Result<()> {
         .join("\n\n");
 
     println!("{}", results);
+
+    Ok(())
+}
+
+fn sync(
+    config: &Config,
+    is_set: &bool,
+    no_download: &bool,
+    preserve: &bool,
+    arg: &str,
+) -> Result<()> {
+    let mut directory = Directory::new(&config.mods_dir)?;
+
+    let mods = if *is_set {
+        if let Some(sets) = &config.sets {
+            if let Some(set) = sets.get(arg) {
+                set.clone()
+            } else {
+                bail!("mod set '{}' does not exist", arg);
+            }
+        } else {
+            bail!("no mod sets have been defined");
+        }
+    } else {
+        let path = PathBuf::from_str(arg)?;
+        if !path.exists() {
+            bail!("path '{}' does not exist", path.to_str().unwrap());
+        }
+        let save_file = SaveFile::from(path)?;
+        // Sync startup settings
+        directory
+            .settings
+            .merge_startup_settings(&save_file.startup_settings)?;
+        // Extract mods to enable or download
+        save_file
+            .mods
+            .iter()
+            .filter(|ident| ident.name != "base")
+            .cloned()
+            .collect()
+    };
+
+    // Download mods that we don't have
+    if !no_download {
+        let to_download: Vec<ModIdent> = mods
+            .iter()
+            .cloned()
+            .filter(|ident| !directory.contains(ident))
+            .collect();
+        download(config, &to_download)?;
+    }
+
+    if !preserve {
+        directory.disable_all();
+    }
+
+    directory.save()?;
+
+    // Enable mods
+    enable(config, &mods)?;
 
     Ok(())
 }
