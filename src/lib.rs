@@ -1,6 +1,5 @@
 #![allow(unstable_name_collisions)]
 
-pub mod cli;
 mod config;
 mod dat;
 mod dependency;
@@ -11,7 +10,6 @@ mod portal;
 mod save_file;
 mod version;
 
-use crate::cli::{Args, Cmd};
 use crate::config::Config;
 use crate::dependency::ModDependency;
 use crate::directory::Directory;
@@ -22,28 +20,71 @@ use crate::version::Version;
 use anyhow::{anyhow, bail, Context, Result};
 use console::style;
 use itertools::Itertools;
-use std::path::{Path, PathBuf};
+use pico_args::Arguments;
+use std::path::PathBuf;
 use std::str::FromStr;
 
-pub fn run(args: Args) -> Result<()> {
-    let config = Config::new(args)?;
+const HELP: &str = "usage: fmm <options> <args>
+options:
+    --game-dir <PATH>  custom game directory path
+    --mods-dir <PATH>  custom mod directory path
+    --token <TOKEN>    oauth token for the mod portal
+subcommands:
+    disable <MODS>
+    download <MODS>
+    enable <MODS>
+    query <MODS>
+    remove <MODS>
+    search <QUERY>
+    sync (-s --set) <SET/FILE>
+    update <MODS>
+    upload <PATH>
+";
 
-    match &config.cmd {
-        Cmd::Disable { mods } => disable(&config, mods),
-        Cmd::Download { mods } => download(&config, mods),
-        Cmd::Enable { ignore_deps, mods } => enable(&config, mods),
-        Cmd::Query { mods } => query(&config, mods),
-        Cmd::Remove { mods } => remove(&config, mods),
-        Cmd::Search { query } => search(&config, query),
-        Cmd::Sync {
-            is_set,
-            no_download,
-            preserve,
-            arg,
-        } => sync(&config, is_set, no_download, preserve, arg),
-        Cmd::Update { mods } => update(&config, mods),
-        Cmd::Upload { file } => upload(&config, file),
+fn finish_args<T>(args: Arguments) -> Result<Vec<T>>
+where
+    T: FromStr,
+    anyhow::Error: From<<T as FromStr>::Err>,
+{
+    args.finish()
+        .iter()
+        .map(|str| {
+            str.to_str()
+                .ok_or_else(|| anyhow!("argument '{:?}' is not valid unicode", str))
+                .and_then(|str| T::from_str(str).map_err(|e| anyhow!(e)))
+        })
+        .collect()
+}
+
+pub fn run() -> Result<()> {
+    let mut args = Arguments::from_env();
+
+    if args.contains("--help") || std::env::args().len() == 1 {
+        println!("{HELP}");
+        return Ok(());
     }
+
+    let config = Config::new(&mut args)?;
+
+    match args.subcommand()?.as_deref() {
+        Some("disable") => disable(&config, &finish_args::<ModIdent>(args)?)?,
+        Some("download") => download(&config, &finish_args::<ModIdent>(args)?)?,
+        Some("enable") => enable(&config, &finish_args::<ModIdent>(args)?)?,
+        Some("query") => query(&config, &finish_args::<ModIdent>(args)?)?,
+        Some("remove") => remove(&config, &finish_args::<ModIdent>(args)?)?,
+        Some("search") => search(&config, args.free_from_str()?)?,
+        Some("sync") => sync(
+            &config,
+            &args.contains(["-s", "--sync"]),
+            &args.free_from_str()?,
+        )?,
+        Some("update") => update(&config, &finish_args::<String>(args)?)?,
+        Some("upload") => upload(&config, args.free_from_str()?)?,
+        Some(cmd) => eprintln!("unknown subcommand: {cmd}\n{HELP}"),
+        None => eprintln!("{HELP}"),
+    };
+
+    Ok(())
 }
 
 fn disable(config: &Config, mods: &[ModIdent]) -> Result<()> {
@@ -127,7 +168,7 @@ fn remove(config: &Config, mods: &[ModIdent]) -> Result<()> {
     Ok(())
 }
 
-fn search(_config: &Config, query: &str) -> Result<()> {
+fn search(_config: &Config, query: String) -> Result<()> {
     let portal = Portal::new();
 
     let mod_list = portal.get_all_mods()?;
@@ -176,13 +217,7 @@ fn search(_config: &Config, query: &str) -> Result<()> {
     Ok(())
 }
 
-fn sync(
-    config: &Config,
-    is_set: &bool,
-    no_download: &bool,
-    preserve: &bool,
-    arg: &str,
-) -> Result<()> {
+fn sync(config: &Config, is_set: &bool, arg: &String) -> Result<()> {
     let mut directory = Directory::new(&config.mods_dir)?;
 
     let mods = if *is_set {
@@ -215,7 +250,7 @@ fn sync(
     };
 
     // Download mods that we don't have
-    if !no_download {
+    if !config.sync_no_download {
         let to_download: Vec<ModIdent> = mods
             .iter()
             .cloned()
@@ -224,9 +259,7 @@ fn sync(
         download(config, &to_download)?;
     }
 
-    if !preserve {
-        directory.disable_all();
-    }
+    directory.disable_all();
 
     directory.save()?;
 
@@ -313,11 +346,11 @@ fn update(config: &Config, mods: &[String]) -> Result<()> {
     Ok(())
 }
 
-fn upload(config: &Config, file: &Path) -> Result<()> {
+fn upload(config: &Config, file: PathBuf) -> Result<()> {
     let portal = Portal::new();
 
     portal
-        .upload(config, file)
+        .upload(config, &file)
         .context("Failed to upload mod")?;
 
     Ok(())

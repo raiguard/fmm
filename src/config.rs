@@ -1,6 +1,6 @@
-use crate::cli;
 use crate::ModIdent;
 use anyhow::{anyhow, ensure, Result};
+use pico_args::Arguments;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashMap;
@@ -9,28 +9,30 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Config {
-    pub cmd: cli::Cmd,
     pub game_dir: PathBuf,
     pub mods_dir: PathBuf,
     pub portal_auth: Option<PortalAuth>,
     pub upload_token: Option<String>,
     pub sets: ModSets,
     pub sync_latest_versions: bool,
+    pub sync_no_download: bool,
     pub sync_startup_settings: bool,
 }
 
 impl Config {
-    pub fn new(args: cli::Args) -> Result<Self> {
-        let config_file = ConfigFile::new(args.config)?.unwrap_or_default();
+    pub fn new(args: &mut Arguments) -> Result<Self> {
+        let config_file =
+            ConfigFile::new(args.opt_value_from_str("--config")?)?.unwrap_or_default();
 
-        let game_dir = args
-            .game_dir
+        let game_dir = args.opt_value_from_str("--game-dir")?;
+        let mods_dir = args.opt_value_from_str("--mods-dir")?;
+
+        let game_dir = game_dir
             .or(config_file.game_dir)
             .ok_or_else(|| anyhow!("Did not provide game directory"))?;
         ensure!(game_dir.exists(), "Invalid game directory");
 
-        let mods_dir = args
-            .mods_dir
+        let mods_dir = mods_dir
             .or(config_file.mods_dir)
             .or_else(|| Some(game_dir.join("mods")))
             .ok_or_else(|| anyhow!("Did not provide mods directory"))?;
@@ -52,16 +54,16 @@ impl Config {
         });
 
         Ok(Self {
-            cmd: args.cmd,
             game_dir,
             mods_dir,
             portal_auth,
             upload_token: args
-                .upload_token
+                .opt_value_from_str("--token")?
                 .or_else(|| std::env::var("FMM_UPLOAD_TOKEN").ok())
                 .or(config_file.upload_token),
             sets: config_file.sets,
             sync_latest_versions: config_file.sync_latest_versions,
+            sync_no_download: config_file.sync_no_download,
             sync_startup_settings: config_file.sync_startup_settings.unwrap_or(true),
         })
     }
@@ -86,6 +88,8 @@ struct ConfigFile {
     sets: ModSets,
     #[serde(default)]
     sync_latest_versions: bool,
+    #[serde(default)]
+    sync_no_download: bool,
     sync_startup_settings: Option<bool>,
 }
 

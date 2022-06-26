@@ -43,7 +43,8 @@ impl FromStr for ModIdent {
                 }
             }
             _ => Err(anyhow!(
-                "Incorrect mod format - must be 'Name' or 'Name@Version'"
+                "Could not parse '{}' - must be 'name' or 'name@version'",
+                s
             )),
         }
     }
