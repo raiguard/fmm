@@ -14,11 +14,11 @@ use anyhow::{anyhow, bail, Context, Result};
 use config::Config;
 use console::style;
 use dependency::ModDependency;
-use directory::Directory;
+use directory::{Directory, WrappedDirectory};
 use itertools::Itertools;
 use mod_ident::ModIdent;
 use pico_args::Arguments;
-use portal::Portal;
+use portal::{Portal, WrappedPortal};
 use save_file::SaveFile;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -56,38 +56,18 @@ where
 }
 
 pub struct Ctx {
-    pub directory: Option<Directory>,
-    pub portal: Option<Portal>,
-    mods_dir: PathBuf,
+    pub directory: WrappedDirectory,
+    pub portal: WrappedPortal,
 }
 
 impl Ctx {
     pub fn new(config: &Config) -> Self {
         Self {
-            directory: None,
-            portal: None,
-            mods_dir: config.mods_dir.clone(),
+            directory: WrappedDirectory::new(config),
+            portal: WrappedPortal::new(config),
         }
     }
 
-    pub fn directory(&mut self) -> &mut Directory {
-        if self.directory.is_none() {
-            match Directory::new(&self.mods_dir) {
-                Ok(directory) => self.directory = Some(directory),
-                Err(e) => {
-                    eprintln!("unable to read mod directory: {}", e);
-                    std::process::exit(1);
-                }
-            }
-        }
-        self.directory.as_mut().unwrap()
-    }
-
-    pub fn portal(&mut self) -> &mut Portal {
-        if self.portal.is_none() {
-            self.portal = Some(Portal::new());
-        }
-        self.portal.as_mut().unwrap()
     }
 }
 
@@ -126,31 +106,31 @@ pub fn main() -> Result<()> {
 
 fn disable(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) -> Result<()> {
     if mods.is_empty() {
-        ctx.directory().disable_all();
+        ctx.directory.get().disable_all();
     } else {
         for ident in mods {
-            ctx.directory().disable(ident);
+            ctx.directory.get().disable(ident);
         }
     }
-    ctx.directory().save()?;
+    ctx.directory.get().save()?;
     Ok(())
 }
 
 fn download(ctx: &mut Ctx, config: &Config, mods: &[ModIdent]) -> Result<()> {
     for ident in mods {
-        if ctx.directory().contains(ident) {
+        if ctx.directory.get().contains(ident) {
             eprintln!("{} is already downloaded, use --force to override", ident);
             continue;
         }
-        match ctx.portal().download(ident, config) {
+        match ctx.portal.get().download(ident, config) {
             Ok((ident, path)) => {
-                ctx.directory().add(ident, path);
+                ctx.directory.get().add(ident, path);
             }
             Err(e) => eprintln!("failed to download mod: {}", e),
         }
     }
 
-    ctx.directory().save()?;
+    ctx.directory.get().save()?;
 
     Ok(())
 }
@@ -160,19 +140,19 @@ fn enable(ctx: &mut Ctx, config: &Config, mods: &[ModIdent]) -> Result<()> {
     let to_check = mods.to_vec();
 
     for ident in mods {
-        if let Err(e) = ctx.directory().enable(ident) {
-            eprintln!("error: {}", e);
+        if let Err(e) = ctx.directory.get().enable(&ident) {
+            eprintln!("could not enable mod: {}", e);
         }
     }
 
-    ctx.directory().save()?;
+    ctx.directory.get().save()?;
 
     Ok(())
 }
 
 fn query(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) -> Result<()> {
     for ident in mods {
-        match ctx.directory().get(ident) {
+        match ctx.directory.get().get(ident) {
             Some(entry) => {
                 for release in entry.get_release_list() {
                     if ident.version.is_none()
@@ -191,14 +171,14 @@ fn query(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) -> Result<()> {
 
 fn remove(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) -> Result<()> {
     for ident in mods {
-        ctx.directory().remove(ident)?;
+        ctx.directory.get().remove(ident)?;
     }
-    ctx.directory().save()?;
+    ctx.directory.get().save()?;
     Ok(())
 }
 
 fn search(ctx: &mut Ctx, _config: &Config, query: String) -> Result<()> {
-    let mod_list = ctx.portal().get_all_mods()?;
+    let mod_list = ctx.portal.get().get_all_mods()?;
 
     let query = query.to_lowercase();
 
@@ -262,7 +242,8 @@ fn sync(ctx: &mut Ctx, config: &Config, is_set: &bool, arg: &String) -> Result<(
         }
         let save_file = SaveFile::from(path)?;
         // Sync startup settings
-        ctx.directory()
+        ctx.directory
+            .get()
             .settings
             .merge_startup_settings(&save_file.startup_settings)?;
         // Extract mods to enable or download
@@ -276,7 +257,7 @@ fn sync(ctx: &mut Ctx, config: &Config, is_set: &bool, arg: &String) -> Result<(
 
     // Download mods that we don't have
     if !config.sync_no_download {
-        let directory = ctx.directory();
+        let directory = ctx.directory.get();
         let to_download: Vec<ModIdent> = mods
             .iter()
             .cloned()
@@ -285,9 +266,9 @@ fn sync(ctx: &mut Ctx, config: &Config, is_set: &bool, arg: &String) -> Result<(
         download(ctx, config, &to_download)?;
     }
 
-    ctx.directory().disable_all();
+    ctx.directory.get().disable_all();
 
-    ctx.directory().save()?;
+    ctx.directory.get().save()?;
 
     // Enable mods
     enable(ctx, config, &mods)?;
@@ -299,7 +280,8 @@ fn update(ctx: &mut Ctx, config: &Config, mods: &[String]) -> Result<()> {
     let no_input = mods.is_empty();
 
     let latest_portal: Vec<ModIdent> = ctx
-        .portal()
+        .portal
+        .get()
         .get_all_mods()?
         .results
         .iter()
@@ -312,13 +294,13 @@ fn update(ctx: &mut Ctx, config: &Config, mods: &[String]) -> Result<()> {
         .collect();
 
     let latest_local: Vec<ModIdent> = if no_input {
-        ctx.directory().get_all_names()
+        ctx.directory.get().get_all_names()
     } else {
         mods.to_vec()
     }
     .iter()
     .filter_map(|name| {
-        if let Some(latest_version) = ctx.directory().get_newest(name) {
+        if let Some(latest_version) = ctx.directory.get().get_newest(name) {
             Some(ModIdent {
                 name: name.to_string(),
                 version: Some(latest_version.get_version().clone()),
@@ -365,13 +347,14 @@ fn update(ctx: &mut Ctx, config: &Config, mods: &[String]) -> Result<()> {
         eprintln!("there is nothing to do");
     }
 
-    ctx.directory().save()?;
+    ctx.directory.get().save()?;
 
     Ok(())
 }
 
 fn upload(ctx: &mut Ctx, config: &Config, file: PathBuf) -> Result<()> {
-    ctx.portal()
+    ctx.portal
+        .get()
         .upload(config, &file)
         .context("Failed to upload mod")?;
 

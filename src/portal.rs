@@ -227,6 +227,23 @@ impl Portal {
     }
 }
 
+pub struct WrappedPortal {
+    inner: Option<Portal>,
+}
+
+impl WrappedPortal {
+    pub fn new(_config: &Config) -> Self {
+        Self { inner: None }
+    }
+
+    pub fn get(&mut self) -> &mut Portal {
+        if self.inner.is_none() {
+            self.inner = Some(Portal::new());
+        }
+        self.inner.as_mut().unwrap()
+    }
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum InitUploadRes {

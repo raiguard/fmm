@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::dependency::ModDependency;
 use crate::mod_settings::ModSettings;
 use crate::{HasDependencies, HasReleases, HasVersion, ModIdent, Version};
@@ -205,6 +206,33 @@ impl Directory {
         println!("{} {}", style("Removed").magenta().bold(), ident);
 
         Ok(())
+    }
+}
+
+pub struct WrappedDirectory {
+    inner: Option<Directory>,
+    path: PathBuf,
+}
+
+impl WrappedDirectory {
+    pub fn new(config: &Config) -> Self {
+        Self {
+            inner: None,
+            path: config.mods_dir.clone(),
+        }
+    }
+
+    pub fn get(&mut self) -> &mut Directory {
+        if self.inner.is_none() {
+            match Directory::new(&self.path) {
+                Ok(directory) => self.inner = Some(directory),
+                Err(e) => {
+                    eprintln!("unable to read mod directory: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+        self.inner.as_mut().unwrap()
     }
 }
 
