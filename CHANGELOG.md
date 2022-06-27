@@ -1,3 +1,16 @@
+# [0.7.0] - ??????????
+
+## Added
+- `update` and `upload` subcommands
+
+## Changed
+- Restructured existing functionality into distinct and easy-to-understand subcommands
+- `query` subcommand now searches the local mod directory, while `search` searches the mod portal
+- `sync-file` will sync the exact mods in the file, unless `sync_latest_versions` is enabled, in which case it will scan for dependencies
+
+## Removed
+- `auto_download` and `sync_startup_settings` settings
+
 # [0.6.0] - 2022-04-23
 
 ## Added
