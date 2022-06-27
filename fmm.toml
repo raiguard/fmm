@@ -1,27 +1,28 @@
-# If enabled, mods that you don't have will automatically be downloaded
-# Default: true
-auto_download = true
 # The path to the Factorio installation you wish to use
+# May be overridden with the `--game-dir` flag
 game_dir = "/home/rai/games/factorio"
 # The path to the Factorio mods directory
 # If `game_dir` is specified and the mods folder is within it, you do not need to add this
+# May be overridden with the `--mods-dir` flag
 mods_dir = "/home/rai/.factorio/mods/"
-# If enabled, `--sync` will enable or download the latest version of each mod instead of the version in the save file
+# If enabled, `fmm sync-file` will enable or download the latest version of each mod instead of the version in the save file
 # Default: false
 sync_latest_versions = false
-# If enabled, `--sync` will update your mod startup settings
-# Default: true
-sync_startup_settings = true
+# Your OAUTH token for mod portal access
+# This is currently only used for mod uploading, but will eventually replace the `portal` section
+# You may alternatively specify your token with the FMM_TOKEN environment variable
+# May be overridden with the `--token` flag
+token = "12345"
 
 # Mod portal credentials
-# If `game_dir` is specified, these will be automatically retrieved from `player-data.json`
+# These will be automatically retrieved from `player-data.json` in `game_dir'
 # Retrieve or reset your token: https://factorio.com -> Profile -> Token
 [portal]
 token = "12345"
 username = "raiguard"
 
 # Customizable mod sets
-# Each key will be available for use in the `--enable-set` flag
+# Each key will be available for use in the `enable-set` or `sync-set` subcommand
 # Dependencies will automatically be enabled
 # Specific versions may be specified by appending `@version` to the mod name
 [sets]

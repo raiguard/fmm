@@ -27,8 +27,9 @@ use version::Version;
 
 const HELP: &str = "usage: fmm <options> <subcommand>
 options:
-    --game-dir <PATH>  custom game directory path
-    --mods-dir <PATH>  custom mod directory path
+    --config <PATH>    path to a custom configuration file
+    --game-dir <PATH>  path to the game directory
+    --mods-dir <PATH>  path to the mods directory
     --token <TOKEN>    oauth token for the mod portal
 subcommands:
     disable <MODS>    disable the given mods, or all mods if no mods are given
@@ -43,117 +44,6 @@ subcommands:
     sync-set <SET>    enable the mods from the given mod set, downloading if necessary
     update <MODS>     update the given mods, or all mods if no mods are given
     upload <PATH>     upload the given mod zip file to the mod portal";
-
-fn finish_args<T>(args: Arguments) -> Result<Vec<T>>
-where
-    T: FromStr,
-    anyhow::Error: From<<T as FromStr>::Err>,
-{
-    args.finish()
-        .iter()
-        .map(|str| {
-            str.to_str()
-                .ok_or_else(|| anyhow!("argument '{:?}' is not valid unicode", str))
-                .and_then(|str| T::from_str(str).map_err(|e| anyhow!(e)))
-        })
-        .collect()
-}
-
-pub struct Ctx {
-    pub directory: WrappedDirectory,
-    pub portal: WrappedPortal,
-}
-
-impl Ctx {
-    pub fn new(config: &Config) -> Self {
-        Self {
-            directory: WrappedDirectory::new(config),
-            portal: WrappedPortal::new(config),
-        }
-    }
-
-    pub fn add_dependencies(
-        &mut self,
-        mut to_check: Vec<ModIdent>,
-        check_portal: bool,
-    ) -> Vec<ModIdent> {
-        let mut mods = vec![];
-        let mut checked = HashSet::new();
-
-        while !to_check.is_empty() {
-            let mut to_check_next = vec![];
-            for ident in &to_check {
-                if !checked.contains(&ident.name) {
-                    checked.insert(ident.name.clone());
-                    mods.push(ident.clone());
-                    self.directory
-                        .get()
-                        .get(ident)
-                        .and_then(|entry| {
-                            entry
-                                .get_release(ident)
-                                .and_then(|release| release.get_dependencies())
-                        })
-                        .or_else(|| {
-                            self.portal
-                                .get()
-                                .get_or_fetch(&ident.name)
-                                .and_then(|entry| {
-                                    entry
-                                        .get_release(ident)
-                                        .and_then(|release| release.get_dependencies())
-                                })
-                        })
-                        .cloned()
-                        .unwrap_or_default()
-                        .iter()
-                        .filter(|dependency| {
-                            dependency.name != "base"
-                                && !checked.contains(&dependency.name)
-                                && matches!(
-                                    dependency.dep_type,
-                                    ModDependencyType::Required | ModDependencyType::NoLoadOrder
-                                )
-                        })
-                        .filter_map(|dependency| {
-                            let mut newest = None;
-                            if let Some(entry) =
-                                self.directory.get().get_newest_matching(dependency)
-                            {
-                                newest = Some(entry.ident.clone());
-                            };
-
-                            if newest.is_none() && check_portal {
-                                newest = self
-                                    .portal
-                                    .get()
-                                    .get_or_fetch_newest_matching(dependency)
-                                    .map(|release| ModIdent {
-                                        name: dependency.name.clone(),
-                                        version: Some(release.version.clone()),
-                                    });
-                            }
-
-                            if newest.is_none() {
-                                eprintln!(
-                                    "no mod found that satisfies dependency '{}'",
-                                    dependency
-                                );
-                            }
-
-                            newest
-                        })
-                        .for_each(|ident| {
-                            to_check_next.push(ident);
-                        });
-                }
-            }
-            to_check = to_check_next;
-        }
-
-        mods
-    }
-}
 
 pub fn main() -> Result<()> {
     let mut args = Arguments::from_env();
@@ -441,6 +331,117 @@ fn upload(ctx: &mut Ctx, config: &Config, file: PathBuf) -> Result<()> {
         .context("Failed to upload mod")?;
 
     Ok(())
+}
+
+pub struct Ctx {
+    pub directory: WrappedDirectory,
+    pub portal: WrappedPortal,
+}
+
+impl Ctx {
+    pub fn new(config: &Config) -> Self {
+        Self {
+            directory: WrappedDirectory::new(config),
+            portal: WrappedPortal::new(config),
+        }
+    }
+
+    pub fn add_dependencies(
+        &mut self,
+        mut to_check: Vec<ModIdent>,
+        check_portal: bool,
+    ) -> Vec<ModIdent> {
+        let mut mods = vec![];
+        let mut checked = HashSet::new();
+
+        while !to_check.is_empty() {
+            let mut to_check_next = vec![];
+            for ident in &to_check {
+                if !checked.contains(&ident.name) {
+                    checked.insert(ident.name.clone());
+                    mods.push(ident.clone());
+                    self.directory
+                        .get()
+                        .get(ident)
+                        .and_then(|entry| {
+                            entry
+                                .get_release(ident)
+                                .and_then(|release| release.get_dependencies())
+                        })
+                        .or_else(|| {
+                            self.portal
+                                .get()
+                                .get_or_fetch(&ident.name)
+                                .and_then(|entry| {
+                                    entry
+                                        .get_release(ident)
+                                        .and_then(|release| release.get_dependencies())
+                                })
+                        })
+                        .cloned()
+                        .unwrap_or_default()
+                        .iter()
+                        .filter(|dependency| {
+                            dependency.name != "base"
+                                && !checked.contains(&dependency.name)
+                                && matches!(
+                                    dependency.dep_type,
+                                    ModDependencyType::Required | ModDependencyType::NoLoadOrder
+                                )
+                        })
+                        .filter_map(|dependency| {
+                            let mut newest = None;
+                            if let Some(entry) =
+                                self.directory.get().get_newest_matching(dependency)
+                            {
+                                newest = Some(entry.ident.clone());
+                            };
+
+                            if newest.is_none() && check_portal {
+                                newest = self
+                                    .portal
+                                    .get()
+                                    .get_or_fetch_newest_matching(dependency)
+                                    .map(|release| ModIdent {
+                                        name: dependency.name.clone(),
+                                        version: Some(release.version.clone()),
+                                    });
+                            }
+
+                            if newest.is_none() {
+                                eprintln!(
+                                    "no mod found that satisfies dependency '{}'",
+                                    dependency
+                                );
+                            }
+
+                            newest
+                        })
+                        .for_each(|ident| {
+                            to_check_next.push(ident);
+                        });
+                }
+            }
+            to_check = to_check_next;
+        }
+
+        mods
+    }
+}
+
+fn finish_args<T>(args: Arguments) -> Result<Vec<T>>
+where
+    T: FromStr,
+    anyhow::Error: From<<T as FromStr>::Err>,
+{
+    args.finish()
+        .iter()
+        .map(|str| {
+            str.to_str()
+                .ok_or_else(|| anyhow!("argument '{:?}' is not valid unicode", str))
+                .and_then(|str| T::from_str(str).map_err(|e| anyhow!(e)))
+        })
+        .collect()
 }
 
 trait HasReleases<T: HasVersion> {
