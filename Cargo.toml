@@ -13,7 +13,6 @@ keywords = ["factorio", "cli", "structopt", "manager", "mod"]
 anyhow = "1.0.45"
 byteorder = "1.4.3"
 compress = "0.2.1"
-console = "0.15.0"
 dirs = "4.0.0"
 hex = "0.4.3"
 indicatif = "0.16.2"

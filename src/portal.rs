@@ -1,7 +1,6 @@
 use crate::dependency::ModDependency;
 use crate::{Config, HasDependencies, HasReleases, HasVersion, ModIdent, Version};
 use anyhow::{anyhow, Result};
-use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::multipart::{Form, Part};
 use reqwest::blocking::Client;
@@ -33,17 +32,12 @@ impl Portal {
 
     pub fn fetch(&mut self, mod_name: &str) {
         if let Err(e) = self.fetch_internal(mod_name) {
-            eprintln!(
-                "{} could not fetch {}: {}",
-                style("Error:").red().bold(),
-                mod_name,
-                e
-            );
+            eprintln!("could not fetch {}: {}", mod_name, e);
         }
     }
 
     fn fetch_internal(&mut self, mod_name: &str) -> Result<()> {
-        println!("{} {}", style("Fetching").cyan().bold(), mod_name);
+        println!("fetching {}", mod_name);
         let res = self
             .client
             .get(format!(
@@ -117,11 +111,13 @@ impl Portal {
         let pb = ProgressBar::new(total_size);
         pb.set_style(
             ProgressStyle::default_bar()
-                .template("{msg} [{elapsed_precise:.blue}] [{bar:.green}] {bytes} / {total_bytes} ({bytes_per_sec}, {eta})")
-                .progress_chars("=> "),
+                .template(
+                    "{wide_msg} {bytes}  {bytes_per_sec} {elapsed_precise} [{bar:40}] {percent:>3}%",
+                )
+                .progress_chars("#-"),
         );
 
-        pb.set_message(format!("{} {}", style("Downloading").cyan().bold(), ident,));
+        pb.set_message(format!("downloading {}", ident,));
 
         let mut file = NamedTempFile::new()?;
 
@@ -155,7 +151,7 @@ impl Portal {
 
         // Finish up
         pb.finish_and_clear();
-        println!("{} {}", style("Downloaded").cyan().bold(), ident);
+        println!("downloaded {}", ident);
 
         Ok((ident, proper_path))
     }

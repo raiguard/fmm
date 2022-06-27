@@ -122,9 +122,7 @@ dependencies = [
  "encode_unicode",
  "libc",
  "once_cell",
- "regex",
  "terminal_size",
- "unicode-width",
  "winapi",
 ]
 
@@ -275,7 +273,6 @@ dependencies = [
  "anyhow",
  "byteorder",
  "compress",
- "console",
  "dirs",
  "hex",
  "indicatif",

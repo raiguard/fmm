@@ -3,7 +3,6 @@ use crate::dependency::ModDependency;
 use crate::mod_settings::ModSettings;
 use crate::{HasDependencies, HasReleases, HasVersion, ModIdent, Version};
 use anyhow::{anyhow, bail, ensure, Context, Result};
-use console::style;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -40,9 +39,7 @@ impl Directory {
             })
         {
             let mod_path = entry.path();
-            match InfoJson::from_entry(&mod_path)
-                .context(format!("Could not parse {:?}", entry.file_name()))
-            {
+            match InfoJson::from_entry(&mod_path) {
                 Ok(info_json) => {
                     let ident = ModIdent {
                         name: info_json.name.clone(),
@@ -65,7 +62,11 @@ impl Directory {
                         .unwrap_or_else(|index| index);
                     mod_entry.releases.insert(index, release);
                 }
-                Err(e) => eprintln!("{} {:#}", style("Error:").red().bold(), e),
+                Err(e) => eprintln!(
+                    "could not parse '{}': {}",
+                    entry.file_name().to_str().unwrap(),
+                    e
+                ),
             }
         }
 
@@ -203,7 +204,7 @@ impl Directory {
             self.list.remove(ident);
         }
 
-        println!("{} {}", style("Removed").magenta().bold(), ident);
+        println!("removed {}", ident);
 
         Ok(())
     }
@@ -389,7 +390,7 @@ impl EnabledList {
             mod_state.enabled = false;
             mod_state.version = None;
 
-            println!("{} {}", style("Disabled").yellow().bold(), &ident);
+            println!("disabled {}", &ident);
         }
     }
 
@@ -402,7 +403,7 @@ impl EnabledList {
                 entry.version = None;
             });
 
-        println!("{}", style("Disabled all mods").yellow().bold());
+        println!("disabled all mods");
     }
 
     fn enable(&mut self, ident: &ModIdent) -> Result<()> {
@@ -413,7 +414,7 @@ impl EnabledList {
         mod_data.enabled = true;
         mod_data.version = ident.version.clone();
 
-        println!("{} {}", style("Enabled").green().bold(), ident);
+        println!("enabled {}", ident);
 
         Ok(())
     }

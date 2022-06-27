@@ -12,7 +12,6 @@ mod version;
 
 use anyhow::{anyhow, bail, Context, Result};
 use config::Config;
-use console::style;
 use dependency::{ModDependency, ModDependencyType};
 use directory::WrappedDirectory;
 use itertools::Itertools;
@@ -172,11 +171,10 @@ fn search(ctx: &mut Ctx, _config: &Config, query: String) -> Result<()> {
         .sorted_by(|m1, m2| Ord::cmp(&m1.name.to_lowercase(), &m2.name.to_lowercase()))
         .map(|mod_data| {
             format!(
-                "{} {} {}\n  {}{}",
-                style("-").magenta(),
-                style(mod_data.name).green().bold(),
+                "- {} {}\n  {}{}",
+                mod_data.name,
                 mod_data.latest_release.unwrap().get_version(),
-                style(mod_data.owner).cyan(),
+                mod_data.owner,
                 if mod_data.summary.is_empty() {
                     "".to_string()
                 } else {
