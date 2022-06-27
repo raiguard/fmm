@@ -234,6 +234,10 @@ impl WrappedDirectory {
         }
         self.inner.as_mut().unwrap()
     }
+
+    pub fn is_some(&self) -> bool {
+        self.inner.is_some()
+    }
 }
 
 #[derive(Debug)]
@@ -348,8 +352,7 @@ impl InfoJson {
             }
         }?;
 
-        serde_json::from_slice::<InfoJson>(&contents)
-            .map_err(|_| anyhow!("Invalid info.json format"))
+        serde_json::from_slice::<InfoJson>(&contents).map_err(|e| anyhow!(e))
     }
 }
 

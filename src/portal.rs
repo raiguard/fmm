@@ -63,6 +63,13 @@ impl Portal {
         self.mods.get(mod_name)
     }
 
+    pub fn get_or_fetch(&mut self, mod_name: &str) -> Option<&PortalMod> {
+        if !self.contains(mod_name) {
+            self.fetch(mod_name);
+        }
+        self.get(mod_name)
+    }
+
     pub fn download(&mut self, ident: &ModIdent, config: &Config) -> Result<(ModIdent, PathBuf)> {
         // Get authentication token and username
         let auth = config
@@ -153,8 +160,11 @@ impl Portal {
         Ok((ident, proper_path))
     }
 
-    pub fn get_newest_matching(&self, dependency: &ModDependency) -> Option<&PortalModRelease> {
-        self.mods.get(&dependency.name).and_then(|mod_data| {
+    pub fn get_or_fetch_newest_matching(
+        &mut self,
+        dependency: &ModDependency,
+    ) -> Option<&PortalModRelease> {
+        self.get_or_fetch(&dependency.name).and_then(|mod_data| {
             if let Some(version_req) = &dependency.version_req {
                 mod_data
                     .releases

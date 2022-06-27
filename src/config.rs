@@ -1,5 +1,5 @@
 use crate::ModIdent;
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use pico_args::Arguments;
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
@@ -15,8 +15,6 @@ pub struct Config {
     pub upload_token: Option<String>,
     pub sets: ModSets,
     pub sync_latest_versions: bool,
-    pub sync_no_download: bool,
-    pub sync_startup_settings: bool,
 }
 
 impl Config {
@@ -63,9 +61,19 @@ impl Config {
                 .or(config_file.upload_token),
             sets: config_file.sets,
             sync_latest_versions: config_file.sync_latest_versions,
-            sync_no_download: config_file.sync_no_download,
-            sync_startup_settings: config_file.sync_startup_settings.unwrap_or(true),
         })
+    }
+
+    pub fn extract_mod_set(&self, name: &String) -> Result<Vec<ModIdent>> {
+        if let Some(sets) = &self.sets {
+            if let Some(set) = sets.get(name) {
+                Ok(set.clone())
+            } else {
+                bail!("mod set '{}' does not exist", name);
+            }
+        } else {
+            bail!("no mod sets have been defined");
+        }
     }
 }
 
@@ -80,6 +88,7 @@ pub type ModSets = Option<HashMap<String, Vec<ModIdent>>>;
 #[serde_as]
 #[derive(Deserialize, Default)]
 struct ConfigFile {
+    #[serde(default)]
     game_dir: Option<PathBuf>,
     mods_dir: Option<PathBuf>,
     portal: Option<PortalAuth>,
@@ -88,9 +97,6 @@ struct ConfigFile {
     sets: ModSets,
     #[serde(default)]
     sync_latest_versions: bool,
-    #[serde(default)]
-    sync_no_download: bool,
-    sync_startup_settings: Option<bool>,
 }
 
 impl ConfigFile {

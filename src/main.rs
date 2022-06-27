@@ -13,13 +13,14 @@ mod version;
 use anyhow::{anyhow, bail, Context, Result};
 use config::Config;
 use console::style;
-use dependency::ModDependency;
-use directory::{Directory, WrappedDirectory};
+use dependency::{ModDependency, ModDependencyType};
+use directory::WrappedDirectory;
 use itertools::Itertools;
 use mod_ident::ModIdent;
 use pico_args::Arguments;
-use portal::{Portal, WrappedPortal};
+use portal::WrappedPortal;
 use save_file::SaveFile;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::str::FromStr;
 use version::Version;
@@ -30,15 +31,18 @@ options:
     --mods-dir <PATH>  custom mod directory path
     --token <TOKEN>    oauth token for the mod portal
 subcommands:
-    disable <MODS>
-    download <MODS>
-    enable <MODS>
-    query <MODS>
-    remove <MODS>
-    search <QUERY>
-    sync (-s --set) <SET/FILE>
-    update <MODS>
-    upload <PATH>";
+    disable <MODS>    disable the given mods, or all mods if no mods are given
+    download <MODS>   download the given mods
+    enable <MODS>     enable the given mods
+    enable-set <SET>  enable the mods from the given mod set
+    query <MODS>      query the local mods folder
+    remove <MODS>     remove the given mods
+    search <QUERY>    search for mods on the mod portal
+    sync <MODS>       enable the given mods, downloading if necessary
+    sync-file <PATH>  enable the mods from the given save file, downloading if necessary
+    sync-set <SET>    enable the mods from the given mod set, downloading if necessary
+    update <MODS>     update the given mods, or all mods if no mods are given
+    upload <PATH>     upload the given mod zip file to the mod portal";
 
 fn finish_args<T>(args: Arguments) -> Result<Vec<T>>
 where
@@ -68,6 +72,86 @@ impl Ctx {
         }
     }
 
+    pub fn add_dependencies(
+        &mut self,
+        mut to_check: Vec<ModIdent>,
+        check_portal: bool,
+    ) -> Vec<ModIdent> {
+        let mut mods = vec![];
+        let mut checked = HashSet::new();
+
+        while !to_check.is_empty() {
+            let mut to_check_next = vec![];
+            for ident in &to_check {
+                if !checked.contains(&ident.name) {
+                    checked.insert(ident.name.clone());
+                    mods.push(ident.clone());
+                    self.directory
+                        .get()
+                        .get(ident)
+                        .and_then(|entry| {
+                            entry
+                                .get_release(ident)
+                                .and_then(|release| release.get_dependencies())
+                        })
+                        .or_else(|| {
+                            self.portal
+                                .get()
+                                .get_or_fetch(&ident.name)
+                                .and_then(|entry| {
+                                    entry
+                                        .get_release(ident)
+                                        .and_then(|release| release.get_dependencies())
+                                })
+                        })
+                        .cloned()
+                        .unwrap_or_default()
+                        .iter()
+                        .filter(|dependency| {
+                            dependency.name != "base"
+                                && !checked.contains(&dependency.name)
+                                && matches!(
+                                    dependency.dep_type,
+                                    ModDependencyType::Required | ModDependencyType::NoLoadOrder
+                                )
+                        })
+                        .filter_map(|dependency| {
+                            let mut newest = None;
+                            if let Some(entry) =
+                                self.directory.get().get_newest_matching(dependency)
+                            {
+                                newest = Some(entry.ident.clone());
+                            };
+
+                            if newest.is_none() && check_portal {
+                                newest = self
+                                    .portal
+                                    .get()
+                                    .get_or_fetch_newest_matching(dependency)
+                                    .map(|release| ModIdent {
+                                        name: dependency.name.clone(),
+                                        version: Some(release.version.clone()),
+                                    });
+                            }
+
+                            if newest.is_none() {
+                                eprintln!(
+                                    "no mod found that satisfies dependency '{}'",
+                                    dependency
+                                );
+                            }
+
+                            newest
+                        })
+                        .for_each(|ident| {
+                            to_check_next.push(ident);
+                        });
+                }
+            }
+            to_check = to_check_next;
+        }
+
+        mods
     }
 }
 
@@ -83,28 +167,42 @@ pub fn main() -> Result<()> {
     let mut ctx = Ctx::new(&config);
 
     match args.subcommand()?.as_deref() {
-        Some("disable") => disable(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
+        Some("disable") => disable(&mut ctx, &config, &finish_args::<ModIdent>(args)?),
         Some("download") => download(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
-        Some("enable") => enable(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
+        Some("enable") => {
+            let mods = ctx.add_dependencies(finish_args::<ModIdent>(args)?, false);
+            enable(&mut ctx, &config, mods)?
+        }
+        Some("enable-set") => {
+            let mods = ctx.add_dependencies(config.extract_mod_set(&args.free_from_str()?)?, false);
+            enable(&mut ctx, &config, mods)?
+        }
         Some("query") => query(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
         Some("remove") => remove(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
         Some("search") => search(&mut ctx, &config, args.free_from_str()?)?,
-        Some("sync") => sync(
-            &mut ctx,
-            &config,
-            &args.contains(["-s", "--sync"]),
-            &args.free_from_str()?,
-        )?,
+        Some("sync") => {
+            let mods = ctx.add_dependencies(finish_args::<ModIdent>(args)?, true);
+            sync(&mut ctx, &config, mods)?
+        }
+        Some("sync-file") => sync_file(&mut ctx, &config, args.free_from_str()?)?,
+        Some("sync-set") => {
+            let mods = ctx.add_dependencies(config.extract_mod_set(&args.free_from_str()?)?, true);
+            sync(&mut ctx, &config, mods)?
+        }
         Some("update") => update(&mut ctx, &config, &finish_args::<String>(args)?)?,
         Some("upload") => upload(&mut ctx, &config, args.free_from_str()?)?,
         Some(cmd) => eprintln!("unknown subcommand: {cmd}\n{HELP}"),
         None => eprintln!("{HELP}"),
     };
 
+    if ctx.directory.is_some() {
+        ctx.directory.get().save()?;
+    }
+
     Ok(())
 }
 
-fn disable(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) -> Result<()> {
+fn disable(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) {
     if mods.is_empty() {
         ctx.directory.get().disable_all();
     } else {
@@ -112,8 +210,6 @@ fn disable(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) -> Result<()> {
             ctx.directory.get().disable(ident);
         }
     }
-    ctx.directory.get().save()?;
-    Ok(())
 }
 
 fn download(ctx: &mut Ctx, config: &Config, mods: &[ModIdent]) -> Result<()> {
@@ -129,23 +225,15 @@ fn download(ctx: &mut Ctx, config: &Config, mods: &[ModIdent]) -> Result<()> {
             Err(e) => eprintln!("failed to download mod: {}", e),
         }
     }
-
-    ctx.directory.get().save()?;
-
     Ok(())
 }
 
-fn enable(ctx: &mut Ctx, config: &Config, mods: &[ModIdent]) -> Result<()> {
-    let to_enable = mods.to_vec();
-    let to_check = mods.to_vec();
-
+fn enable(ctx: &mut Ctx, _config: &Config, mods: Vec<ModIdent>) -> Result<()> {
     for ident in mods {
         if let Err(e) = ctx.directory.get().enable(&ident) {
             eprintln!("could not enable mod: {}", e);
         }
     }
-
-    ctx.directory.get().save()?;
 
     Ok(())
 }
@@ -173,7 +261,6 @@ fn remove(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) -> Result<()> {
     for ident in mods {
         ctx.directory.get().remove(ident)?;
     }
-    ctx.directory.get().save()?;
     Ok(())
 }
 
@@ -224,54 +311,17 @@ fn search(ctx: &mut Ctx, _config: &Config, query: String) -> Result<()> {
     Ok(())
 }
 
-fn sync(ctx: &mut Ctx, config: &Config, is_set: &bool, arg: &String) -> Result<()> {
-    let mods = if *is_set {
-        if let Some(sets) = &config.sets {
-            if let Some(set) = sets.get(arg) {
-                set.clone()
-            } else {
-                bail!("mod set '{}' does not exist", arg);
-            }
-        } else {
-            bail!("no mod sets have been defined");
-        }
-    } else {
-        let path = PathBuf::from_str(arg)?;
-        if !path.exists() {
-            bail!("path '{}' does not exist", path.to_str().unwrap());
-        }
-        let save_file = SaveFile::from(path)?;
-        // Sync startup settings
-        ctx.directory
-            .get()
-            .settings
-            .merge_startup_settings(&save_file.startup_settings)?;
-        // Extract mods to enable or download
-        save_file
-            .mods
-            .iter()
-            .filter(|ident| ident.name != "base")
-            .cloned()
-            .collect()
-    };
-
-    // Download mods that we don't have
-    if !config.sync_no_download {
-        let directory = ctx.directory.get();
-        let to_download: Vec<ModIdent> = mods
-            .iter()
-            .cloned()
-            .filter(|ident| !directory.contains(ident))
-            .collect();
-        download(ctx, config, &to_download)?;
-    }
+fn sync(ctx: &mut Ctx, config: &Config, mods: Vec<ModIdent>) -> Result<()> {
+    let to_download: Vec<ModIdent> = mods
+        .iter()
+        .cloned()
+        .filter(|ident| !ctx.directory.get().contains(ident))
+        .collect();
+    download(ctx, config, &to_download)?;
 
     ctx.directory.get().disable_all();
 
-    ctx.directory.get().save()?;
-
-    // Enable mods
-    enable(ctx, config, &mods)?;
+    enable(ctx, config, mods)?;
 
     Ok(())
 }
@@ -347,9 +397,41 @@ fn update(ctx: &mut Ctx, config: &Config, mods: &[String]) -> Result<()> {
         eprintln!("there is nothing to do");
     }
 
-    ctx.directory.get().save()?;
-
     Ok(())
+}
+
+fn sync_file(ctx: &mut Ctx, config: &Config, path: PathBuf) -> Result<()> {
+    if !path.exists() {
+        bail!("path '{}' does not exist", path.to_str().unwrap());
+    }
+    let file = SaveFile::from(path)?;
+    // Sync startup settings
+    ctx.directory
+        .get()
+        .settings
+        .merge_startup_settings(&file.startup_settings)?;
+    // Extract mods to enable or download
+    let mods: Vec<ModIdent> = file
+        .mods
+        .iter()
+        .filter(|ident| ident.name != "base")
+        .cloned()
+        .map(|mut ident| {
+            if config.sync_latest_versions {
+                ident.version = None;
+            }
+            ident
+        })
+        .collect();
+
+    // Latest versions may have different dependency requirements than the versions in the save
+    let mods = if config.sync_latest_versions {
+        ctx.add_dependencies(mods, true)
+    } else {
+        mods
+    };
+
+    sync(ctx, config, mods)
 }
 
 fn upload(ctx: &mut Ctx, config: &Config, file: PathBuf) -> Result<()> {
