@@ -2,7 +2,7 @@ use crate::config::Config;
 use crate::dependency::ModDependency;
 use crate::mod_settings::ModSettings;
 use crate::{HasDependencies, HasReleases, HasVersion, ModIdent, Version};
-use anyhow::{anyhow, bail, ensure, Context, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;

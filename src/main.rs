@@ -217,6 +217,7 @@ fn sync(ctx: &mut Ctx, config: &Config, mods: Vec<ModIdent>) -> Result<()> {
 fn update(ctx: &mut Ctx, config: &Config, mods: &[String]) -> Result<()> {
     let no_input = mods.is_empty();
 
+    println!("fetching latest mods...");
     let latest_portal: Vec<ModIdent> = ctx
         .portal
         .get()
