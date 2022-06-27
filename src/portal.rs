@@ -187,7 +187,7 @@ impl Portal {
 
     pub fn upload(&self, config: &Config, file: &Path) -> Result<()> {
         let upload_token = config
-            .upload_token
+            .token
             .as_ref()
             .ok_or_else(|| anyhow!("Missing mod portal upload token"))?;
 
