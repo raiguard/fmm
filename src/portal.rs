@@ -37,7 +37,8 @@ impl Portal {
     }
 
     fn fetch_internal(&mut self, mod_name: &str) -> Result<()> {
-        println!("fetching {}", mod_name);
+        print!("fetching {}", mod_name);
+        std::io::stdout().flush()?;
         let res = self
             .client
             .get(format!(
@@ -49,6 +50,8 @@ impl Portal {
             .error_for_status()?;
 
         self.mods.insert(mod_name.to_string(), res.json()?);
+        // The extra space at the end is required because 'fetched' is one char less than 'fetching'
+        println!("\rfetched {} ", mod_name);
 
         Ok(())
     }
