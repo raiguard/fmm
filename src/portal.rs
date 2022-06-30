@@ -1,5 +1,5 @@
 use crate::dependency::ModDependency;
-use crate::{Config, HasDependencies, HasReleases, HasVersion, ModIdent, Version};
+use crate::{Config, HasReleases, HasVersion, ModIdent, Version};
 use anyhow::{anyhow, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::multipart::{Form, Part};
@@ -13,19 +13,13 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use tempfile::NamedTempFile;
 
+#[derive(Default)]
 pub struct Portal {
     client: Client,
     mods: HashMap<String, PortalMod>,
 }
 
 impl Portal {
-    pub fn new() -> Self {
-        Self {
-            client: Client::new(),
-            mods: HashMap::new(),
-        }
-    }
-
     pub fn contains(&self, mod_name: &str) -> bool {
         self.mods.contains_key(mod_name)
     }
@@ -46,7 +40,6 @@ impl Portal {
                 mod_name
             ))
             .send()?
-            // TODO: Custom errors
             .error_for_status()?;
 
         self.mods.insert(mod_name.to_string(), res.json()?);
@@ -247,7 +240,7 @@ impl WrappedPortal {
 
     pub fn get(&mut self) -> &mut Portal {
         if self.inner.is_none() {
-            self.inner = Some(Portal::new());
+            self.inner = Some(Portal::default());
         }
         self.inner.as_mut().unwrap()
     }
@@ -291,14 +284,6 @@ pub struct PortalModRelease {
     pub version: Version,
 }
 
-impl HasDependencies for PortalModRelease {
-    fn get_dependencies(&self) -> Option<&Vec<ModDependency>> {
-        self.info_json
-            .as_ref()
-            .and_then(|info_json| info_json.dependencies.as_ref())
-    }
-}
-
 impl HasVersion for PortalModRelease {
     fn get_version(&self) -> &Version {
         &self.version
@@ -332,7 +317,7 @@ mod tests {
 
     #[test]
     fn basic_methods() {
-        let mut portal = Portal::new();
+        let mut portal = Portal::default();
         let ident = ModIdent {
             name: "EditorExtensions".to_string(),
             version: None,

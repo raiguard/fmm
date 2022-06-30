@@ -12,7 +12,7 @@ mod version;
 
 use anyhow::{anyhow, bail, Context, Result};
 use config::Config;
-use dependency::{ModDependency, ModDependencyType};
+use dependency::ModDependencyType;
 use directory::WrappedDirectory;
 use itertools::Itertools;
 use mod_ident::ModIdent;
@@ -129,7 +129,7 @@ fn enable(ctx: &mut Ctx, _config: &Config, mods: Vec<ModIdent>) -> Result<()> {
 
 fn query(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) -> Result<()> {
     for ident in mods {
-        match ctx.directory.get().get(ident) {
+        match ctx.directory.get().get_entry(&ident.name) {
             Some(entry) => {
                 for release in entry.get_release_list() {
                     if ident.version.is_none()
@@ -239,11 +239,13 @@ fn update(ctx: &mut Ctx, config: &Config, mods: &[String]) -> Result<()> {
     }
     .iter()
     .filter_map(|name| {
-        if let Some(latest_version) = ctx.directory.get().get_newest(name) {
-            Some(ModIdent {
-                name: name.to_string(),
-                version: Some(latest_version.get_version().clone()),
-            })
+        let mut ident = ModIdent {
+            name: name.to_string(),
+            version: None,
+        };
+        if let Some(latest_release) = ctx.directory.get().get_release(&ident) {
+            ident.version = Some(latest_release.get_version().clone());
+            Some(ident)
         } else {
             eprintln!("mod '{}' was not found in the mods directory", name);
             None
@@ -361,20 +363,19 @@ impl Ctx {
                     mods.push(ident.clone());
                     self.directory
                         .get()
-                        .get(ident)
-                        .and_then(|entry| {
-                            entry
-                                .get_release(ident)
-                                .and_then(|release| release.get_dependencies())
-                        })
+                        .get_release(ident)
+                        .and_then(|release| release.dependencies.get())
                         .or_else(|| {
                             self.portal
                                 .get()
                                 .get_or_fetch(&ident.name)
                                 .and_then(|entry| {
-                                    entry
-                                        .get_release(ident)
-                                        .and_then(|release| release.get_dependencies())
+                                    entry.get_release(ident).and_then(|release| {
+                                        release
+                                            .info_json
+                                            .as_ref()
+                                            .and_then(|info_json| info_json.dependencies.as_ref())
+                                    })
                                 })
                         })
                         .cloned()
@@ -391,7 +392,7 @@ impl Ctx {
                         .filter_map(|dependency| {
                             let mut newest = None;
                             if let Some(entry) =
-                                self.directory.get().get_newest_matching(dependency)
+                                self.directory.get().get_newest_matching_release(dependency)
                             {
                                 newest = Some(entry.ident.clone());
                             };
@@ -482,8 +483,4 @@ trait HasReleases<T: HasVersion> {
 
 trait HasVersion {
     fn get_version(&self) -> &Version;
-}
-
-trait HasDependencies {
-    fn get_dependencies(&self) -> Option<&Vec<ModDependency>>;
 }

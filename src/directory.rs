@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::dependency::ModDependency;
 use crate::mod_settings::ModSettings;
-use crate::{HasDependencies, HasReleases, HasVersion, ModIdent, Version};
+use crate::{HasReleases, HasVersion, ModIdent, Version};
 use anyhow::{anyhow, bail, ensure, Result};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -11,6 +11,7 @@ use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use zip::ZipArchive;
 
 #[derive(Debug)]
@@ -20,14 +21,13 @@ pub struct Directory {
     pub settings: ModSettings,
 }
 
-// TODO: Don't read zip files unless we need to
 impl Directory {
     /// Constructs the object from the given mods directory
     pub fn new(path: &Path) -> Result<Self> {
         // Check for mod-list.json and mod-settings.dat
         ensure!(
             path.join("mod-list.json").exists() && path.join("mod-settings.dat").exists(),
-            format!("Invalid mods directory: {:?}", path)
+            format!("invalid mods directory: {:?}", path)
         );
 
         // Assemble mod entries
@@ -39,22 +39,37 @@ impl Directory {
             })
         {
             let mod_path = entry.path();
-            match InfoJson::from_entry(&mod_path) {
-                Ok(info_json) => {
-                    let ident = ModIdent {
-                        name: info_json.name.clone(),
+            let file_name = entry.file_name();
+            let release = match file_name
+                .to_str()
+                .and_then(|file_name| file_name.strip_suffix(".zip"))
+                .and_then(|file_name| file_name.rsplit_once('_'))
+            {
+                Some((mod_name, mod_version)) => {
+                    Version::from_str(mod_version).map(|version| DirModRelease {
+                        path: mod_path.clone(),
+                        ident: ModIdent {
+                            name: mod_name.to_string(),
+                            version: Some(version),
+                        },
+                        dependencies: WrappedDependencies::new(mod_path, None),
+                    })
+                }
+                None => InfoJson::from_entry(&entry.path()).map(|info_json| DirModRelease {
+                    path: mod_path.clone(),
+                    ident: ModIdent {
+                        name: info_json.name.to_string(),
                         version: Some(info_json.version.clone()),
-                    };
+                    },
+                    dependencies: WrappedDependencies::new(mod_path, info_json.dependencies),
+                }),
+            };
 
+            match release {
+                Ok(release) => {
                     let mod_entry = mods
-                        .entry(ident.name.clone())
+                        .entry(release.ident.name.clone())
                         .or_insert(DirMod { releases: vec![] });
-
-                    let release = DirModRelease {
-                        path: mod_path,
-                        ident,
-                        dependencies: info_json.dependencies,
-                    };
 
                     let index = mod_entry
                         .releases
@@ -62,11 +77,7 @@ impl Directory {
                         .unwrap_or_else(|index| index);
                     mod_entry.releases.insert(index, release);
                 }
-                Err(e) => eprintln!(
-                    "could not parse '{}': {}",
-                    entry.file_name().to_str().unwrap(),
-                    e
-                ),
+                Err(e) => eprintln!("failed to parse {:?}: {}", entry.file_name(), e),
             }
         }
 
@@ -96,9 +107,9 @@ impl Directory {
             .entry(ident.name.clone())
             .or_insert_with(|| DirMod { releases: vec![] });
         let release = DirModRelease {
-            path,
+            path: path.clone(),
             ident,
-            dependencies: None,
+            dependencies: WrappedDependencies::new(path, None),
         };
         if let Err(index) = mod_data.releases.binary_search(&release) {
             mod_data.releases.insert(index, release);
@@ -106,26 +117,14 @@ impl Directory {
     }
 
     pub fn contains(&mut self, ident: &ModIdent) -> bool {
-        self.get(ident)
-            .map(|entry| {
-                if let Some(version) = &ident.version {
-                    entry
-                        .releases
-                        .iter()
-                        .any(|release| release.get_version() == version)
-                } else {
-                    !entry.releases.is_empty()
-                }
-            })
-            .unwrap_or_default()
+        self.get_release(ident).is_some()
     }
 
     pub fn disable(&mut self, ident: &ModIdent) {
         if ident.name == "base" || self.mods.contains_key(&ident.name) {
             self.list.disable(ident);
         } else {
-            // TODO: Centralize printing
-            eprintln!("Could not find {}", &ident);
+            eprintln!("could not find {}", &ident);
         }
     }
 
@@ -151,21 +150,31 @@ impl Directory {
         Ok(())
     }
 
-    pub fn get(&self, ident: &ModIdent) -> Option<&DirMod> {
-        self.mods.get(&ident.name)
+    pub fn get_entry(&self, name: &str) -> Option<&DirMod> {
+        self.mods.get(name)
+    }
+
+    pub fn get_release(&mut self, ident: &ModIdent) -> Option<&mut DirModRelease> {
+        self.mods.get_mut(&ident.name).and_then(|entry| {
+            if let Some(version) = &ident.version {
+                entry
+                    .releases
+                    .iter_mut()
+                    .find(|release| release.get_version() == version)
+            } else {
+                entry.releases.last_mut()
+            }
+        })
     }
 
     pub fn get_all_names(&self) -> Vec<String> {
         self.mods.keys().cloned().collect()
     }
 
-    pub fn get_newest(&self, name: &str) -> Option<&DirModRelease> {
-        self.mods
-            .get(name)
-            .and_then(|mod_data| mod_data.releases.last())
-    }
-
-    pub fn get_newest_matching(&self, dependency: &ModDependency) -> Option<&DirModRelease> {
+    pub fn get_newest_matching_release(
+        &self,
+        dependency: &ModDependency,
+    ) -> Option<&DirModRelease> {
         self.mods.get(&dependency.name).and_then(|mod_data| {
             if let Some(version_req) = &dependency.version_req {
                 mod_data
@@ -262,13 +271,7 @@ pub struct DirModRelease {
     // This is always guaranteed to have a version
     pub ident: ModIdent,
 
-    pub dependencies: Option<Vec<ModDependency>>,
-}
-
-impl HasDependencies for DirModRelease {
-    fn get_dependencies(&self) -> Option<&Vec<ModDependency>> {
-        self.dependencies.as_ref()
-    }
+    pub dependencies: WrappedDependencies,
 }
 
 impl HasVersion for DirModRelease {
@@ -325,6 +328,31 @@ impl DirModReleaseType {
         };
 
         bail!("Could not parse mod entry structure");
+    }
+}
+
+#[derive(Debug)]
+pub struct WrappedDependencies {
+    inner: Option<Vec<ModDependency>>,
+    path: PathBuf,
+}
+
+impl WrappedDependencies {
+    pub fn new(path: PathBuf, inner: Option<Vec<ModDependency>>) -> Self {
+        Self { inner, path }
+    }
+
+    pub fn get(&mut self) -> Option<&Vec<ModDependency>> {
+        if self.inner.is_none() {
+            match InfoJson::from_entry(&self.path) {
+                Ok(info_json) => {
+                    self.inner = info_json.dependencies;
+                }
+                Err(e) => eprintln!("failed to parse {:?}: {}", self.path.file_name(), e),
+            };
+        }
+
+        self.inner.as_ref()
     }
 }
 
