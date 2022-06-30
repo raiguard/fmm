@@ -70,11 +70,9 @@ impl Portal {
         if !self.contains(&ident.name) {
             self.fetch(&ident.name);
         }
-        let mod_data = self
+        let release_data = self
             .get(&ident.name)
-            .ok_or_else(|| anyhow!("Cannot download {}", ident))?;
-        let release_data = mod_data
-            .get_release(ident)
+            .and_then(|mod_data| mod_data.get_release(ident))
             .ok_or_else(|| anyhow!("{} was not found on the mod portal", ident))?;
 
         let ident = ModIdent {
