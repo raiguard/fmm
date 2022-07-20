@@ -15,6 +15,7 @@ pub struct Config {
     pub token: Option<String>,
     pub sets: ModSets,
     pub sync_latest_versions: bool,
+    pub sync_no_disable: bool,
 }
 
 impl Config {
@@ -61,6 +62,7 @@ impl Config {
                 .or(config_file.token),
             sets: config_file.sets,
             sync_latest_versions: config_file.sync_latest_versions,
+            sync_no_disable: args.contains(["--nodisable", "-n"]),
         })
     }
 

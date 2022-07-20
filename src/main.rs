@@ -207,7 +207,10 @@ fn sync(ctx: &mut Ctx, config: &Config, mods: Vec<ModIdent>) -> Result<()> {
         .collect();
     download(ctx, config, &to_download)?;
 
-    ctx.directory.get().disable_all();
+    // TODO: Add this option to the help text
+    if !config.sync_no_disable {
+        ctx.directory.get().disable_all();
+    }
 
     enable(ctx, config, mods)?;
 
