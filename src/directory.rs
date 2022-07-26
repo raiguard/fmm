@@ -40,6 +40,12 @@ impl Directory {
         {
             let mod_path = entry.path();
             let file_name = entry.file_name();
+            let file_type = DirModReleaseType::parse(&mod_path);
+            if file_type.is_err() {
+                eprintln!("{:?} has an invalid mod structure", file_name);
+                continue;
+            }
+            let file_type = file_type.unwrap();
             let release = match file_name
                 .to_str()
                 .and_then(|file_name| file_name.strip_suffix(".zip"))
@@ -53,6 +59,7 @@ impl Directory {
                             version: Some(version),
                         },
                         dependencies: WrappedDependencies::new(mod_path, None),
+                        type_: file_type,
                     })
                 }
                 None => InfoJson::from_entry(&entry.path()).map(|info_json| DirModRelease {
@@ -62,6 +69,7 @@ impl Directory {
                         version: Some(info_json.version.clone()),
                     },
                     dependencies: WrappedDependencies::new(mod_path, info_json.dependencies),
+                    type_: file_type,
                 }),
             };
 
@@ -97,7 +105,7 @@ impl Directory {
     }
 
     /// Adds the mod, but keeps it disabled
-    pub fn add(&mut self, ident: ModIdent, path: PathBuf) {
+    pub fn add(&mut self, ident: ModIdent, path: PathBuf) -> Result<()> {
         if self.list.get(&ident).is_none() {
             self.list.add(&ident);
         }
@@ -109,11 +117,13 @@ impl Directory {
         let release = DirModRelease {
             path: path.clone(),
             ident,
+            type_: DirModReleaseType::parse(&path)?,
             dependencies: WrappedDependencies::new(path, None),
         };
         if let Err(index) = mod_data.releases.binary_search(&release) {
             mod_data.releases.insert(index, release);
         }
+        Ok(())
     }
 
     pub fn contains(&mut self, ident: &ModIdent) -> bool {
@@ -152,6 +162,10 @@ impl Directory {
 
     pub fn get_entry(&self, name: &str) -> Option<&DirMod> {
         self.mods.get(name)
+    }
+
+    pub fn get_entry_mut(&mut self, name: &str) -> Option<&mut DirMod> {
+        self.mods.get_mut(name)
     }
 
     pub fn get_release(&mut self, ident: &ModIdent) -> Option<&mut DirModRelease> {
@@ -205,7 +219,11 @@ impl Directory {
             .get_release(ident)
             .ok_or_else(|| anyhow!("{} not found in mods directory", ident))?;
 
-        fs::remove_file(&release.path)?;
+        if let DirModReleaseType::Directory = release.type_ {
+            fs::remove_dir_all(&release.path)?;
+        } else {
+            fs::remove_file(&release.path)?;
+        }
         mod_data.remove_release(ident)?;
 
         if mod_data.get_release_list().is_empty() {
@@ -268,10 +286,9 @@ impl HasReleases<DirModRelease> for DirMod {
 #[derive(Debug)]
 pub struct DirModRelease {
     pub path: PathBuf,
-    // This is always guaranteed to have a version
-    pub ident: ModIdent,
-
+    pub ident: ModIdent, // This is always guaranteed to have a version
     pub dependencies: WrappedDependencies,
+    pub type_: DirModReleaseType,
 }
 
 impl HasVersion for DirModRelease {
@@ -305,7 +322,7 @@ impl PartialEq for DirModRelease {
 impl Eq for DirModRelease {}
 
 #[derive(Debug)]
-enum DirModReleaseType {
+pub enum DirModReleaseType {
     Directory,
     Symlink,
     Zip,

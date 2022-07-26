@@ -9,6 +9,7 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct Config {
+    pub clean_all: bool,
     pub download_force: bool,
     pub game_dir: PathBuf,
     pub mods_dir: PathBuf,
@@ -54,6 +55,7 @@ impl Config {
         });
 
         Ok(Self {
+            clean_all: args.contains("--all"),
             download_force: args.contains(["-f", "--force"]),
             game_dir,
             mods_dir,

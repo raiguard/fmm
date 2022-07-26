@@ -11,7 +11,7 @@ mod version;
 use anyhow::{anyhow, bail, Context, Result};
 use config::Config;
 use dependency::ModDependencyType;
-use directory::{ModListJson, WrappedDirectory};
+use directory::{DirModReleaseType, ModListJson, WrappedDirectory};
 use itertools::Itertools;
 use mod_ident::ModIdent;
 use pico_args::Arguments;
@@ -27,13 +27,15 @@ const HELP: &str = "usage: fmm <options> <subcommand>
 environment variables:
     FMM_TOKEN          oauth token for the mod portal
 options:
+    --all              when using the clean subcommand, remove all non-symlink mods
     --config <PATH>    path to a custom configuration file
     --force -f         always download, overwriting an existing mod if necessary
     --game-dir <PATH>  path to the game directory
     --mods-dir <PATH>  path to the mods directory
-    --nodisable -d     when using sync commands, keep current mods enabled
+    --nodisable -d     when using sync subcommands, keep current mods enabled
     --token <TOKEN>    oauth token for the mod portal
 subcommands:
+    clean             remove out-of-date mod versions, leaving only the newest version; ignores symlinked mods
     disable <MODS>    disable the given mods, or all mods if no mods are given
     download <MODS>   download the given mods
     enable <MODS>     enable the given mods
@@ -60,6 +62,7 @@ pub fn main() -> Result<()> {
     let mut ctx = Ctx::new(&config);
 
     match args.subcommand()?.as_deref() {
+        Some("clean") => clean(&mut ctx, &config)?,
         Some("disable") => disable(&mut ctx, &config, &finish_args::<ModIdent>(args)?),
         Some("download") => download(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
         Some("enable") => {
@@ -96,6 +99,35 @@ pub fn main() -> Result<()> {
     Ok(())
 }
 
+fn clean(ctx: &mut Ctx, config: &Config) -> Result<()> {
+    let mut mods = vec![];
+    let directory = ctx.directory.get();
+    directory
+        .get_all_names()
+        .iter()
+        .filter_map(|name| directory.get_entry(name))
+        .for_each(|mod_entry| {
+            let releases = mod_entry.get_release_list();
+            mods.append(
+                &mut releases[..if config.clean_all {
+                    releases.len()
+                } else {
+                    releases.len() - 1
+                }]
+                    .iter()
+                    .filter(|release| !matches!(release.type_, DirModReleaseType::Symlink))
+                    .map(|release| release.ident.clone())
+                    .collect(),
+            );
+        });
+    if mods.is_empty() {
+        println!("there is nothing to do");
+        Ok(())
+    } else {
+        remove(ctx, config, &mods)
+    }
+}
+
 fn disable(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) {
     if mods.is_empty() {
         ctx.directory.get().disable_all();
@@ -114,7 +146,7 @@ fn download(ctx: &mut Ctx, config: &Config, mods: &[ModIdent]) -> Result<()> {
         }
         match ctx.portal.get().download(ident, config) {
             Ok((ident, path)) => {
-                ctx.directory.get().add(ident, path);
+                ctx.directory.get().add(ident, path)?;
             }
             Err(e) => eprintln!("failed to download mod: {}", e),
         }
