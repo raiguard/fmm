@@ -11,13 +11,14 @@ mod version;
 use anyhow::{anyhow, bail, Context, Result};
 use config::Config;
 use dependency::ModDependencyType;
-use directory::WrappedDirectory;
+use directory::{ModListJson, WrappedDirectory};
 use itertools::Itertools;
 use mod_ident::ModIdent;
 use pico_args::Arguments;
 use portal::WrappedPortal;
 use save_file::SaveFile;
 use std::collections::HashSet;
+use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 use version::Version;
@@ -42,6 +43,7 @@ subcommands:
     search <QUERY>    search for mods on the mod portal
     sync <MODS>       enable the given mods, downloading if necessary, and disable all other mods
     sync-file <PATH>  enable the mods from the given save file, downloading if necessary, and disable all other mods
+    sync-list <PATH>  enable the mods from the given mod-list.json, downloading if necessary, and disable all other mods
     sync-set <SET>    enable the mods from the given mod set, downloading if necessary, and disable all other mods
     update <MODS>     update the given mods, or all mods if no mods are given
     upload <PATH>     upload the given mod zip file to the mod portal";
@@ -76,6 +78,7 @@ pub fn main() -> Result<()> {
             sync(&mut ctx, &config, mods)?
         }
         Some("sync-file") => sync_file(&mut ctx, &config, args.free_from_str()?)?,
+        Some("sync-list") => sync_list(&mut ctx, &config, args.free_from_str())?,
         Some("sync-set") => {
             let mods = ctx.add_dependencies(config.extract_mod_set(&args.free_from_str()?)?, true);
             sync(&mut ctx, &config, mods)?
@@ -327,6 +330,29 @@ fn sync_file(ctx: &mut Ctx, config: &Config, path: PathBuf) -> Result<()> {
         mods
     };
 
+    sync(ctx, config, mods)
+}
+
+fn sync_list(
+    ctx: &mut Ctx,
+    config: &Config,
+    path: Result<PathBuf, pico_args::Error>,
+) -> Result<()> {
+    let path: PathBuf = path.map_err(|_| anyhow!("required argument <PATH> is missing"))?;
+    if !path.exists() {
+        bail!("path {:?} does not exist", path);
+    }
+    let json: ModListJson = serde_json::from_str(&fs::read_to_string(&path)?)
+        .context("invalid mod-list.json format")?;
+    let mods: Vec<ModIdent> = json
+        .mods
+        .iter()
+        .filter(|mod_entry| mod_entry.enabled && mod_entry.name != "base")
+        .map(|mod_entry| ModIdent {
+            name: mod_entry.name.clone(),
+            version: mod_entry.version.clone(),
+        })
+        .collect();
     sync(ctx, config, mods)
 }
 

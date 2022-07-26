@@ -471,16 +471,16 @@ impl EnabledList {
 }
 
 #[derive(Deserialize, Serialize)]
-struct ModListJson {
+pub struct ModListJson {
     pub mods: Vec<ModListJsonMod>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct ModListJsonMod {
-    name: String,
+pub struct ModListJsonMod {
+    pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    version: Option<Version>,
-    enabled: bool,
+    pub version: Option<Version>,
+    pub enabled: bool,
 }
 
 #[cfg(test)]
