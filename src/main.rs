@@ -1,5 +1,3 @@
-#![allow(unstable_name_collisions)]
-
 mod config;
 mod dat;
 mod dependency;
@@ -25,10 +23,14 @@ use std::str::FromStr;
 use version::Version;
 
 const HELP: &str = "usage: fmm <options> <subcommand>
+environment variables:
+    FMM_TOKEN          oauth token for the mod portal
 options:
     --config <PATH>    path to a custom configuration file
+    --force -f         always download, overwriting an existing mod if necessary
     --game-dir <PATH>  path to the game directory
     --mods-dir <PATH>  path to the mods directory
+    --nodisable -d     when using sync commands, keep current mods enabled
     --token <TOKEN>    oauth token for the mod portal
 subcommands:
     disable <MODS>    disable the given mods, or all mods if no mods are given
@@ -103,7 +105,7 @@ fn disable(ctx: &mut Ctx, _config: &Config, mods: &[ModIdent]) {
 
 fn download(ctx: &mut Ctx, config: &Config, mods: &[ModIdent]) -> Result<()> {
     for ident in mods {
-        if ctx.directory.get().contains(ident) {
+        if !config.download_force && ctx.directory.get().contains(ident) {
             eprintln!("{} is already downloaded, use --force to override", ident);
             continue;
         }
