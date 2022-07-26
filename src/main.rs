@@ -44,7 +44,7 @@ subcommands:
     remove <MODS>     remove the given mods
     search <QUERY>    search for mods on the mod portal
     sync <MODS>       enable the given mods, downloading if necessary, and disable all other mods
-    sync-file <PATH>  enable the mods from the given save file, downloading if necessary, and disable all other mods
+    sync-file <PATH>  enable the mods from the given save file, downloading if necessary, disable all other mods, and sync mod startup settings
     sync-list <PATH>  enable the mods from the given mod-list.json, downloading if necessary, and disable all other mods
     sync-set <SET>    enable the mods from the given mod set, downloading if necessary, and disable all other mods
     update <MODS>     update the given mods, or all mods if no mods are given
@@ -109,12 +109,13 @@ fn clean(ctx: &mut Ctx, config: &Config) -> Result<()> {
         .for_each(|mod_entry| {
             let releases = mod_entry.get_release_list();
             mods.append(
-                &mut releases[..if config.clean_all {
-                    releases.len()
-                } else {
-                    releases.len() - 1
-                }]
+                &mut releases
                     .iter()
+                    .take(if config.clean_all {
+                        releases.len()
+                    } else {
+                        releases.len() - 1
+                    })
                     .filter(|release| !matches!(release.type_, DirModReleaseType::Symlink))
                     .map(|release| release.ident.clone())
                     .collect(),
