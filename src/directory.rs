@@ -313,18 +313,20 @@ enum DirModReleaseType {
 
 impl DirModReleaseType {
     fn parse(path: &Path) -> Result<Self> {
-        let metadata = fs::metadata(path)?;
-        let extension = path.extension();
+        let metadata = fs::symlink_metadata(path)?;
 
-        if extension.is_some() && extension.unwrap() == OsStr::new("zip") {
+        let file_type = metadata.file_type();
+        if file_type.is_symlink() && path.join("info.json").exists() {
+            return Ok(DirModReleaseType::Symlink);
+        } else if file_type.is_dir() && path.join("info.json").exists() {
+            return Ok(DirModReleaseType::Directory);
+        } else if file_type.is_file()
+            && path
+                .extension()
+                .map(|ext| ext == OsStr::new("zip"))
+                .unwrap_or_default()
+        {
             return Ok(DirModReleaseType::Zip);
-        } else {
-            let file_type = metadata.file_type();
-            if file_type.is_symlink() {
-                return Ok(DirModReleaseType::Symlink);
-            } else if path.join("info.json").exists() {
-                return Ok(DirModReleaseType::Directory);
-            }
         };
 
         bail!("Could not parse mod entry structure");
