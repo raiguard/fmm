@@ -255,6 +255,63 @@ fn sync(ctx: &mut Ctx, config: &Config, mods: Vec<ModIdent>) -> Result<()> {
     Ok(())
 }
 
+fn sync_file(ctx: &mut Ctx, config: &Config, path: PathBuf) -> Result<()> {
+    if !path.exists() {
+        bail!("path '{}' does not exist", path.to_str().unwrap());
+    }
+    let file = SaveFile::from(path)?;
+    // Sync startup settings
+    ctx.directory
+        .get()
+        .settings
+        .merge_startup_settings(&file.startup_settings)?;
+    // Extract mods to enable or download
+    let mods: Vec<ModIdent> = file
+        .mods
+        .iter()
+        .filter(|ident| ident.name != "base")
+        .cloned()
+        .map(|mut ident| {
+            if config.sync_latest_versions {
+                ident.version = None;
+            }
+            ident
+        })
+        .collect();
+
+    // Latest versions may have different dependency requirements than the versions in the save
+    let mods = if config.sync_latest_versions {
+        ctx.add_dependencies(mods, true)
+    } else {
+        mods
+    };
+
+    sync(ctx, config, mods)
+}
+
+fn sync_list(
+    ctx: &mut Ctx,
+    config: &Config,
+    path: Result<PathBuf, pico_args::Error>,
+) -> Result<()> {
+    let path: PathBuf = path.map_err(|_| anyhow!("required argument <PATH> is missing"))?;
+    if !path.exists() {
+        bail!("path {:?} does not exist", path);
+    }
+    let json: ModListJson = serde_json::from_str(&fs::read_to_string(&path)?)
+        .context("invalid mod-list.json format")?;
+    let mods: Vec<ModIdent> = json
+        .mods
+        .iter()
+        .filter(|mod_entry| mod_entry.enabled && mod_entry.name != "base")
+        .map(|mod_entry| ModIdent {
+            name: mod_entry.name.clone(),
+            version: mod_entry.version.clone(),
+        })
+        .collect();
+    sync(ctx, config, mods)
+}
+
 fn update(ctx: &mut Ctx, config: &Config, mods: &[String]) -> Result<()> {
     let no_input = mods.is_empty();
 
@@ -330,63 +387,6 @@ fn update(ctx: &mut Ctx, config: &Config, mods: &[String]) -> Result<()> {
     }
 
     Ok(())
-}
-
-fn sync_file(ctx: &mut Ctx, config: &Config, path: PathBuf) -> Result<()> {
-    if !path.exists() {
-        bail!("path '{}' does not exist", path.to_str().unwrap());
-    }
-    let file = SaveFile::from(path)?;
-    // Sync startup settings
-    ctx.directory
-        .get()
-        .settings
-        .merge_startup_settings(&file.startup_settings)?;
-    // Extract mods to enable or download
-    let mods: Vec<ModIdent> = file
-        .mods
-        .iter()
-        .filter(|ident| ident.name != "base")
-        .cloned()
-        .map(|mut ident| {
-            if config.sync_latest_versions {
-                ident.version = None;
-            }
-            ident
-        })
-        .collect();
-
-    // Latest versions may have different dependency requirements than the versions in the save
-    let mods = if config.sync_latest_versions {
-        ctx.add_dependencies(mods, true)
-    } else {
-        mods
-    };
-
-    sync(ctx, config, mods)
-}
-
-fn sync_list(
-    ctx: &mut Ctx,
-    config: &Config,
-    path: Result<PathBuf, pico_args::Error>,
-) -> Result<()> {
-    let path: PathBuf = path.map_err(|_| anyhow!("required argument <PATH> is missing"))?;
-    if !path.exists() {
-        bail!("path {:?} does not exist", path);
-    }
-    let json: ModListJson = serde_json::from_str(&fs::read_to_string(&path)?)
-        .context("invalid mod-list.json format")?;
-    let mods: Vec<ModIdent> = json
-        .mods
-        .iter()
-        .filter(|mod_entry| mod_entry.enabled && mod_entry.name != "base")
-        .map(|mod_entry| ModIdent {
-            name: mod_entry.name.clone(),
-            version: mod_entry.version.clone(),
-        })
-        .collect();
-    sync(ctx, config, mods)
 }
 
 fn upload(ctx: &mut Ctx, config: &Config, file: PathBuf) -> Result<()> {
