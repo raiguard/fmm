@@ -35,20 +35,20 @@ options:
     --nodisable -d     when using sync subcommands, keep current mods enabled
     --token <TOKEN>    oauth token for the mod portal
 subcommands:
-    clean             remove out-of-date mod versions, leaving only the newest version; ignores symlinked mods
-    disable <MODS>    disable the given mods, or all mods if no mods are given
-    download <MODS>   download the given mods
-    enable <MODS>     enable the given mods
-    enable-set <SET>  enable the mods from the given mod set
-    query <MODS>      query the local mods folder
-    remove <MODS>     remove the given mods
-    search <QUERY>    search for mods on the mod portal
-    sync <MODS>       enable the given mods, downloading if necessary, and disable all other mods
-    sync-file <PATH>  enable the mods from the given save file, downloading if necessary, disable all other mods, and sync mod startup settings
-    sync-list <PATH>  enable the mods from the given mod-list.json, downloading if necessary, and disable all other mods
-    sync-set <SET>    enable the mods from the given mod set, downloading if necessary, and disable all other mods
-    update <MODS>     update the given mods, or all mods if no mods are given
-    upload <PATH>     upload the given mod zip file to the mod portal";
+    {clean, c}                remove out-of-date mod versions, leaving only the newest version; ignores symlinked mods
+    {disable, d}     <MODS>   disable the given mods, or all mods if no mods are given
+    {download, dl}   <MODS>   download the given mods
+    {enable, e}      <MODS>   enable the given mods
+    {enable-set, es} <SET>    enable the mods from the given mod set
+    {query, q}       <MODS>   query the local mods folder
+    {remove, r}      <MODS>   remove the given mods
+    {search, l}      <QUERY>  search for mods on the mod portal
+    {sync, s}        <MODS>   enable the given mods, downloading if necessary, and disable all other mods
+    {sync-file, sf}  <PATH>   enable the mods from the given save file, downloading if necessary, disable all other mods, and sync mod startup settings
+    {sync-list, sl}  <PATH>   enable the mods from the given mod-list.json, downloading if necessary, and disable all other mods
+    {sync-set, ss}   <SET>    enable the mods from the given mod set, downloading if necessary, and disable all other mods
+    {update, u}      <MODS>   update the given mods, or all mods if no mods are given
+    {upload, ul}     <PATH>   upload the given mod zip file to the mod portal";
 
 pub fn main() -> Result<()> {
     let mut args = Arguments::from_env();
@@ -62,32 +62,32 @@ pub fn main() -> Result<()> {
     let mut ctx = Ctx::new(&config);
 
     match args.subcommand()?.as_deref() {
-        Some("clean") => clean(&mut ctx, &config)?,
-        Some("disable") => disable(&mut ctx, &config, &finish_args::<ModIdent>(args)?),
-        Some("download") => download(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
-        Some("enable") => {
+        Some("clean" | "c") => clean(&mut ctx, &config)?,
+        Some("disable" | "d") => disable(&mut ctx, &config, &finish_args::<ModIdent>(args)?),
+        Some("download" | "dl") => download(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
+        Some("enable" | "e") => {
             let mods = ctx.add_dependencies(finish_args::<ModIdent>(args)?, false);
             enable(&mut ctx, &config, mods)?
         }
-        Some("enable-set") => {
+        Some("enable-set" | "es") => {
             let mods = ctx.add_dependencies(config.extract_mod_set(&args.free_from_str()?)?, false);
             enable(&mut ctx, &config, mods)?
         }
-        Some("query") => query(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
-        Some("remove") => remove(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
-        Some("search") => search(&mut ctx, &config, args.free_from_str()?)?,
-        Some("sync") => {
+        Some("query" | "q") => query(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
+        Some("remove" | "r") => remove(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
+        Some("search" | "l") => search(&mut ctx, &config, args.free_from_str()?)?,
+        Some("sync" | "s") => {
             let mods = ctx.add_dependencies(finish_args::<ModIdent>(args)?, true);
             sync(&mut ctx, &config, mods)?
         }
-        Some("sync-file") => sync_file(&mut ctx, &config, args.free_from_str()?)?,
-        Some("sync-list") => sync_list(&mut ctx, &config, args.free_from_str())?,
-        Some("sync-set") => {
+        Some("sync-file" | "sf") => sync_file(&mut ctx, &config, args.free_from_str()?)?,
+        Some("sync-list" | "sl") => sync_list(&mut ctx, &config, args.free_from_str())?,
+        Some("sync-set" | "ss") => {
             let mods = ctx.add_dependencies(config.extract_mod_set(&args.free_from_str()?)?, true);
             sync(&mut ctx, &config, mods)?
         }
-        Some("update") => update(&mut ctx, &config, &finish_args::<String>(args)?)?,
-        Some("upload") => upload(&mut ctx, &config, args.free_from_str()?)?,
+        Some("update" | "u") => update(&mut ctx, &config, &finish_args::<String>(args)?)?,
+        Some("upload" | "ul") => upload(&mut ctx, &config, args.free_from_str()?)?,
         Some(cmd) => eprintln!("unknown subcommand: {cmd}\n{HELP}"),
         None => eprintln!("{HELP}"),
     };
