@@ -1,4 +1,4 @@
-fmm(5)
+FMM(5)
 
 # NAME
 

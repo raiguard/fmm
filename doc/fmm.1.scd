@@ -1,4 +1,4 @@
-fmm(1)
+FMM(1)
 
 # NAME
 
@@ -10,7 +10,7 @@ fmm - a mod manager for factorio
 
 # OPERATIONS
 
-See *fmm(5)* for an explanation of the *[mods]* format.
+See *fmm*(5) for an explanation of the [mods] format.
 
 *clean, c*
 	Remove out-of-date mod versions, leaving only the newest versions. Ignores
@@ -118,7 +118,7 @@ On startup, fmm will look for a file at *$XDG_CONFIG_HOME/fmm/fmm.toml*. If
 unset, *$XDG_CONFIG_HOME* defaults to *~/.config/*. Passing the *--config*
 option will override this configuration file with the one specified.
 
-See *fmm(5)* for the configuration file syntax.
+See *fmm*(5) for the configuration file syntax.
 
 # AUTHORS
 
