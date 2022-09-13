@@ -12,7 +12,7 @@ fmm download Krastorio2
 fmm sync-file ~/downloads/cool-save-file.zip
 ```
 
-Read the [man pages][./doc] to learn more.
+Read the [man pages](./doc) to learn more.
 
 ## Installation
 
