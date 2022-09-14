@@ -34,4 +34,4 @@ uninstall:
 		$(DESTDIR)$(PREFIX)/$(MANDIR)/man1/fmm.1 \
 		$(DESTDIR)$(PREFIX)/$(MANDIR)/man5/fmm.5
 
-.PHONY: all build docs clean install
+.PHONY: all build docs clean install uninstall

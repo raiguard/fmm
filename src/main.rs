@@ -63,21 +63,21 @@ pub fn main() -> Result<()> {
 
     match args.subcommand()?.as_deref() {
         Some("clean" | "c") => clean(&mut ctx, &config)?,
-        Some("disable" | "d") => disable(&mut ctx, &config, &finish_args::<ModIdent>(args)?),
-        Some("download" | "dl") => download(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
+        Some("disable" | "d") => disable(&mut ctx, &config, &finish_args(args)?),
+        Some("download" | "dl") => download(&mut ctx, &config, &finish_args(args)?)?,
         Some("enable" | "e") => {
-            let mods = ctx.add_dependencies(finish_args::<ModIdent>(args)?, false);
+            let mods = ctx.add_dependencies(finish_args(args)?, false);
             enable(&mut ctx, &config, mods)?
         }
         Some("enable-set" | "es") => {
             let mods = ctx.add_dependencies(config.extract_mod_set(&args.free_from_str()?)?, false);
             enable(&mut ctx, &config, mods)?
         }
-        Some("query" | "q") => query(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
-        Some("remove" | "r") => remove(&mut ctx, &config, &finish_args::<ModIdent>(args)?)?,
+        Some("query" | "q") => query(&mut ctx, &config, &finish_args(args)?)?,
+        Some("remove" | "r") => remove(&mut ctx, &config, &finish_args(args)?)?,
         Some("search" | "l") => search(&mut ctx, &config, args.free_from_str()?)?,
         Some("sync" | "s") => {
-            let mods = ctx.add_dependencies(finish_args::<ModIdent>(args)?, true);
+            let mods = ctx.add_dependencies(finish_args(args)?, true);
             sync(&mut ctx, &config, mods)?
         }
         Some("sync-file" | "sf") => sync_file(&mut ctx, &config, args.free_from_str()?)?,
@@ -86,7 +86,7 @@ pub fn main() -> Result<()> {
             let mods = ctx.add_dependencies(config.extract_mod_set(&args.free_from_str()?)?, true);
             sync(&mut ctx, &config, mods)?
         }
-        Some("update" | "u") => update(&mut ctx, &config, &finish_args::<String>(args)?)?,
+        Some("update" | "u") => update(&mut ctx, &config, &finish_args(args)?)?,
         Some("upload" | "ul") => upload(&mut ctx, &config, args.free_from_str()?)?,
         Some(cmd) => eprintln!("unknown subcommand: {cmd}\n{HELP}"),
         None => eprintln!("{HELP}"),

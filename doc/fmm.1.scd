@@ -6,7 +6,7 @@ fmm - a mod manager for factorio
 
 # SYNOPSIS
 
-*fmm* <operation> [options]
+*fmm* [options] <operation>
 
 # OPERATIONS
 
