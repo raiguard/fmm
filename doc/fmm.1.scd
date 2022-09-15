@@ -103,8 +103,8 @@ See *fmm*(5) for an explanation of the [mods] format.
 # MODS DIRECTORY
 
 fmm determines the mods directory in the following order:
-	- the current working directory
 	- the *--mods-dir* option
+	- the current working directory
 	- the *mods_dir* setting
 	- inferred from the *--game-dir* option
 	- inferred from the *game_dir* setting

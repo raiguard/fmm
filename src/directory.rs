@@ -14,6 +14,10 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use zip::ZipArchive;
 
+pub fn is_valid(path: &Path) -> bool {
+    path.join("mod-list.json").exists() && path.join("mod-settings.dat").exists()
+}
+
 #[derive(Debug)]
 pub struct Directory {
     mods: HashMap<String, DirMod>,
@@ -26,7 +30,7 @@ impl Directory {
     pub fn new(path: &Path) -> Result<Self> {
         // Check for mod-list.json and mod-settings.dat
         ensure!(
-            path.join("mod-list.json").exists() && path.join("mod-settings.dat").exists(),
+            is_valid(path),
             format!("invalid mods directory: {:?}", path)
         );
 

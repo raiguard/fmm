@@ -1,4 +1,4 @@
-use crate::ModIdent;
+use crate::{directory, ModIdent};
 use anyhow::{anyhow, bail, ensure, Result};
 use pico_args::Arguments;
 use serde::Deserialize;
@@ -34,6 +34,16 @@ impl Config {
         ensure!(game_dir.exists(), "Invalid game directory");
 
         let mods_dir = mods_dir
+            .or_else(|| {
+                std::env::current_dir().ok().filter(|path| {
+                    if directory::is_valid(path) {
+                        println!("using current directory");
+                        true
+                    } else {
+                        false
+                    }
+                })
+            })
             .or(config_file.mods_dir)
             .or_else(|| Some(game_dir.join("mods")))
             .ok_or_else(|| anyhow!("Did not provide mods directory"))?;
