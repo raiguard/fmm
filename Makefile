@@ -1,37 +1,48 @@
-BINDIR = bin
-MANDIR = share/man
-PREFIX = /usr/local
+PREFIX = $(DESTDIR)/usr/local
+BINDIR = $(PREFIX)/bin
+MANDIR = $(PREFIX)/share/man
 
-all: build docs
+all: target/debug/fmm docs
 
-build:
+target:
+	mkdir target
+
+target/debug/fmm: src/*.rs target
+	cargo build
+
+release:
 	cargo build --release
 
-docs: doc/fmm.1 doc/fmm.5
+test:
+	cargo test
 
-doc/fmm.1: doc/fmm.1.scd
+docs: target/man/fmm.1 target/man/fmm.5
+
+target/man: target
+	mkdir target/man
+
+target/man/fmm.1: man/fmm.1.scd target/man
 	scdoc < $< > $@
 
-doc/fmm.5: doc/fmm.5.scd
+target/man/fmm.5: man/fmm.5.scd target/man
 	scdoc < $< > $@
 
 clean:
 	cargo clean
-	rm -f doc/fmm.1 doc/fmm.5
 
 install:
 	install -d \
-		$(DESTDIR)$(PREFIX)/$(BINDIR) \
-		$(DESTDIR)$(PREFIX)/$(MANDIR)/man1/ \
-		$(DESTDIR)$(PREFIX)/$(MANDIR)/man5/
-	install -pm 0755 target/release/fmm $(DESTDIR)$(PREFIX)/$(BINDIR)/
-	install -pm 0644 doc/fmm.1 $(DESTDIR)$(PREFIX)/$(MANDIR)/man1/
-	install -pm 0644 doc/fmm.5 $(DESTDIR)$(PREFIX)/$(MANDIR)/man5/
+		$(BINDIR) \
+		$(MANDIR)/man1/ \
+		$(MANDIR)/man5/
+	install -pm 0755 target/release/fmm $(BINDIR)/
+	install -pm 0644 target/man/fmm.1 $(MANDIR)/man1/
+	install -pm 0644 target/man/fmm.5 $(MANDIR)/man5/
 
 uninstall:
 	rm -f \
-		$(DESTDIR)$(PREFIX)/$(BINDIR)/fmm \
-		$(DESTDIR)$(PREFIX)/$(MANDIR)/man1/fmm.1 \
-		$(DESTDIR)$(PREFIX)/$(MANDIR)/man5/fmm.5
+		$(BINDIR)/fmm \
+		$(MANDIR)/man1/fmm.1 \
+		$(MANDIR)/man5/fmm.5
 
-.PHONY: all build docs clean install uninstall
+.PHONY: all release test docs clean install uninstall

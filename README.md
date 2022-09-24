@@ -12,7 +12,7 @@ fmm download Krastorio2
 fmm sync-file ~/downloads/cool-save-file.zip
 ```
 
-Read the [man pages](./doc) to learn more.
+Read the [man pages](./man) to learn more.
 
 ## Installation
 
@@ -23,10 +23,10 @@ will be available soon.
 
 Dependencies:
 - [rust](https://rust-lang.org) (cargo)
-- [scdoc](https://git.sr.ht/~sircmpwn/scdoc) (optional, for man pages)
+- [scdoc](https://git.sr.ht/~sircmpwn/scdoc) (for man pages)
 
 ```
-make
+make release
 sudo make install
 ```
 
