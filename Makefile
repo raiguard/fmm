@@ -18,8 +18,8 @@ test:
 
 docs: target/man/fmm.1 target/man/fmm.5
 
-target/man: target
-	mkdir target/man
+target/man:
+	mkdir -p target/man
 
 target/man/fmm.1: man/fmm.1.scd target/man
 	scdoc < $< > $@

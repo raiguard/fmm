@@ -30,7 +30,7 @@ All settings are optional.
 	*FMM_TOKEN* environment variable and the *--token* option will override this
 	setting.
 
-# PORTAL CREDENTIALS
+# SECTION: portal
 
 fmm will attempt to extract your mod portal credentials from the
 *player-data.json* file in the game directory. If the game directory has not
@@ -44,7 +44,7 @@ specify them in the *[portal]* section of the configuration file.
 *username* = _string_
 	Your Factorio username.
 
-# MOD SETS
+# SECTION: sets
 
 When using the *enable-set* or *sync-set* operations, fmm will check the
 *[sets]* section of the configuration file for the set that you specified.

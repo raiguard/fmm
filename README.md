@@ -8,7 +8,7 @@ automatically downloaded and enabled.
 
 ```
 fmm enable space-exploration
-fmm download Krastorio2
+fmm download Krastorio2@1.2.0
 fmm sync-file ~/downloads/cool-save-file.zip
 ```
 
