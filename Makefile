@@ -2,33 +2,26 @@ PREFIX = $(DESTDIR)/usr/local
 BINDIR = $(PREFIX)/bin
 MANDIR = $(PREFIX)/share/man
 
-all: target/debug/fmm docs
+all: fmm docs
 
-target:
-	mkdir target
-
-target/debug/fmm: src/*.rs target
-	cargo build
-
-release:
-	cargo build --release
+fmm: *.go
+	go build
 
 test:
-	cargo test
+	go test
 
-docs: target/man/fmm.1 target/man/fmm.5
+docs: fmm.1 fmm.5
 
-target/man:
-	mkdir -p target/man
-
-target/man/fmm.1: man/fmm.1.scd target/man
+fmm.1: fmm.1.scd
 	scdoc < $< > $@
 
-target/man/fmm.5: man/fmm.5.scd target/man
+fmm.5: fmm.5.scd
 	scdoc < $< > $@
 
 clean:
-	cargo clean
+	go clean
+	rm -f fmm.1
+	rm -f fmm.5
 
 install:
 	install -d \
@@ -45,4 +38,4 @@ uninstall:
 		$(MANDIR)/man1/fmm.1 \
 		$(MANDIR)/man5/fmm.5
 
-.PHONY: all release test docs clean install uninstall
+.PHONY: test docs clean install uninstall
