@@ -1,5 +1,5 @@
 fmm
-fmm.1
-fmm.5
 .kakrc
-.vscode
+man/fmm.1
+man/fmm.5
+TEST

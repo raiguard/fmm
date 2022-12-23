@@ -11,12 +11,12 @@ func usage(msg ...any) {
 	if len(msg) > 0 {
 		fmt.Fprintln(os.Stderr, msg...)
 	}
-	fmt.Fprintln(os.Stderr, "usage: fmm [-c <file>] [-d <directory>] <clean | disable | enable | install | publish | query | sync> args...")
+	fmt.Fprintln(os.Stderr, "usage: fmm [-l <file>] <disable | enable> mods...")
 	os.Exit(1)
 }
 
 func main() {
-	_, index, err := getopt.Getopts(os.Args, "c:d:")
+	opts, index, err := getopt.Getopts(os.Args, "l:")
 	if err != nil {
 		usage(err)
 	}
@@ -25,26 +25,31 @@ func main() {
 		usage()
 	}
 
-	var task func(args []string)
-	op := args[0]
-	switch op {
-	case "clean", "c":
-		panic("clean subcommand is not yet implemented")
-	case "disable", "d":
-		panic("disable subcommand is not yet implemented")
-	case "enable", "e":
-		panic("enable subcommand is not yet implemented")
-	case "install", "i":
-		panic("install subcommand is not yet implemented")
-	case "publish", "p":
-		panic("publish subcommand is not yet implemented")
-	case "query", "q":
-		panic("query subcommand is not yet implemented")
-	case "sync", "s":
-		panic("sync subcommand is not yet implemented")
-	default:
-		usage("fmm: unknown operation", op)
+	modlistPath := "mod-list.json"
+	for _, opt := range opts {
+		switch opt.Option {
+		case 'l':
+			modlistPath = opt.Value
+		}
 	}
 
-	task(args)
+	list, err := newModlist(modlistPath)
+	if err != nil {
+		usage(err)
+	}
+
+	op := args[0]
+	for _, input := range args[1:] {
+		mod := newModident(input)
+		switch op {
+		case "enable", "e":
+			list.enable(mod.Name, mod.Version)
+		case "disable", "d":
+			list.disable(mod.Name)
+		default:
+			usage("Unrecognized operation: ", op)
+		}
+	}
+
+	list.save()
 }

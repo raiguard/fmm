@@ -8,20 +8,23 @@ fmm: *.go
 	go build
 
 test:
-	go test
+	@if [ -d TEST ]; then echo "rm -rf TEST"; rm -rf TEST; fi
+	cp -rf testfiles TEST
+	@go test
+	rm -rf TEST
 
-docs: fmm.1 fmm.5
+docs: man/fmm.1 man/fmm.5
 
-fmm.1: fmm.1.scd
+man/fmm.1: man/fmm.1.scd
 	scdoc < $< > $@
 
-fmm.5: fmm.5.scd
+man/fmm.5: man/fmm.5.scd
 	scdoc < $< > $@
 
 clean:
 	go clean
-	rm -f fmm.1
-	rm -f fmm.5
+	rm -f man/fmm.1
+	rm -f man/fmm.5
 
 install:
 	install -d \
