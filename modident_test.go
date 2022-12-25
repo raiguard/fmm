@@ -5,11 +5,11 @@ import "testing"
 func TestModident(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected modident
+		expected Modident
 	}{
-		{"Zipped", modident{"Zipped", nil}},
-		{"Zipped_1.0.0", modident{"Zipped", &version{1}}},
-		{"Recipe_Book_1.0.35", modident{"Recipe_Book", &version{1, 0, 35}}},
+		{"Zipped", Modident{"Zipped", nil}},
+		{"Zipped_1.0.0", Modident{"Zipped", &version{1}}},
+		{"Recipe_Book_1.0.35", Modident{"Recipe_Book", &version{1, 0, 35}}},
 	}
 	for _, test := range tests {
 		mod := newModident(test.input)

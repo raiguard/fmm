@@ -49,6 +49,17 @@ func (l *modlist) save() error {
 	return err
 }
 
+func (l *modlist) disable(name string) {
+	for i := range l.Mods {
+		mod := &l.Mods[i]
+		if mod.Name != name {
+			continue
+		}
+		mod.Enabled = false
+		break
+	}
+}
+
 func (l *modlist) enable(name string, version *version) {
 	var versionStr *string
 	if version != nil {
@@ -67,17 +78,6 @@ func (l *modlist) enable(name string, version *version) {
 	// Mod was not found, so add it
 	mod := modlistMod{Name: name, Enabled: true, Version: versionStr}
 	l.Mods = append(l.Mods, mod)
-}
-
-func (l *modlist) disable(name string) {
-	for i := range l.Mods {
-		mod := &l.Mods[i]
-		if mod.Name != name {
-			continue
-		}
-		mod.Enabled = false
-		break
-	}
 }
 
 func (l *modlist) remove(name string) {

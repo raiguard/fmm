@@ -3,20 +3,24 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 
 	"git.sr.ht/~sircmpwn/getopt"
+	"github.com/adrg/xdg"
 )
+
+var config Config
 
 func usage(msg ...any) {
 	if len(msg) > 0 {
 		fmt.Fprintln(os.Stderr, msg...)
 	}
-	fmt.Fprintln(os.Stderr, "usage: fmm [-l <file>] <disable | enable> mods...")
+	fmt.Fprintln(os.Stderr, "usage: fmm [-c <file>] <disable | enable> mods...")
 	os.Exit(1)
 }
 
 func main() {
-	opts, index, err := getopt.Getopts(os.Args, "l:")
+	opts, index, err := getopt.Getopts(os.Args, "c:")
 	if err != nil {
 		usage(err)
 	}
@@ -25,15 +29,21 @@ func main() {
 		usage()
 	}
 
-	modlistPath := "mod-list.json"
+	configPath, err := xdg.ConfigFile("fmm/fmm.ini")
+	if err != nil {
+		usage(err)
+	}
+
 	for _, opt := range opts {
 		switch opt.Option {
-		case 'l':
-			modlistPath = opt.Value
+		case 'c':
+			configPath = opt.Value
 		}
 	}
 
-	list, err := newModlist(modlistPath)
+	parseConfig(configPath)
+
+	list, err := newModlist(path.Join(config.ModsDir, "mod-list.json"))
 	if err != nil {
 		usage(err)
 	}
@@ -42,10 +52,10 @@ func main() {
 	for _, input := range args[1:] {
 		mod := newModident(input)
 		switch op {
-		case "enable", "e":
-			list.enable(mod.Name, mod.Version)
 		case "disable", "d":
 			list.disable(mod.Name)
+		case "enable", "e":
+			list.enable(mod.Name, mod.Version)
 		default:
 			usage("Unrecognized operation: ", op)
 		}
