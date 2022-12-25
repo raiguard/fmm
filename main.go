@@ -54,8 +54,10 @@ func main() {
 		switch op {
 		case "disable", "d":
 			list.disable(mod.Name)
+			fmt.Println("Disabled", mod.toString())
 		case "enable", "e":
 			list.enable(mod.Name, mod.Version)
+			fmt.Println("Enabled", mod.toString())
 		default:
 			usage("Unrecognized operation: ", op)
 		}
