@@ -41,16 +41,16 @@ func main() {
 		}
 	}
 
-	parseConfig(configPath)
+	newConfig(configPath)
 
-	list, err := newModlist(path.Join(config.ModsDir, "mod-list.json"))
+	list, err := newModList(path.Join(config.ModsDir, "mod-list.json"))
 	if err != nil {
 		usage(err)
 	}
 
 	op := args[0]
 	for _, input := range args[1:] {
-		mod := newModident(input)
+		mod := newModIdent(input)
 		switch op {
 		case "disable", "d":
 			list.disable(mod.Name)
@@ -59,7 +59,7 @@ func main() {
 			list.enable(mod.Name, mod.Version)
 			fmt.Println("Enabled", mod.toString())
 		default:
-			usage("Unrecognized operation: ", op)
+			usage(os.Args[0], ": unrecognized operation: ", op)
 		}
 	}
 

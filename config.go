@@ -6,7 +6,7 @@ type Config struct {
 	ModsDir string
 }
 
-func parseConfig(path string) error {
+func newConfig(path string) error {
 	file, err := ini.LoadFile(path)
 	if err != nil {
 		return err

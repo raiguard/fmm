@@ -7,25 +7,25 @@ import (
 	"strings"
 )
 
-type version [4]uint16
+type Version [4]uint16
 
-type versionCmpRes uint8
+type VersionCmpRes uint8
 
 const (
-	versionAny versionCmpRes = iota
-	versionEq
-	versionGt
-	versionGtEq
-	versionLt
-	versionLtEq
+	VersionAny VersionCmpRes = iota
+	VersionEq
+	VersionGt
+	VersionGtEq
+	VersionLt
+	VersionLtEq
 )
 
-func newVersion(input string) (*version, error) {
+func newVersion(input string) (*Version, error) {
 	parts := strings.Split(strings.TrimSpace(input), ".")
 	if len(parts) < 2 || len(parts) > 4 {
 		return nil, errors.New("Version string must have between 2 and 4 parts")
 	}
-	var ver version
+	var ver Version
 	for i, part := range parts {
 		part, err := strconv.ParseUint(part, 10, 0)
 		if err != nil {
@@ -36,18 +36,18 @@ func newVersion(input string) (*version, error) {
 	return &ver, nil
 }
 
-func (v *version) cmp(other version) versionCmpRes {
+func (v *Version) cmp(other Version) VersionCmpRes {
 	for i := range v {
 		if v[i] > other[i] {
-			return versionGt
+			return VersionGt
 		} else if v[i] < other[i] {
-			return versionLt
+			return VersionLt
 		}
 	}
-	return versionEq
+	return VersionEq
 }
 
-func (v *version) toString(includeBuild bool) string {
+func (v *Version) toString(includeBuild bool) string {
 	if includeBuild {
 		return fmt.Sprintf("%d.%d.%d.%d", v[0], v[1], v[2], v[3])
 	} else {

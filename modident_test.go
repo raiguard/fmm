@@ -5,19 +5,19 @@ import "testing"
 func TestModident(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected Modident
+		expected ModIdent
 	}{
-		{"Zipped", Modident{"Zipped", nil}},
-		{"Zipped_1.0.0", Modident{"Zipped", &version{1}}},
-		{"Recipe_Book_1.0.35", Modident{"Recipe_Book", &version{1, 0, 35}}},
+		{"Zipped", ModIdent{"Zipped", nil}},
+		{"Zipped_1.0.0", ModIdent{"Zipped", &Version{1}}},
+		{"Recipe_Book_1.0.35", ModIdent{"Recipe_Book", &Version{1, 0, 35}}},
 	}
 	for _, test := range tests {
-		mod := newModident(test.input)
+		mod := newModIdent(test.input)
 		if mod.Name != test.expected.Name {
 			t.Error("Mod name mismatch:", test.input, mod, test.expected)
 		}
 		if test.expected.Version != nil {
-			if mod.Version == nil || test.expected.Version.cmp(*mod.Version) != versionEq {
+			if mod.Version == nil || test.expected.Version.cmp(*mod.Version) != VersionEq {
 				t.Error("Mod version mismatch:", test.input, mod, test.expected)
 			}
 		} else if mod.Version != nil {

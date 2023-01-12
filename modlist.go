@@ -6,23 +6,23 @@ import (
 	"os"
 )
 
-type modlist struct {
-	Mods []modlistMod `json:"mods"`
+type ModList struct {
+	Mods []ModListMod `json:"mods"`
 	path string
 }
 
-type modlistMod struct {
+type ModListMod struct {
 	Name    string  `json:"name"`
 	Enabled bool    `json:"enabled"`
 	Version *string `json:"version,omitempty"`
 }
 
-func newModlist(path string) (*modlist, error) {
+func newModList(path string) (*ModList, error) {
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	list := modlist{path: path}
+	list := ModList{path: path}
 	err = json.Unmarshal(file, &list)
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func newModlist(path string) (*modlist, error) {
 	return &list, nil
 }
 
-func (l *modlist) isEnabled(name string) bool {
+func (l *ModList) isEnabled(name string) bool {
 	for i := range l.Mods {
 		mod := &l.Mods[i]
 		if mod.Name == name {
@@ -40,7 +40,7 @@ func (l *modlist) isEnabled(name string) bool {
 	return false
 }
 
-func (l *modlist) save() error {
+func (l *ModList) save() error {
 	marshaled, err := json.MarshalIndent(l, "", "  ")
 	if err != nil {
 		return err
@@ -49,7 +49,7 @@ func (l *modlist) save() error {
 	return err
 }
 
-func (l *modlist) disable(name string) {
+func (l *ModList) disable(name string) {
 	for i := range l.Mods {
 		mod := &l.Mods[i]
 		if mod.Name != name {
@@ -60,7 +60,7 @@ func (l *modlist) disable(name string) {
 	}
 }
 
-func (l *modlist) enable(name string, version *version) {
+func (l *ModList) enable(name string, version *Version) {
 	var versionStr *string
 	if version != nil {
 		output := version.toString(false)
@@ -76,11 +76,11 @@ func (l *modlist) enable(name string, version *version) {
 		return
 	}
 	// Mod was not found, so add it
-	mod := modlistMod{Name: name, Enabled: true, Version: versionStr}
+	mod := ModListMod{Name: name, Enabled: true, Version: versionStr}
 	l.Mods = append(l.Mods, mod)
 }
 
-func (l *modlist) remove(name string) {
+func (l *ModList) remove(name string) {
 	for i := range l.Mods {
 		mod := &l.Mods[i]
 		if mod.Name != name {

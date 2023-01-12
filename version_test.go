@@ -35,13 +35,13 @@ func TestVersion(t *testing.T) {
 
 func TestVersionCmp(t *testing.T) {
 	tests := []struct {
-		v1  version
-		v2  version
-		res versionCmpRes
+		v1  Version
+		v2  Version
+		res VersionCmpRes
 	}{
-		{version{1, 3, 1}, version{2, 0}, versionLt},
-		{version{1, 5, 3}, version{1, 5, 2}, versionGt},
-		{version{1, 5}, version{1, 5, 0, 0}, versionEq},
+		{Version{1, 3, 1}, Version{2, 0}, VersionLt},
+		{Version{1, 5, 3}, Version{1, 5, 2}, VersionGt},
+		{Version{1, 5}, Version{1, 5, 0, 0}, VersionEq},
 	}
 	for _, test := range tests {
 		res := test.v1.cmp(test.v2)

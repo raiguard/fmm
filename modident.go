@@ -4,24 +4,24 @@ import (
 	"strings"
 )
 
-type Modident struct {
+type ModIdent struct {
 	Name    string
-	Version *version
+	Version *Version
 }
 
-func newModident(input string) Modident {
+func newModIdent(input string) ModIdent {
 	input = strings.TrimSuffix(input, ".zip")
 	parts := strings.Split(input, "_")
 	if len(parts) == 1 {
-		return Modident{input, nil}
+		return ModIdent{input, nil}
 	}
 
 	name := strings.Join(parts[:len(parts)-1], "_")
 	version, _ := newVersion(parts[len(parts)-1])
-	return Modident{name, version}
+	return ModIdent{name, version}
 }
 
-func (i *Modident) toString() string {
+func (i *ModIdent) toString() string {
 	if i.Version != nil {
 		return i.Name + "_" + i.Version.toString(false)
 	}
