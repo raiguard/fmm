@@ -4,6 +4,11 @@ A CLI mod manager for Factorio. Easily enable, disable, download, remove,
 update, upload, or sync mods with a save file. Dependencies will be
 automatically downloaded and enabled.
 
+## Status
+
+This project is currently being rewritten from the ground up in Go. Most
+features are missing, and it has bugs!
+
 ## Usage
 
 ```
@@ -16,8 +21,7 @@ Read the [man pages](./man) to learn more.
 
 ## Installation
 
-AUR packages for compiling from source and for downloading the latest binary
-will be available soon.
+Distribution packages will be available once the project is usable.
 
 ## Building
 
@@ -26,7 +30,7 @@ Dependencies:
 - [scdoc](https://git.sr.ht/~sircmpwn/scdoc) (for man pages)
 
 ```
-make release
+make
 sudo make install
 ```
 
