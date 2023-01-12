@@ -31,9 +31,9 @@ install:
 		$(BINDIR) \
 		$(MANDIR)/man1/ \
 		$(MANDIR)/man5/
-	install -pm 0755 target/release/fmm $(BINDIR)/
-	install -pm 0644 target/man/fmm.1 $(MANDIR)/man1/
-	install -pm 0644 target/man/fmm.5 $(MANDIR)/man5/
+	install -pm 0755 fmm $(BINDIR)/
+	install -pm 0644 man/fmm.1 $(MANDIR)/man1/
+	install -pm 0644 man/fmm.5 $(MANDIR)/man5/
 
 uninstall:
 	rm -f \
