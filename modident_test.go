@@ -8,8 +8,8 @@ func TestModident(t *testing.T) {
 		expected ModIdent
 	}{
 		{"Zipped", ModIdent{"Zipped", nil}},
-		{"Zipped_1.0.0", ModIdent{"Zipped", &Version{1}}},
-		{"Recipe_Book_1.0.35", ModIdent{"Recipe_Book", &Version{1, 0, 35}}},
+		{"Zipped 1.0.0", ModIdent{"Zipped", &Version{1}}},
+		{"Recipe_Book 1.0.35", ModIdent{"Recipe_Book", &Version{1, 0, 35}}},
 	}
 	for _, test := range tests {
 		mod := newModIdent(test.input)

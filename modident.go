@@ -31,7 +31,7 @@ func newModIdentList(input []string) []ModIdent {
 
 func (i *ModIdent) toString() string {
 	if i.Version != nil {
-		return i.Name + "_" + i.Version.toString(false)
+		return i.Name + " " + i.Version.toString(false)
 	}
 	return i.Name
 }

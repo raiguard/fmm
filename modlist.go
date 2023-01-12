@@ -49,6 +49,11 @@ func (l *ModList) save() error {
 	return err
 }
 
+func (l *ModList) add(name string) *ModListMod {
+	l.Mods = append(l.Mods, ModListMod{name, true, nil})
+	return &l.Mods[len(l.Mods)-1]
+}
+
 func (l *ModList) disable(name string) {
 	for i := range l.Mods {
 		mod := &l.Mods[i]

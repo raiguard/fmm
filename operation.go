@@ -6,45 +6,69 @@ import (
 )
 
 func disable(args []string) {
+	if len(args) == 0 {
+		disableAll()
+		return
+	}
+
+	dir, err := newDir(modsDir)
+	if err != nil {
+		abort(err)
+	}
+	defer dir.save()
+
+	mods := newModIdentList(args)
+	for _, mod := range mods {
+		file, entry, err := dir.find(mod)
+		if err != nil {
+			errorln(err)
+			continue
+		}
+		entry.Enabled = false
+		fmt.Println("Disabled", file.Ident.Name)
+	}
+}
+
+func disableAll() {
 	list, err := newModList(path.Join(modsDir, "mod-list.json"))
 	if err != nil {
 		usage(disableUsage, err)
 	}
 	defer list.save()
 
-	mods := newModIdentList(args)
-
-	// Disable all
-	if len(mods) == 0 {
-		for i := range list.Mods {
-			mod := &list.Mods[i]
-			if mod.Name != "base" {
-				mod.Enabled = false
-			}
+	for i := range list.Mods {
+		mod := &list.Mods[i]
+		if mod.Name != "base" {
+			mod.Enabled = false
 		}
-		fmt.Println("Disabled all mods")
-		return
 	}
 
-	for _, mod := range mods {
-		list.disable(mod.Name)
-		fmt.Println("Disabled", mod.toString())
-	}
+	fmt.Println("Disabled all mods")
 }
 
 func enable(args []string) {
 	if len(args) == 0 {
 		usage(enableUsage, "no mods were provided")
 	}
-	list, err := newModList(path.Join(modsDir, "mod-list.json"))
+
+	dir, err := newDir(modsDir)
 	if err != nil {
-		usage(enableUsage, err)
+		abort(err)
 	}
-	defer list.save()
+	defer dir.save()
 
 	mods := newModIdentList(args)
 	for _, mod := range mods {
-		list.enable(mod.Name, mod.Version)
-		fmt.Println("Enabled", mod.toString())
+		file, entry, err := dir.find(mod)
+		if err != nil {
+			errorln(err)
+			continue
+		}
+		entry.Enabled = true
+		if mod.Version != nil {
+			versionStr := mod.Version.toString(false)
+			entry.Version = &versionStr
+		}
+		fmt.Println("Enabled", file.Ident.toString())
 	}
 }
