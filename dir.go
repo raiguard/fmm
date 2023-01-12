@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -14,13 +15,13 @@ type Dir struct {
 	List  ModList
 }
 
-func newDir(name string) (*Dir, error) {
-	file, err := os.ReadDir(name)
+func newDir(dirPath string) (*Dir, error) {
+	file, err := os.ReadDir(dirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	list, err := newModList(path.Join(name, "mod-list.json"))
+	list, err := newModList(path.Join(dirPath, "mod-list.json"))
 	if err != nil {
 		// TODO: Create a json?
 		return nil, err
@@ -32,14 +33,26 @@ func newDir(name string) (*Dir, error) {
 		if name == "mod-list.json" || name == "mod-settings.dat" {
 			continue
 		}
+		var ident ModIdent
 		fileType := file.Type()
-		// TODO: Extract info.json
-		if !fileType.IsRegular() {
-			continue
+		if fileType.IsDir() || fileType&fs.ModeSymlink > 0 {
+			infoJson, err := parseInfoJson(path.Join(dirPath, name, "info.json"))
+			if err != nil {
+				errorln(err)
+				continue
+			}
+			ident.Name = infoJson.Name
+			ver, err := newVersion(infoJson.Version)
+			if err != nil {
+				errorln(err)
+				continue
+			}
+			ident.Version = ver
+		} else {
+			ident = newModIdent(name)
 		}
 		files = append(files, ModFile{
-			// TODO: Guarantee version
-			Ident: newModIdent(name),
+			Ident: ident,
 			Path:  name,
 			Type:  fileType,
 		})
@@ -110,8 +123,29 @@ func (f ModFiles) Less(i, j int) bool {
 }
 
 type ModFile struct {
-	// Dependencies []Dependency
-	Ident ModIdent
-	Path  string
-	Type  fs.FileMode
+	Dependencies []string
+	Ident        ModIdent
+	Path         string
+	Type         fs.FileMode
+}
+
+type InfoJson struct {
+	Dependencies []string `json:"dependencies"`
+	Name         string   `json:"name"`
+	Version      string   `json:"version"`
+}
+
+func parseInfoJson(path string) (*InfoJson, error) {
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var unmarshaled InfoJson
+	err = json.Unmarshal(bytes, &unmarshaled)
+	if err != nil {
+		return nil, err
+	}
+
+	return &unmarshaled, nil
 }
