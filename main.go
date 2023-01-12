@@ -3,65 +3,58 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 
 	"git.sr.ht/~sircmpwn/getopt"
 	"github.com/adrg/xdg"
 )
 
-var config Config
+var (
+	configPath string = "./fmm.ini"
+	modsDir    string = "."
+)
 
-func usage(msg ...any) {
-	if len(msg) > 0 {
-		fmt.Fprintln(os.Stderr, msg...)
-	}
-	fmt.Fprintln(os.Stderr, "usage: fmm [-c <file>] <disable | enable> mods...")
-	os.Exit(1)
-}
+const (
+	disableUsage string = "fmm disable [mods...]"
+	enableUsage  string = "fmm enable <mods...>"
+	mainUsage    string = "fmm [-c <file>] <disable | enable> args..."
+)
 
 func main() {
-	opts, index, err := getopt.Getopts(os.Args, "c:")
+	opts, index, err := getopt.Getopts(os.Args, "c:h")
 	if err != nil {
-		usage(err)
-	}
-	args := os.Args[index:]
-	if len(args) == 0 {
-		usage()
+		usage(mainUsage, err)
 	}
 
-	configPath, err := xdg.ConfigFile("fmm/fmm.ini")
-	if err != nil {
-		usage(err)
+	xdgConfigPath, err := xdg.ConfigFile("fmm/fmm.ini")
+	if err == nil {
+		configPath = xdgConfigPath
 	}
 
 	for _, opt := range opts {
 		switch opt.Option {
 		case 'c':
 			configPath = opt.Value
+		case 'h':
+			usage(mainUsage)
 		}
 	}
-
-	newConfig(configPath)
-
-	list, err := newModList(path.Join(config.ModsDir, "mod-list.json"))
-	if err != nil {
-		usage(err)
+	if err := parseConfigFile(configPath); err != nil {
+		abort("could not parse config file:", err)
 	}
 
-	op := args[0]
-	for _, input := range args[1:] {
-		mod := newModIdent(input)
-		switch op {
-		case "disable", "d":
-			list.disable(mod.Name)
-			fmt.Println("Disabled", mod.toString())
-		case "enable", "e":
-			list.enable(mod.Name, mod.Version)
-			fmt.Println("Enabled", mod.toString())
-		default:
-			usage(os.Args[0], ": unrecognized operation: ", op)
-		}
+	args := os.Args[index:]
+	if len(args) == 0 {
+		usage(mainUsage, "no operation was specified")
 	}
 
-	list.save()
+	var task func([]string)
+	switch args[0] {
+	case "disable", "d":
+		task = disable
+	case "enable", "e":
+		task = enable
+	default:
+		usage(mainUsage, fmt.Sprintf("%s: unknown operation %s", os.Args[0], args[0]))
+	}
+	task(args[1:])
 }

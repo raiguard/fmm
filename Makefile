@@ -10,7 +10,7 @@ fmm: *.go
 test:
 	@if [ -d TEST ]; then echo "rm -rf TEST"; rm -rf TEST; fi
 	cp -rf testfiles TEST
-	@go test
+	go test
 	rm -rf TEST
 
 docs: man/fmm.1 man/fmm.5
