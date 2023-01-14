@@ -42,12 +42,7 @@ func newDir(dirPath string) (*Dir, error) {
 				continue
 			}
 			ident.Name = infoJson.Name
-			ver, err := newVersion(infoJson.Version)
-			if err != nil {
-				errorln(err)
-				continue
-			}
-			ident.Version = ver
+			ident.Version = &infoJson.Version // TODO: Will this preserve InfoJson forever?
 		} else {
 			ident = newModIdent(name)
 		}
@@ -132,7 +127,7 @@ type ModFile struct {
 type InfoJson struct {
 	Dependencies []string `json:"dependencies"`
 	Name         string   `json:"name"`
-	Version      string   `json:"version"`
+	Version      Version  `json:"version"`
 }
 
 func parseInfoJson(path string) (*InfoJson, error) {

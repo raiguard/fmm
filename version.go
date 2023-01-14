@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -53,4 +54,23 @@ func (v *Version) toString(includeBuild bool) string {
 	} else {
 		return fmt.Sprintf("%d.%d.%d", v[0], v[1], v[2])
 	}
+}
+
+func (v *Version) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	ver, err := newVersion(s)
+	if err != nil {
+		return err
+	}
+
+	v[0] = ver[0]
+	v[1] = ver[1]
+	v[2] = ver[2]
+	v[3] = ver[3]
+
+	return nil
 }
