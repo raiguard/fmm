@@ -33,3 +33,24 @@ func TestNewDependency(t *testing.T) {
 		assert.Equal(t, dep.Req, test.req)
 	}
 }
+
+func TestDependencyTest(t *testing.T) {
+	tests := []struct {
+		dep, mod string
+		result   bool
+	}{
+		{"flib", "flib_0.1.1", true},
+		{"! flib", "flib_0.1.1", false},
+		{"flib >= 0.10", "flib_0.1.1", false},
+		{"flib >= 0.10", "flib_0.10.0", true},
+		{"flib >= 0.10.0", "flib_0.10.0", true},
+		{"flib > 0.10", "flib_0.10.0", false},
+	}
+
+	for _, test := range tests {
+		dep, err := newDependency(test.dep)
+		assert.NoError(t, err)
+		mod := newModIdent(test.mod)
+		assert.Equal(t, dep.Test(&mod), test.result)
+	}
+}
