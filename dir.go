@@ -125,9 +125,9 @@ type ModFile struct {
 }
 
 type InfoJson struct {
-	Dependencies []string `json:"dependencies"`
-	Name         string   `json:"name"`
-	Version      Version  `json:"version"`
+	Dependencies []Dependency `json:"dependencies"`
+	Name         string       `json:"name"`
+	Version      Version      `json:"version"`
 }
 
 func parseInfoJson(path string) (*InfoJson, error) {
