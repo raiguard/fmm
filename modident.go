@@ -21,14 +21,6 @@ func newModIdent(input string) ModIdent {
 	return ModIdent{name, version}
 }
 
-func newModIdentList(input []string) []ModIdent {
-	var output []ModIdent
-	for _, str := range input {
-		output = append(output, newModIdent(str))
-	}
-	return output
-}
-
 func (i *ModIdent) toString() string {
 	if i.Version != nil {
 		return i.Name + " " + i.Version.toString(false)

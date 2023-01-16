@@ -14,11 +14,11 @@ type Dependency struct {
 type DependencyKind uint8
 
 const (
-	DependencyHiddenOptional DependencyKind = iota
+	DependencyRequired DependencyKind = iota
+	DependencyOptional
+	DependencyHiddenOptional
 	DependencyIncompatible
 	DependencyNoLoadOrder
-	DependencyOptional
-	DependencyRequired
 )
 
 func newDependency(input string) (*Dependency, error) {
@@ -94,7 +94,7 @@ func (d *Dependency) Test(mod *ModIdent) bool {
 
 	version := d.Ident.Version
 	if version == nil {
-		return false
+		return true
 	}
 	return d.Req&mod.Version.cmp(*version) > 0
 }

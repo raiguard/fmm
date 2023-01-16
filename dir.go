@@ -1,13 +1,16 @@
 package main
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path"
 	"sort"
+	"strings"
 )
 
 type Dir struct {
@@ -35,6 +38,7 @@ func newDir(dirPath string) (*Dir, error) {
 		}
 		var ident ModIdent
 		fileType := file.Type()
+		var deps *[]Dependency
 		if fileType.IsDir() || fileType&fs.ModeSymlink > 0 {
 			infoJson, err := parseInfoJson(path.Join(dirPath, name, "info.json"))
 			if err != nil {
@@ -43,13 +47,15 @@ func newDir(dirPath string) (*Dir, error) {
 			}
 			ident.Name = infoJson.Name
 			ident.Version = &infoJson.Version // TODO: Will this preserve InfoJson forever?
+			deps = &infoJson.Dependencies
 		} else {
 			ident = newModIdent(name)
 		}
 		files = append(files, ModFile{
-			Ident: ident,
-			Path:  name,
-			Type:  fileType,
+			dependencies: deps,
+			Ident:        ident,
+			Path:         path.Join(dirPath, name),
+			Type:         fileType,
 		})
 	}
 
@@ -62,32 +68,32 @@ func newDir(dirPath string) (*Dir, error) {
 	}, nil
 }
 
-func (d *Dir) find(mod ModIdent) (file *ModFile, entry *ModListMod, err error) {
+func (d *Dir) Find(mod Dependency) (file *ModFile, entry *ModListMod, err error) {
 	// Iterate in reverse to get the newest version first
 	for i := len(d.Files) - 1; i >= 0; i-- {
 		thisfile := &d.Files[i]
-		if thisfile.Ident.Name != mod.Name {
+		if thisfile.Ident.Name != mod.Ident.Name {
 			continue
 		}
-		if mod.Version == nil || thisfile.Ident.Version.cmp(*mod.Version) == VersionEq {
+		if mod.Test(&thisfile.Ident) {
 			file = thisfile
 			break
 		}
 	}
 	if file == nil {
-		return nil, nil, errors.New(fmt.Sprintf("%s was not found in the mods directory", mod.toString()))
+		return nil, nil, errors.New(fmt.Sprintf("%s was not found in the mods directory", mod.Ident.toString()))
 	}
 
 	for i := range d.List.Mods {
 		thisentry := &d.List.Mods[i]
-		if thisentry.Name == mod.Name {
+		if thisentry.Name == mod.Ident.Name {
 			entry = thisentry
 			break
 		}
 	}
 
 	if entry == nil {
-		entry = d.List.add(mod.Name)
+		entry = d.List.add(mod.Ident.Name)
 	}
 
 	return file, entry, nil
@@ -118,10 +124,51 @@ func (f ModFiles) Less(i, j int) bool {
 }
 
 type ModFile struct {
-	Dependencies []string
-	Ident        ModIdent
-	Path         string
-	Type         fs.FileMode
+	dependencies *[]Dependency
+
+	Ident ModIdent
+	Path  string
+	Type  fs.FileMode
+}
+
+func (f *ModFile) Dependencies() (*[]Dependency, error) {
+	if f.dependencies != nil {
+		return f.dependencies, nil
+	}
+
+	if !f.Type.IsRegular() {
+		return nil, errors.New("Failed to get dependencies for unzipped mod")
+	}
+
+	r, err := zip.OpenReader(f.Path)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range r.File {
+		// TODO: Use a regex to get the right one
+		if !strings.Contains(file.Name, "info.json") {
+			continue
+		}
+		rc, err := file.Open()
+		if err != nil {
+			return nil, err
+		}
+		defer rc.Close()
+		content, err := ioutil.ReadAll(rc)
+		if err != nil {
+			return nil, err
+		}
+
+		var unmarshaled InfoJson
+		err = json.Unmarshal(content, &unmarshaled)
+		if err != nil {
+			return nil, err
+		}
+		f.dependencies = &unmarshaled.Dependencies
+	}
+
+	return f.dependencies, nil
 }
 
 type InfoJson struct {
