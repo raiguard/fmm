@@ -56,6 +56,10 @@ func (v *Version) toString(includeBuild bool) string {
 	}
 }
 
+func (v *Version) MarshalJSON() ([]byte, error) {
+	return []byte("\"" + v.toString(false) + "\""), nil
+}
+
 func (v *Version) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {

@@ -12,9 +12,9 @@ type ModList struct {
 }
 
 type ModListMod struct {
-	Name    string  `json:"name"`
-	Enabled bool    `json:"enabled"`
-	Version *string `json:"version,omitempty"`
+	Name    string   `json:"name"`
+	Enabled bool     `json:"enabled"`
+	Version *Version `json:"version,omitempty"`
 }
 
 func newModList(path string) (*ModList, error) {
@@ -65,21 +65,16 @@ func (l *ModList) disable(name string) {
 }
 
 func (l *ModList) enable(name string, version *Version) {
-	var versionStr *string
-	if version != nil {
-		output := version.toString(false)
-		versionStr = &output
-	}
 	for i := range l.Mods {
 		mod := &l.Mods[i]
 		if mod.Name == name {
 			mod.Enabled = true
-			mod.Version = versionStr
+			mod.Version = version
 			return
 		}
 	}
 	// Mod was not found, so add it
-	mod := ModListMod{Name: name, Enabled: true, Version: versionStr}
+	mod := ModListMod{Name: name, Enabled: true, Version: version}
 	l.Mods = append(l.Mods, mod)
 }
 

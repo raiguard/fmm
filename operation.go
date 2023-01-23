@@ -80,15 +80,12 @@ func enable(args []string) {
 			errorln(err)
 			continue
 		}
-		// TODO: This prevents enabling a different version of the same mod
-		if entry.Enabled {
+		// Don't enable if it was already enabled
+		if entry.Enabled && (mod.Ident.Version == nil || (entry.Version != nil && entry.Version.cmp(*file.Ident.Version) == VersionEq)) {
 			continue
 		}
 		entry.Enabled = true
-		if mod.Ident.Version != nil {
-			versionStr := mod.Ident.Version.toString(false)
-			entry.Version = &versionStr
-		}
+		entry.Version = mod.Ident.Version
 		fmt.Println("Enabled", file.Ident.toString())
 
 		deps, err := file.Dependencies()
