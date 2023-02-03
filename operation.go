@@ -80,9 +80,13 @@ func enable(args []string) {
 			errorln(err)
 			continue
 		}
-		// Don't enable if it was already enabled
-		if entry.Enabled && (mod.Ident.Version == nil || (entry.Version != nil && entry.Version.cmp(*file.Ident.Version) == VersionEq)) {
-			continue
+		if entry.Enabled {
+			if mod.Ident.Version == nil || entry.Version == nil {
+				continue
+			}
+			if mod.Test(&ModIdent{entry.Name, entry.Version}) {
+				continue
+			}
 		}
 		entry.Enabled = true
 		entry.Version = mod.Ident.Version
