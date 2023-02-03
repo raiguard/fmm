@@ -39,7 +39,7 @@ func newDependency(input string) (*Dependency, error) {
 		input = strings.TrimPrefix(input, "~")
 	}
 
-	// Iterate in reverse and find the first space
+	// Iterate in reverse and find the first non-digit and non-dot
 	var ver *Version = nil
 	for i := len(input) - 1; i >= 0; i-- {
 		if i > 0 && !(input[i] == '.' || (input[i] >= '0' && input[i] <= '9')) {
