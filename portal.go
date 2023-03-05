@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path"
 
-	"github.com/cavaliergopher/grab/v3"
+	"github.com/cheggaaa/pb/v3"
 )
+
+const barTemplate string = `Downloading {{ string . "name" }} {{ bar . "[" "#" "#" " " "]" }} {{ counters . }} {{ percent . "%.0f%%" }}`
 
 func downloadMod(mod Dependency, dir *Dir) error {
 	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s", mod.Ident.Name)
@@ -30,6 +33,7 @@ func downloadMod(mod Dependency, dir *Dir) error {
 		return err
 	}
 
+	// Check releases from newest to oldest and find the first matching one
 	var release *ModResRelease
 	for i := len(unmarshaled.Releases) - 1; i >= 0; i -= 1 {
 		toCheck := unmarshaled.Releases[i]
@@ -44,19 +48,33 @@ func downloadMod(mod Dependency, dir *Dir) error {
 			mod.Ident.toString()))
 	}
 
-	fmt.Printf("Downloading %s %s\n", unmarshaled.Name, release.Version.toString(false))
-
 	downloadUrl := fmt.Sprintf("https://mods.factorio.com/%s?username=%s&token=%s",
 		release.DownloadUrl, downloadUsername, downloadToken)
 	outPath := path.Join(modsDir, release.FileName)
-	resp, err := grab.Get(outPath, downloadUrl)
+
+	resp, err := http.Get(downloadUrl)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
-	fmt.Printf("Downloaded to %s\n", resp.Filename)
+	f, err := os.Create(outPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 
-	// TODO: Add to dir and download dependencies
+	bar := pb.New64(resp.ContentLength)
+	bar.SetTemplateString(barTemplate)
+	bar.Set(pb.Bytes, true).Set("name", release.FileName)
+	bar.Start()
+
+	barReader := bar.NewProxyReader(resp.Body)
+	io.Copy(f, barReader)
+
+	bar.Finish()
+
+	// TODO: Add to dir
 
 	return nil
 }
