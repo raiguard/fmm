@@ -1,4 +1,4 @@
-module git.sr.ht/~raiguard/fmm
+module github.com/raiguard/fmm
 
 go 1.19
 
