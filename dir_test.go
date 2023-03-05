@@ -21,7 +21,9 @@ func TestDir(t *testing.T) {
 	}
 
 	for _, expected := range expected {
-		file, entry, err := dir.Find(expected, VersionEq)
+		file, entry, err := dir.Find(Dependency{
+			expected, DependencyRequired, VersionEq,
+		})
 		assert.NoError(t, err)
 		assert.Equal(t, file.Ident.Name, expected.Name)
 		assert.Equal(t, file.Ident.Version.cmp(*expected.Version), VersionEq)
