@@ -17,7 +17,10 @@ func newModIdent(input string) ModIdent {
 	}
 
 	name := strings.Join(parts[:len(parts)-1], "_")
-	version, _ := newVersion(parts[len(parts)-1])
+	version, err := newVersion(parts[len(parts)-1])
+	if err != nil {
+		return ModIdent{input, nil}
+	}
 	return ModIdent{name, version}
 }
 
