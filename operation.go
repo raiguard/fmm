@@ -35,6 +35,39 @@ func disable(args []string) {
 	}
 }
 
+func download(args []string) {
+	if len(args) == 0 {
+		usage(downloadUsage, "no mods were provided")
+	}
+
+	if downloadToken == "" {
+		abort("Download username not specified in config file")
+	}
+	if downloadToken == "" {
+		abort("Download token not specified in config file")
+	}
+
+	dir, err := newDir(modsDir)
+	if err != nil {
+		abort(err)
+	}
+
+	var mods []Dependency
+	for _, input := range args {
+		mods = append(mods, Dependency{Ident: newModIdent(input), Req: VersionEq})
+	}
+
+	for _, mod := range mods {
+		// TODO: Do we want to do this?
+		if file, _, _ := dir.Find(mod); file != nil {
+			fmt.Println(file.Ident.toString(), "is already in the mods directory")
+			continue
+		}
+
+		downloadMod(mod, dir)
+	}
+}
+
 func disableAll() {
 	list, err := newModList(path.Join(modsDir, "mod-list.json"))
 	if err != nil {

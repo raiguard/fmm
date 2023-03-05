@@ -16,6 +16,7 @@ import (
 type Dir struct {
 	Files ModFiles
 	List  ModList
+	Path  string
 }
 
 func newDir(dirPath string) (*Dir, error) {
@@ -65,6 +66,7 @@ func newDir(dirPath string) (*Dir, error) {
 	return &Dir{
 		Files: files,
 		List:  *list,
+		Path:  dirPath,
 	}, nil
 }
 

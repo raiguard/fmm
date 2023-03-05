@@ -30,6 +30,13 @@ func parseConfigFile(path string) error {
 		modsDir = dir
 	}
 
+	if username, ok := file.Get("portal", "download_username"); ok {
+		downloadUsername = username
+	}
+	if token, ok := file.Get("portal", "download_token"); ok {
+		downloadToken = token
+	}
+
 	return nil
 }
 

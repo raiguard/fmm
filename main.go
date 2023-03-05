@@ -9,14 +9,17 @@ import (
 )
 
 var (
-	configPath string = "./fmm.ini"
-	modsDir    string = "."
+	configPath       string = "./fmm.ini"
+	downloadToken    string = ""
+	downloadUsername string = ""
+	modsDir          string = "."
 )
 
 const (
-	disableUsage string = "fmm disable [mods...]"
-	enableUsage  string = "fmm enable <mods...>"
-	mainUsage    string = "fmm [-c <file>] <disable | enable> args..."
+	disableUsage  string = "fmm disable [mods...]"
+	downloadUsage string = "fmm download [mods...]"
+	enableUsage   string = "fmm enable <mods...>"
+	mainUsage     string = "fmm [-c <file>] <disable | download | enable> args..."
 )
 
 func main() {
@@ -53,6 +56,8 @@ func main() {
 		task = disable
 	case "enable", "e":
 		task = enable
+	case "download", "dl":
+		task = download
 	default:
 		usage(mainUsage, fmt.Sprintf("%s: unknown operation %s", os.Args[0], args[0]))
 	}
