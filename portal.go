@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,26 +11,23 @@ import (
 	"github.com/cavaliergopher/grab/v3"
 )
 
-func downloadMod(mod Dependency, dir *Dir) {
+func downloadMod(mod Dependency, dir *Dir) error {
 	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s", mod.Ident.Name)
 	res, err := http.Get(url)
 	if err != nil {
-		errorln(err)
-		return
+		return err
 	}
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		errorln(err)
-		return
+		return err
 	}
 	res.Body.Close()
 
 	var unmarshaled ModRes
 	err = json.Unmarshal(body, &unmarshaled)
 	if err != nil {
-		errorln(err)
-		return
+		return err
 	}
 
 	var release *ModResRelease
@@ -42,8 +40,8 @@ func downloadMod(mod Dependency, dir *Dir) {
 	}
 
 	if release == nil {
-		errorf("%s was not found on the mod portal\n", mod.Ident.toString())
-		return
+		return errors.New(fmt.Sprintf("%s was not found on the mod portal",
+			mod.Ident.toString()))
 	}
 
 	fmt.Printf("Downloading %s %s\n", unmarshaled.Name, release.Version.toString(false))
@@ -53,13 +51,14 @@ func downloadMod(mod Dependency, dir *Dir) {
 	outPath := path.Join(modsDir, release.FileName)
 	resp, err := grab.Get(outPath, downloadUrl)
 	if err != nil {
-		errorln(err)
-		return
+		return err
 	}
 
 	fmt.Printf("Downloaded to %s\n", resp.Filename)
 
 	// TODO: Add to dir and download dependencies
+
+	return nil
 }
 
 type ModRes struct {

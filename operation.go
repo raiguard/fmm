@@ -64,7 +64,10 @@ func download(args []string) {
 			continue
 		}
 
-		downloadMod(mod, dir)
+		err := downloadMod(mod, dir)
+		if err != nil {
+			errorln(err)
+		}
 	}
 }
 
