@@ -6,121 +6,79 @@ fmm - a mod manager for factorio
 
 # SYNOPSIS
 
-*fmm* [options] <operation>
+*fmm* [options] <operation> args...
+
+# MOD SYNTAX
+
+Operations and settings that take _mod_ values expect a string in the format of
+*name* or *name_version*. If _version_ is omitted, it is assumed to be the
+newest version in the local mods directory (for local operations) or the newest
+version on the mod portal (for remote operations).
+
+_version_ takes the format of *major.minor.patch*, e.g. *1.1.3*. Leading zeroes
+will be ignored during comparison.
+
+## EXAMPLES
+
+```
+RecipeBook
+RecipeBook_3.5.2
+RecipeBook_4.0
+```
 
 # OPERATIONS
 
-See *fmm*(5) for an explanation of the [mods] format.
-
-*clean, c*
-	Remove out-of-date mod versions, leaving only the newest versions. Ignores
-	symlinked mods.
-
-*disable, d* [mods]
+*disable, d* [mods...]
 	Disable the specified mods, or disable all mods if none are specified.
 
-*download, dl* [mods]
+*download, dl* [mods...]
 	Download the specified mods and their dependencies.
 
-*enable, e* [mods]
+*enable, e* [mods...]
 	Enable the specified mods and their dependencies.
 
-*enable-set, es* <set>
-	Enable the specified mod set - see *fmm(5)*.
-
-*query, q* [mods]
-	Query the local mods directory and display all matching mod versions.
-
-*remove, r* [mods]
-	Remove the specified mods from the local mods directory.
-
-*search, s* <query>
-	Search the mod portal for the specified query. Mod name, author, and
-	description will be searched.
-
-*sync, s* [mods]
-	Enable the specified mods and their dependencies, downloading if necessary,
-	and disable all other mods.
-
-*sync-file, sf* <path>
-	Enable the mods from the specified save file, downloading if necessary, disable
-	all other mods, and sync mod startup settings.
-
-*sync-list, sl* <path>
-	Enable the mods from the specified *mod-list.json*, downloading if necessary,
-	and disable all other mods
-
-*sync-set, ss* <set>
-	Enable the mods from the specified mod set, downloading if necessary, and
-	disable all other mods. See *fmm(5)*.
-
-*update, u* [mods]
-	Update the specified mods to the latest versions, or update all mods if none
-	are specified.
-
-*upload, ul* <path>
-	Upload the specified mod zip file to the mod portal.
+*upload, ul* [files...]
+	Upload the specified mod zip files to the mod portal.
 
 # OPTIONS
 
-*--help*
-	Show help message and quit.
-
-*--config* <config>
+*-c* <file>
 	Path to a custom configuration file.
 
-*--game-dir* <path>
-	Path to a custom game directory.
-
-*--mods-dir* <path>
-	Path to a custom mods directory.
-
-*--token <token>*
-	OAUTH token for the mod portal.
-
-## CLEAN OPTIONS
-
-*--all*
-	Remove all non-symlinked mods instead of keeping the latest versions.
-
-## DOWNLOAD OPTIONS
-
-*--force, -f*
-	Always download even when the mod is already present. The newly downloaded mod
-	will overwrite the existing one. Will not overwrite folder or symlinked mods.
-
-## SYNC OPTIONS
-
-*--nodisable, -d*
-	Keep current mods enabled instead of disabling them.
+*-h*
+	Show help message and quit.
 
 # ENVIRONMENT
 
-*FMM_TOKEN*
-	OAUTH token for the mod portal. Overrides the *token* configuration setting,
-	but may be overridden by the *--token* option
+Environment variables will be prioritized over options set in the config file,
+but can be overridden by CLI options.
+
+To retrieve or reset your API key, token, or username, visit
+https://factorio.com/profile.
+
+*FACTORIO_API_KEY*
+	Your Factorio mod portal API key, used for the *upload* operation. The API key
+	must have authorization for the _upload mods_ action.
+
+*FACTORIO_TOKEN*
+	Your Factorio mod portal token, used for the *download* operation.
+
+*FACTORIO_USERNAME*
+	Your Factorio username.
 
 # MODS DIRECTORY
 
 fmm determines the mods directory in the following order:
-	- the *--mods-dir* option
 	- the current working directory
 	- the *mods_dir* setting
-	- inferred from the *--game-dir* option
-	- inferred from the *game_dir* setting
 
-A valid mods directory must have a _mod-list.json_ file and a _mod-settings.dat_
-file.
+A valid mods directory must have a _mod-list.json_ file.
 
 # CONFIGURATION
-
-On startup, fmm will look for a file at *$XDG_CONFIG_HOME/fmm/fmm.toml*. If
-unset, *$XDG_CONFIG_HOME* defaults to *~/.config/*. Passing the *--config*
-option will override this configuration file with the one specified.
 
 See *fmm*(5) for the configuration file syntax.
 
 # AUTHORS
 
 Maintained by Caleb Heuer <ch@raiguard.me>. For more information about fmm
-development, see https://sr.ht/~raiguard/fmm.
+development, see https://github.com/raiguard/fmm.
