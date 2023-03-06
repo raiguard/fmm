@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path"
@@ -13,6 +15,7 @@ import (
 )
 
 const barTemplate string = `Downloading {{ string . "name" }} {{ bar . "[" "#" "#" " " "]" }} {{ counters . }} {{ percent . "%.0f%%" }}`
+const initUploadUrl string = "https://mods.factorio.com/api/v2/mods/releases/init_upload"
 
 func downloadMod(mod Dependency, dir *Dir) error {
 	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s", mod.Ident.Name)
@@ -77,6 +80,64 @@ func downloadMod(mod Dependency, dir *Dir) error {
 	// TODO: Add to dir
 
 	return nil
+}
+
+func uploadMod(filepath string) error {
+	// Init upload
+	initUploadBody := &bytes.Buffer{}
+	w := multipart.NewWriter(initUploadBody)
+	ident := newModIdent(path.Base(filepath))
+	w.WriteField("mod", ident.Name)
+	w.Close()
+	req, err := http.NewRequest("POST", initUploadUrl, initUploadBody)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	var decoded ModInitUploadRes
+	err = json.NewDecoder(res.Body).Decode(&decoded)
+	if err != nil {
+		return err
+	}
+	if res.StatusCode != http.StatusOK {
+		return errors.New(*decoded.Message)
+	}
+	defer res.Body.Close()
+
+	// Open file
+	file, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	fmt.Printf("Uploading %s\n", filepath)
+
+	// Upload file
+	uploadBody := &bytes.Buffer{}
+	w = multipart.NewWriter(uploadBody)
+	part, err := w.CreateFormFile("file", path.Base(file.Name()))
+	io.Copy(part, file)
+	w.Close()
+
+	r, err := http.NewRequest("POST", *decoded.UploadUrl, uploadBody)
+	if err != nil {
+		return err
+	}
+	r.Header.Add("Content-Type", w.FormDataContentType())
+	http.DefaultClient.Do(r)
+
+	return nil
+}
+
+type ModInitUploadRes struct {
+	UploadUrl *string `json:"upload_url"`
+	Message   *string // When an error occurs
 }
 
 type ModRes struct {

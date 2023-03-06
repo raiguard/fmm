@@ -37,6 +37,12 @@ func parseConfigFile(path string) error {
 		downloadToken = token
 	}
 
+	if key := os.Getenv("FACTORIO_API_KEY"); key != "" {
+		apiKey = key
+	} else if key, ok := file.Get("portal", "api_key"); ok {
+		apiKey = key
+	}
+
 	return nil
 }
 

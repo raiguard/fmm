@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	apiKey           string = ""
 	configPath       string = "./fmm.ini"
 	downloadToken    string = ""
 	downloadUsername string = ""
@@ -58,6 +59,8 @@ func main() {
 		task = enable
 	case "download", "dl":
 		task = download
+	case "upload", "ul":
+		task = upload
 	default:
 		usage(mainUsage, fmt.Sprintf("%s: unknown operation %s", os.Args[0], args[0]))
 	}

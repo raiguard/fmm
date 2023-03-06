@@ -143,3 +143,14 @@ func enable(args []string) {
 		}
 	}
 }
+
+func upload(files []string) {
+	if apiKey == "" {
+		abort("Upload API key not specified in config file.")
+	}
+	for _, file := range files {
+		if err := uploadMod(file); err != nil {
+			abort("Upload failed:", err)
+		}
+	}
+}
