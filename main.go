@@ -60,6 +60,8 @@ func main() {
 		task = enable
 	case "download", "dl":
 		task = download
+	case "help", "h":
+		usage(mainUsage)
 	case "upload", "ul":
 		task = upload
 	default:
