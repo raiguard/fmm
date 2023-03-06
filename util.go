@@ -20,7 +20,16 @@ func errorf(format string, msg ...any) {
 	fmt.Fprintf(os.Stderr, format, msg...)
 }
 
-func parseConfigFile(path string) error {
+func getFromEnvOrConfig(env string, file ini.File, section string, key string) string {
+	if value := os.Getenv(env); value != "" {
+		return value
+	} else if value, ok := file.Get(section, key); ok {
+		return value
+	}
+	return ""
+}
+
+func parseConfig(path string) error {
 	file, err := ini.LoadFile(path)
 	if err != nil {
 		return err
@@ -30,18 +39,9 @@ func parseConfigFile(path string) error {
 		modsDir = dir
 	}
 
-	if username, ok := file.Get("portal", "download_username"); ok {
-		downloadUsername = username
-	}
-	if token, ok := file.Get("portal", "download_token"); ok {
-		downloadToken = token
-	}
-
-	if key := os.Getenv("FACTORIO_API_KEY"); key != "" {
-		apiKey = key
-	} else if key, ok := file.Get("portal", "api_key"); ok {
-		apiKey = key
-	}
+	apiKey = getFromEnvOrConfig("FACTORIO_API_KEY", file, "portal", "api_key")
+	downloadToken = getFromEnvOrConfig("FACTORIO_TOKEN", file, "portal", "token")
+	downloadUsername = getFromEnvOrConfig("FACTORIO_USERNAME", file, "portal", "username")
 
 	return nil
 }

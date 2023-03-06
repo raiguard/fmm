@@ -43,7 +43,7 @@ func main() {
 			usage(mainUsage)
 		}
 	}
-	if err := parseConfigFile(configPath); err != nil {
+	if err := parseConfig(configPath); err != nil {
 		abort("could not parse config file:", err)
 	}
 

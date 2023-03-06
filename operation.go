@@ -41,10 +41,10 @@ func download(args []string) {
 	}
 
 	if downloadToken == "" {
-		abort("Download username not specified in config file")
+		abort("Username not specified")
 	}
 	if downloadToken == "" {
-		abort("Download token not specified in config file")
+		abort("Token not specified")
 	}
 
 	dir, err := newDir(modsDir)
@@ -146,7 +146,7 @@ func enable(args []string) {
 
 func upload(files []string) {
 	if apiKey == "" {
-		abort("Upload API key not specified in config file.")
+		abort("API key not specified.")
 	}
 	if len(files) == 0 {
 		usage(uploadUsage, "no files were provided")
