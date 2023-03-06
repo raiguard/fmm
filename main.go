@@ -20,7 +20,8 @@ const (
 	disableUsage  string = "fmm disable [mods...]"
 	downloadUsage string = "fmm download [mods...]"
 	enableUsage   string = "fmm enable <mods...>"
-	mainUsage     string = "fmm [-c <file>] <disable | download | enable> args..."
+	mainUsage     string = "fmm [-c <file>] <disable | download | enable | upload> args..."
+	uploadUsage   string = "fmm upload [files...]"
 )
 
 func main() {

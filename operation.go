@@ -148,6 +148,9 @@ func upload(files []string) {
 	if apiKey == "" {
 		abort("Upload API key not specified in config file.")
 	}
+	if len(files) == 0 {
+		usage(uploadUsage, "no files were provided")
+	}
 	for _, file := range files {
 		if err := uploadMod(file); err != nil {
 			abort("Upload failed:", err)
