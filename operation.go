@@ -117,10 +117,7 @@ func enable(args []string) {
 			continue
 		}
 		if entry.Enabled {
-			if mod.Ident.Version == nil || entry.Version == nil {
-				continue
-			}
-			if mod.Test(&ModIdent{entry.Name, entry.Version}) {
+			if mod.Ident.Version != nil && entry.Version != nil && mod.Test(&ModIdent{entry.Name, entry.Version}) {
 				continue
 			}
 		}
