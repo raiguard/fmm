@@ -11,7 +11,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/cheggaaa/pb/v3"
+	"github.com/cavaliergopher/grab/v3"
+	// "github.com/cheggaaa/pb/v3"
 )
 
 const barTemplate string = `Downloading {{ string . "name" }} {{ bar . "[" "#" "#" " " "]" }} {{ counters . }} {{ percent . "%.0f%%" }}`
@@ -55,29 +56,10 @@ func downloadMod(mod Dependency, dir *Dir) error {
 		release.DownloadUrl, downloadUsername, downloadToken)
 	outPath := path.Join(modsDir, release.FileName)
 
-	resp, err := http.Get(downloadUrl)
-	if err != nil {
+	fmt.Printf("Downloading %s\n", release.FileName)
+	if _, err := grab.Get(outPath, downloadUrl); err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-
-	f, err := os.Create(outPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	bar := pb.New64(resp.ContentLength)
-	bar.SetTemplateString(barTemplate)
-	bar.Set(pb.Bytes, true).Set("name", release.FileName)
-	bar.Start()
-
-	barReader := bar.NewProxyReader(resp.Body)
-	io.Copy(f, barReader)
-
-	bar.Finish()
-
-	// TODO: Add to dir
 
 	return nil
 }
