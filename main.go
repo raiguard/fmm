@@ -62,6 +62,8 @@ func main() {
 		task = download
 	case "help", "h":
 		usage(mainUsage)
+	case "sync", "s":
+		task = sync
 	case "upload", "ul":
 		task = upload
 	default:

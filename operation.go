@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path"
+	"strings"
 )
 
 func disable(args []string) {
@@ -136,6 +137,16 @@ func enable(args []string) {
 		for _, dep := range *deps {
 			if dep.Ident.Name != "base" && dep.Kind == DependencyRequired {
 				mods = append(mods, dep)
+			}
+		}
+	}
+}
+
+func sync(files []string) {
+	for _, file := range files {
+		if strings.HasSuffix(file, ".log") {
+			if err := syncWithLog(file); err != nil {
+				errorln(err)
 			}
 		}
 	}
