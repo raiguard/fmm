@@ -47,6 +47,11 @@ func main() {
 		abort("could not parse config file:", err)
 	}
 
+	if _, err := os.Stat("mod-list.json"); err == nil {
+		fmt.Println("Using current directory")
+		modsDir = "."
+	}
+
 	args := os.Args[index:]
 	if len(args) == 0 {
 		usage(mainUsage, "no operation was specified")
