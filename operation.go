@@ -65,7 +65,7 @@ func download(args []string) {
 			continue
 		}
 
-		err := downloadMod(mod, dir)
+		err := portalDownloadMod(mod, dir)
 		if err != nil {
 			errorln(err)
 		}
@@ -160,7 +160,7 @@ func upload(files []string) {
 		usage(uploadUsage, "no files were provided")
 	}
 	for _, file := range files {
-		if err := uploadMod(file); err != nil {
+		if err := portalUploadMod(file); err != nil {
 			abort("Upload failed:", err)
 		}
 	}

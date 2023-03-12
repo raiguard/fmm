@@ -12,13 +12,12 @@ import (
 	"path"
 
 	"github.com/cavaliergopher/grab/v3"
-	// "github.com/cheggaaa/pb/v3"
 )
 
 const barTemplate string = `Downloading {{ string . "name" }} {{ bar . "[" "#" "#" " " "]" }} {{ counters . }} {{ percent . "%.0f%%" }}`
 const initUploadUrl string = "https://mods.factorio.com/api/v2/mods/releases/init_upload"
 
-func downloadMod(mod Dependency, dir *Dir) error {
+func portalDownloadMod(mod Dependency, dir *Dir) error {
 	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s", mod.Ident.Name)
 	res, err := http.Get(url)
 	if err != nil {
@@ -64,7 +63,7 @@ func downloadMod(mod Dependency, dir *Dir) error {
 	return nil
 }
 
-func uploadMod(filepath string) error {
+func portalUploadMod(filepath string) error {
 	// Init upload
 	initUploadBody := &bytes.Buffer{}
 	w := multipart.NewWriter(initUploadBody)
