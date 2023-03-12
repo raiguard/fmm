@@ -14,7 +14,6 @@ import (
 	"github.com/cavaliergopher/grab/v3"
 )
 
-const barTemplate string = `Downloading {{ string . "name" }} {{ bar . "[" "#" "#" " " "]" }} {{ counters . }} {{ percent . "%.0f%%" }}`
 const initUploadUrl string = "https://mods.factorio.com/api/v2/mods/releases/init_upload"
 
 func portalDownloadMod(mod Dependency, dir *Dir) error {
