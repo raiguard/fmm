@@ -30,6 +30,9 @@ func syncWithLog(filepath string) error {
 		}
 		inChecksums = true
 		modName, _ := strings.CutSuffix(strings.Split(strings.TrimSpace(line), " ")[3], ":")
+		if modName == "base" {
+			continue
+		}
 		modNames = append(modNames, modName)
 	}
 
