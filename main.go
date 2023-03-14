@@ -17,11 +17,11 @@ var (
 )
 
 const (
-	disableUsage  string = "fmm disable [mods...]"
-	downloadUsage string = "fmm download [mods...]"
-	enableUsage   string = "fmm enable [mods...]"
-	mainUsage     string = "fmm [-c <file>] <disable | download | enable | sync | upload> [args...]"
-	uploadUsage   string = "fmm upload [files...]"
+	disableUsage string = "fmm disable [mods...]"
+	enableUsage  string = "fmm enable [mods...]"
+	installUsage string = "fmm install [mods...]"
+	mainUsage    string = "fmm [-c <file>] <disable | enable | install | sync | upload> [args...]"
+	uploadUsage  string = "fmm upload [files...]"
 )
 
 func main() {
@@ -63,8 +63,8 @@ func main() {
 		task = disable
 	case "enable", "e":
 		task = enable
-	case "download", "dl":
-		task = download
+	case "install", "i":
+		task = install
 	case "help", "h":
 		usage(mainUsage)
 	case "sync", "s":

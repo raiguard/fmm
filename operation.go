@@ -36,42 +36,6 @@ func disable(args []string) {
 	}
 }
 
-func download(args []string) {
-	if len(args) == 0 {
-		usage(downloadUsage, "no mods were provided")
-	}
-
-	if downloadUsername == "" {
-		abort("Username not specified")
-	}
-	if downloadToken == "" {
-		abort("Token not specified")
-	}
-
-	dir, err := newDir(modsDir)
-	if err != nil {
-		abort(err)
-	}
-
-	var mods []Dependency
-	for _, input := range args {
-		mods = append(mods, Dependency{Ident: newModIdent(input), Req: VersionEq})
-	}
-
-	for _, mod := range mods {
-		// TODO: Do we want to do this?
-		if file, _, _ := dir.Find(mod); file != nil {
-			fmt.Println(file.Ident.toString(), "is already in the mods directory")
-			continue
-		}
-
-		err := portalDownloadMod(mod, dir)
-		if err != nil {
-			errorln(err)
-		}
-	}
-}
-
 func disableAll() {
 	list, err := newModList(path.Join(modsDir, "mod-list.json"))
 	if err != nil {
@@ -138,6 +102,42 @@ func enable(args []string) {
 			if dep.Ident.Name != "base" && dep.Kind == DependencyRequired {
 				mods = append(mods, dep)
 			}
+		}
+	}
+}
+
+func install(args []string) {
+	if len(args) == 0 {
+		usage(installUsage, "no mods were provided")
+	}
+
+	if downloadUsername == "" {
+		abort("Username not specified")
+	}
+	if downloadToken == "" {
+		abort("Token not specified")
+	}
+
+	dir, err := newDir(modsDir)
+	if err != nil {
+		abort(err)
+	}
+
+	var mods []Dependency
+	for _, input := range args {
+		mods = append(mods, Dependency{Ident: newModIdent(input), Req: VersionEq})
+	}
+
+	for _, mod := range mods {
+		// TODO: Do we want to do this?
+		if file, _, _ := dir.Find(mod); file != nil {
+			fmt.Println(file.Ident.toString(), "is already in the mods directory")
+			continue
+		}
+
+		err := portalDownloadMod(mod, dir)
+		if err != nil {
+			errorln(err)
 		}
 	}
 }

@@ -35,7 +35,7 @@ func syncWithLog(filepath string) error {
 		modNames = append(modNames, modName)
 	}
 
-	download(modNames)
+	install(modNames)
 	enable(modNames)
 
 	return nil
