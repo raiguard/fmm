@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strings"
 )
@@ -34,10 +33,6 @@ func syncWithLog(filepath string) error {
 			continue
 		}
 		modNames = append(modNames, modName)
-	}
-
-	for _, modname := range modNames {
-		fmt.Println(modname)
 	}
 
 	download(modNames)
