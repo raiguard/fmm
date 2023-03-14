@@ -17,7 +17,7 @@ import (
 const initUploadUrl string = "https://mods.factorio.com/api/v2/mods/releases/init_upload"
 
 func portalDownloadMod(mod Dependency, dir *Dir) error {
-	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s", mod.Ident.Name)
+	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Ident.Name)
 	res, err := http.Get(url)
 	if err != nil {
 		return err
@@ -29,14 +29,14 @@ func portalDownloadMod(mod Dependency, dir *Dir) error {
 	}
 	res.Body.Close()
 
-	var unmarshaled ModRes
+	var unmarshaled PortalFullMod
 	err = json.Unmarshal(body, &unmarshaled)
 	if err != nil {
 		return err
 	}
 
 	// Check releases from newest to oldest and find the first matching one
-	var release *ModResRelease
+	var release *PortalModRelease
 	for i := len(unmarshaled.Releases) - 1; i >= 0; i -= 1 {
 		toCheck := unmarshaled.Releases[i]
 		if mod.Test(&ModIdent{mod.Ident.Name, &toCheck.Version}) {
@@ -120,14 +120,15 @@ type ModInitUploadRes struct {
 	Message   *string // When an error occurs
 }
 
-type ModRes struct {
+type PortalFullMod struct {
 	Name     string
-	Releases []ModResRelease
+	Releases []PortalModRelease
 	Title    string
 }
 
-type ModResRelease struct {
-	DownloadUrl string `json:"download_url"`
-	FileName    string `json:"file_name"`
+type PortalModRelease struct {
+	DownloadUrl string   `json:"download_url"`
+	FileName    string   `json:"file_name"`
+	InfoJson    InfoJson `json:"info_json"`
 	Version     Version
 }
