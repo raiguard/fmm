@@ -39,7 +39,7 @@ func disable(args []string) {
 func disableAll() {
 	list, err := newModList(path.Join(modsDir, "mod-list.json"))
 	if err != nil {
-		usage(disableUsage, err)
+		abort(err)
 	}
 	defer list.save()
 
@@ -55,7 +55,7 @@ func disableAll() {
 
 func enable(args []string) {
 	if len(args) == 0 {
-		usage(enableUsage, "no mods were provided")
+		abort("no mods were provided")
 	}
 
 	dir, err := newDir(modsDir)
@@ -108,7 +108,7 @@ func enable(args []string) {
 
 func install(args []string) {
 	if len(args) == 0 {
-		usage(installUsage, "no mods were provided")
+		abort("no mods were provided")
 	}
 
 	if downloadUsername == "" {
@@ -157,7 +157,7 @@ func upload(files []string) {
 		abort("API key not specified.")
 	}
 	if len(files) == 0 {
-		usage(uploadUsage, "no files were provided")
+		abort("no files were provided")
 	}
 	for _, file := range files {
 		if err := portalUploadMod(file); err != nil {

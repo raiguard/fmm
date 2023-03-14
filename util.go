@@ -45,11 +45,3 @@ func parseConfig(path string) error {
 
 	return nil
 }
-
-func usage(usg string, msg ...any) {
-	if len(msg) > 0 {
-		errorln(msg...)
-	}
-	errorln("usage:", usg)
-	os.Exit(1)
-}

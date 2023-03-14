@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"git.sr.ht/~sircmpwn/getopt"
 	"github.com/adrg/xdg"
 )
 
@@ -16,32 +15,24 @@ var (
 	modsDir          string = "."
 )
 
-const (
-	disableUsage string = "fmm disable [mods...]"
-	enableUsage  string = "fmm enable [mods...]"
-	installUsage string = "fmm install [mods...]"
-	mainUsage    string = "fmm [-c <file>] <disable | enable | install | sync | upload> [args...]"
-	uploadUsage  string = "fmm upload [files...]"
-)
+const usageStr string = `usage: fmm <operation> [args...]
+operations:
+	disable [mods...]   Disable the given mods, or all mods if none are given
+	enable  [mods...]   Enable the given mods
+	help                Show usage information
+	install [mods...]   Install and enable the given mods from the mod portal
+	sync    [files...]  Sync active mods with the given log file
+	upload  [files...]  Upload the given mod zip files to the mod portal`
+
+func printUsage(msg ...any) {
+	errorln(usageStr)
+	os.Exit(1)
+}
 
 func main() {
-	opts, index, err := getopt.Getopts(os.Args, "c:h")
-	if err != nil {
-		usage(mainUsage, err)
-	}
-
 	xdgConfigPath, err := xdg.ConfigFile("fmm/fmm.ini")
 	if err == nil {
 		configPath = xdgConfigPath
-	}
-
-	for _, opt := range opts {
-		switch opt.Option {
-		case 'c':
-			configPath = opt.Value
-		case 'h':
-			usage(mainUsage)
-		}
 	}
 	if err := parseConfig(configPath); err != nil {
 		abort("could not parse config file:", err)
@@ -52,9 +43,9 @@ func main() {
 		modsDir = "."
 	}
 
-	args := os.Args[index:]
+	args := os.Args[1:]
 	if len(args) == 0 {
-		usage(mainUsage, "no operation was specified")
+		abort("no operation was specified")
 	}
 
 	var task func([]string)
@@ -64,7 +55,7 @@ func main() {
 	case "enable", "e":
 		task = enable
 	case "help", "h":
-		usage(mainUsage)
+		printUsage()
 	case "install", "i":
 		task = install
 	case "sync", "s":
@@ -72,7 +63,7 @@ func main() {
 	case "upload", "ul":
 		task = upload
 	default:
-		usage(mainUsage, fmt.Sprintf("%s: unknown operation %s", os.Args[0], args[0]))
+		abort(fmt.Sprintf("unrecognized operation %s", args[0]))
 	}
 	task(args[1:])
 }
