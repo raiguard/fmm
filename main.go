@@ -63,10 +63,10 @@ func main() {
 		task = disable
 	case "enable", "e":
 		task = enable
-	case "install", "i":
-		task = install
 	case "help", "h":
 		usage(mainUsage)
+	case "install", "i":
+		task = install
 	case "sync", "s":
 		task = sync
 	case "upload", "ul":
