@@ -41,7 +41,7 @@ func download(args []string) {
 		usage(downloadUsage, "no mods were provided")
 	}
 
-	if downloadToken == "" {
+	if downloadUsername == "" {
 		abort("Username not specified")
 	}
 	if downloadToken == "" {
