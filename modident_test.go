@@ -20,7 +20,7 @@ func TestModIdent(t *testing.T) {
 		assert.Equal(t, mod.Name, test.expected.Name)
 		if test.expected.Version != nil {
 			assert.NotNil(t, mod.Version)
-			assert.Equal(t, test.expected.Version.cmp(*mod.Version), VersionEq)
+			assert.Equal(t, test.expected.Version.cmp(mod.Version), VersionEq)
 		} else {
 			assert.Nil(t, mod.Version)
 		}

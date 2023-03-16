@@ -44,7 +44,7 @@ func TestVersionCmp(t *testing.T) {
 		{Version{1, 5}, Version{1, 5, 0, 0}, VersionEq},
 	}
 	for _, test := range tests {
-		res := test.v1.cmp(test.v2)
+		res := test.v1.cmp(&test.v2)
 		if res != test.res {
 			t.Error("Version comparison failure:", test.v1, test.v2, test.res, res)
 		}

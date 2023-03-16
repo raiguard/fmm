@@ -26,7 +26,7 @@ func TestNewDependency(t *testing.T) {
 			assert.Nil(t, dep.Ident.Version)
 		} else {
 			assert.NotNil(t, dep.Ident.Version)
-			assert.Equal(t, dep.Ident.Version.cmp(*test.version), test.req)
+			assert.Equal(t, dep.Ident.Version.cmp(test.version), test.req)
 		}
 
 		assert.Equal(t, dep.Kind, test.kind)

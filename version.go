@@ -37,7 +37,10 @@ func newVersion(input string) (*Version, error) {
 	return &ver, nil
 }
 
-func (v *Version) cmp(other Version) VersionCmpRes {
+func (v *Version) cmp(other *Version) VersionCmpRes {
+	if other == nil {
+		return VersionEq
+	}
 	for i := range v {
 		if v[i] > other[i] {
 			return VersionGt

@@ -92,11 +92,7 @@ func (d *Dependency) Test(mod *ModIdent) bool {
 		return true
 	}
 
-	version := d.Ident.Version
-	if version == nil {
-		return true
-	}
-	return d.Req&mod.Version.cmp(*version) > 0
+	return d.Req&mod.Version.cmp(d.Ident.Version) > 0
 }
 
 func (d *Dependency) UnmarshalJSON(data []byte) error {

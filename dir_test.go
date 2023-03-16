@@ -26,7 +26,7 @@ func TestDir(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, file.Ident.Name, expected.Name)
-		assert.Equal(t, file.Ident.Version.cmp(*expected.Version), VersionEq)
+		assert.Equal(t, file.Ident.Version.cmp(expected.Version), VersionEq)
 		assert.Equal(t, entry.Name, expected.Name)
 	}
 }

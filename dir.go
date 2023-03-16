@@ -122,7 +122,7 @@ func (f ModFiles) Less(i, j int) bool {
 	if modi.Name != modj.Name {
 		return modi.Name < modj.Name
 	}
-	return modi.Version.cmp(*modj.Version) == VersionLt
+	return modi.Version.cmp(modj.Version) == VersionLt
 }
 
 type ModFile struct {
