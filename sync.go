@@ -2,21 +2,23 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 )
 
-func syncWithLog(filepath string) error {
+func parseLogFile(filepath string) []ModIdent {
+	var output []ModIdent
 	file, err := os.Open(filepath)
 	if err != nil {
-		return err
+		fmt.Fprintf(os.Stderr, "Error reading %s: %s", filepath, err)
+		return output
 	}
 	defer file.Close()
 
 	fileScanner := bufio.NewScanner(file)
 	fileScanner.Split(bufio.ScanLines)
 
-	var modNames []string
 	inChecksums := false
 	for fileScanner.Scan() {
 		line := fileScanner.Text()
@@ -32,11 +34,8 @@ func syncWithLog(filepath string) error {
 		if modName == "base" {
 			continue
 		}
-		modNames = append(modNames, modName)
+		output = append(output, ModIdent{modName, nil})
 	}
 
-	install(modNames)
-	enable(modNames)
-
-	return nil
+	return output
 }
