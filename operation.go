@@ -6,44 +6,68 @@ import (
 	"strings"
 )
 
-func parseMods(input []string, expandDependencies bool) []ModIdent {
+func parseMods(input []string, parseDependencies bool) []ModIdent {
 	var output []ModIdent
 
 	for _, input := range input {
 		if strings.HasSuffix(input, ".zip") {
-			// TODO:
+			// TODO: Read from save
 		} else if strings.HasSuffix(input, ".log") {
 			output = append(output, parseLogFile(input)...)
-			// TODO:
 		} else if strings.HasSuffix(input, ".json") {
-			// TODO:
+			// TODO: info.json
 		} else if strings.HasPrefix(input, "!") {
-			// TODO:
+			// TODO: Mod set
 		} else {
 			output = append(output, newModIdent(input))
 		}
 	}
 
-	// if expandDependencies {
-	// 	output = expandDependencies(output)
-	// }
+	if parseDependencies {
+		output = expandDependencies(output)
+	}
 
 	return output
 }
 
-// func expandDependencies(mods []ModIdent) []ModIdent {
-// 	visited := make(map[string]bool)
+func expandDependencies(mods []ModIdent) []ModIdent {
+	visited := make(map[string]bool)
 
-// 	output := make([]ModIdent, 0, len(mods))
-// 	copy(output, mods)
+	output := make([]ModIdent, 0, len(mods))
+	copy(output, mods)
 
-// 	for _, mod := range mods {
-// 		// if exists in directory {
-// 		// }
-// 	}
+	dir, err := newDir(modsDir)
+	if err != nil {
+		abort(err)
+	}
 
-// 	return mods
-// }
+	for _, mod := range mods {
+		visited[mod.Name] = true
+		file, _, err := dir.Find(Dependency{mod, DependencyRequired, VersionAny})
+		if err != nil {
+			// TODO: Get from portal
+			errorln(err)
+			continue
+		}
+		deps, err := file.Dependencies()
+		if err != nil {
+			errorln(err)
+			continue
+		}
+		for _, dep := range *deps {
+			if dep.Ident.Name == "base" || visited[dep.Ident.Name] {
+				continue
+			}
+			if dep.Kind != DependencyRequired && dep.Kind != DependencyNoLoadOrder {
+				continue
+			}
+			visited[dep.Ident.Name] = true
+			mods = append(mods, dep.Ident)
+		}
+	}
+
+	return mods
+}
 
 func disable(args []string) {
 	if len(args) == 0 {
