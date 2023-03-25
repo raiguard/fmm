@@ -58,11 +58,10 @@ func expandDependencies(mods []ModIdent) []ModIdent {
 			if dep.Ident.Name == "base" || visited[dep.Ident.Name] {
 				continue
 			}
-			if dep.Kind != DependencyRequired && dep.Kind != DependencyNoLoadOrder {
-				continue
+			if dep.Kind == DependencyRequired || dep.Kind == DependencyNoLoadOrder {
+				visited[dep.Ident.Name] = true
+				mods = append(mods, dep.Ident)
 			}
-			visited[dep.Ident.Name] = true
-			mods = append(mods, dep.Ident)
 		}
 	}
 
