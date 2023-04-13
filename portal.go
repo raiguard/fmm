@@ -115,6 +115,42 @@ func portalUploadMod(filepath string) error {
 	return nil
 }
 
+func portalGetDependencies(mod ModIdent) ([]Dependency, error) {
+	fmt.Println("Fetching dependencies for", mod.toString())
+	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Name)
+	res, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return nil, errors.New(fmt.Sprintf("%s was not found on the mod portal", mod.toString()))
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	res.Body.Close()
+
+	var unmarshaled PortalFullMod
+	err = json.Unmarshal(body, &unmarshaled)
+	if err != nil {
+		return nil, err
+	}
+
+	version := mod.Version
+	if version != nil {
+		for _, release := range unmarshaled.Releases {
+			if release.Version == *version {
+				return release.InfoJson.Dependencies, nil
+			}
+		}
+		return nil, nil
+	}
+
+	return unmarshaled.Releases[len(unmarshaled.Releases)-1].InfoJson.Dependencies, nil
+}
+
 type ModInitUploadRes struct {
 	UploadUrl *string `json:"upload_url"`
 	Message   *string // When an error occurs

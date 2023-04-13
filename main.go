@@ -37,12 +37,11 @@ func printUsage(msg ...any) {
 //   - Log file
 //   - Mod-list.json
 //   - Mod sets?
-// - Process list
-//   - Determine if already exists or needs to be downloaded
-//   - Read or fetch dependencies and add them to the list
-// - AFTER the list has been processed, iterate it again and dispatch the
-//   requisite action(s)
-//   - Could add a confirmation step here
+// - Add missing dependencies, fetching from portal if needed
+//   - Keep note of which are present and which need to be downloaded
+// - Check for incompatibilities and circular dependencies in list and currently enabled mods
+// - Confirm actions with user?
+// - Execute each enable or download action
 
 func main() {
 	xdgConfigPath, err := xdg.ConfigFile("fmm/fmm.ini")
@@ -63,7 +62,10 @@ func main() {
 		abort("no operation was specified")
 	}
 
-	fmt.Println(parseMods(args, true))
+	mods := parseMods(args, true)
+	for _, mod := range mods {
+		fmt.Println(mod.toString())
+	}
 
 	// var task func([]string)
 	// switch args[0] {

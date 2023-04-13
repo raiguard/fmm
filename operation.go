@@ -33,28 +33,32 @@ func parseMods(input []string, parseDependencies bool) []ModIdent {
 func expandDependencies(mods []ModIdent) []ModIdent {
 	visited := make(map[string]bool)
 
-	output := make([]ModIdent, 0, len(mods))
-	copy(output, mods)
-
 	dir, err := newDir(modsDir)
 	if err != nil {
 		abort(err)
 	}
 
-	for _, mod := range mods {
+	for i := 0; i < len(mods); i += 1 {
+		mod := mods[i]
 		visited[mod.Name] = true
 		file, _, err := dir.Find(Dependency{mod, DependencyRequired, VersionAny})
-		if err != nil {
-			// TODO: Get from portal
-			errorln(err)
-			continue
+		var deps []Dependency
+		if file != nil {
+			realDeps, err := file.Dependencies()
+			if err != nil {
+				errorln(err)
+				continue
+			}
+			deps = *realDeps
+		} else {
+			deps, err = portalGetDependencies(mod)
+			if err != nil {
+				errorln(err)
+				continue
+			}
 		}
-		deps, err := file.Dependencies()
-		if err != nil {
-			errorln(err)
-			continue
-		}
-		for _, dep := range *deps {
+		for _, dep := range deps {
+			// FIXME: Dependency kind or version might be different / incompatible
 			if dep.Ident.Name == "base" || visited[dep.Ident.Name] {
 				continue
 			}
