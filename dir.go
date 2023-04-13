@@ -20,7 +20,7 @@ type Dir struct {
 }
 
 func newDir(dirPath string) (*Dir, error) {
-	file, err := os.ReadDir(dirPath)
+	dir, err := os.ReadDir(dirPath)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func newDir(dirPath string) (*Dir, error) {
 	}
 
 	var files ModFiles
-	for _, file := range file {
+	for _, file := range dir {
 		name := file.Name()
 		if name == "mod-list.json" || name == "mod-settings.dat" {
 			continue
