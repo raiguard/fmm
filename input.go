@@ -94,7 +94,8 @@ func parseLogFile(filepath string) []ModIdent {
 			}
 		}
 		inChecksums = true
-		modName, _ := strings.CutSuffix(strings.Split(strings.TrimSpace(line), " ")[3], ":")
+		parts := strings.Split(strings.TrimSpace(line), " ")
+		modName, _ := strings.CutSuffix(strings.Join(parts[3:len(parts)-1], " "), ":")
 		if modName == "base" {
 			continue
 		}
