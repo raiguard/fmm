@@ -18,17 +18,17 @@ type ModListMod struct {
 	Version *Version `json:"version,omitempty"`
 }
 
-func newModList(path string) (*ModList, error) {
+func newModList(path string) ModList {
 	file, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		abort(err)
 	}
 	list := ModList{Path: path}
 	err = json.Unmarshal(file, &list)
 	if err != nil {
-		return nil, err
+		abort(err)
 	}
-	return &list, nil
+	return list
 }
 
 func (l *ModList) IsEnabled(name string) bool {

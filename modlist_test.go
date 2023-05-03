@@ -5,17 +5,11 @@ import (
 )
 
 func TestModlistNew(t *testing.T) {
-	_, err := newModList("TEST/mods/mod-list.json")
-	if err != nil {
-		t.Error(err)
-	}
+	newModList("TEST/mods/mod-list.json")
 }
 
 func TestModlistOps(t *testing.T) {
-	list, err := newModList("TEST/mods/mod-list.json")
-	if err != nil {
-		t.Error(err)
-	}
+	list := newModList("TEST/mods/mod-list.json")
 	list.Disable("Unzipped")
 	if list.IsEnabled("Unzipped") {
 		t.Error("Disable failed")

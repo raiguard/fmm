@@ -74,15 +74,10 @@ func main() {
 	// 	task = install
 	// case "sync", "s":
 	// 	task = sync
-	// case "upload", "ul":
-	// 	task = upload
+	case "upload", "ul":
+		task = upload
 	default:
 		abort(fmt.Sprintf("unrecognized operation %s", args[0]))
 	}
 	task(args[1:])
-
-	// mods := parseMods(args, true)
-	// for _, mod := range mods {
-	// 	fmt.Println(mod.toString())
-	// }
 }

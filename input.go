@@ -88,7 +88,7 @@ func parseMods(input []string, parseDependencies bool) []ModIdent {
 		} else if strings.HasSuffix(input, ".log") {
 			output = append(output, parseLogFile(input)...)
 		} else if strings.HasSuffix(input, ".json") {
-			// TODO: info.json
+			// TODO: mod-list.json
 		} else if strings.HasPrefix(input, "!") {
 			// TODO: Mod set
 		} else {

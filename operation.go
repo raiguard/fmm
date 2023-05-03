@@ -11,10 +11,7 @@ func disable(args []string) {
 		return
 	}
 
-	list, err := newModList(path.Join(modsDir, "mod-list.json"))
-	if err != nil {
-		abort(err)
-	}
+	list := newModList(path.Join(modsDir, "mod-list.json"))
 	defer list.Save()
 
 	mods := parseMods(args, false)
@@ -24,10 +21,7 @@ func disable(args []string) {
 }
 
 func disableAll() {
-	list, err := newModList(path.Join(modsDir, "mod-list.json"))
-	if err != nil {
-		abort(err)
-	}
+	list := newModList(path.Join(modsDir, "mod-list.json"))
 	defer list.Save()
 
 	for i := range list.Mods {
@@ -47,10 +41,7 @@ func enable(args []string) {
 
 	mods := parseMods(args, true)
 
-	list, err := newModList(path.Join(modsDir, "mod-list.json"))
-	if err != nil {
-		abort(err)
-	}
+	list := newModList(path.Join(modsDir, "mod-list.json"))
 	defer list.Save()
 
 	for i := 0; i < len(mods); i += 1 {
