@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -62,7 +61,7 @@ func newDir(dirPath string) Dir {
 	}
 }
 
-func (d Dir) Find(mod Dependency) (file *ModFile, err error) {
+func (d Dir) Find(mod Dependency) *ModFile {
 	// Iterate in reverse to get the newest version first
 	for i := len(d.Files) - 1; i >= 0; i-- {
 		thisfile := &d.Files[i]
@@ -70,15 +69,10 @@ func (d Dir) Find(mod Dependency) (file *ModFile, err error) {
 			continue
 		}
 		if mod.Test(&thisfile.Ident) {
-			file = thisfile
-			break
+			return thisfile
 		}
 	}
-	if file == nil {
-		return nil, errors.New(fmt.Sprintf("%s was not found in the mods directory", mod.Ident.toString()))
-	}
-
-	return file, nil
+	return nil
 }
 
 // Wrapper type with implementations for sorting
