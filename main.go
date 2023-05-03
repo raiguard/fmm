@@ -62,17 +62,12 @@ func main() {
 		abort("no operation was specified")
 	}
 
-	mods := parseMods(args, true)
-	for _, mod := range mods {
-		fmt.Println(mod.toString())
-	}
-
-	// var task func([]string)
-	// switch args[0] {
-	// case "disable", "d":
-	// 	task = disable
-	// case "enable", "e":
-	// 	task = enable
+	var task func([]string)
+	switch args[0] {
+	case "disable", "d":
+		task = disable
+	case "enable", "e":
+		task = enable
 	// case "help", "h":
 	// 	printUsage()
 	// case "install", "i":
@@ -81,8 +76,13 @@ func main() {
 	// 	task = sync
 	// case "upload", "ul":
 	// 	task = upload
-	// default:
-	// 	abort(fmt.Sprintf("unrecognized operation %s", args[0]))
+	default:
+		abort(fmt.Sprintf("unrecognized operation %s", args[0]))
+	}
+	task(args[1:])
+
+	// mods := parseMods(args, true)
+	// for _, mod := range mods {
+	// 	fmt.Println(mod.toString())
 	// }
-	// task(args[1:])
 }

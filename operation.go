@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"path"
-	"strings"
 )
 
 func disable(args []string) {
@@ -12,27 +11,15 @@ func disable(args []string) {
 		return
 	}
 
-	dir, err := newDir(modsDir)
+	list, err := newModList(path.Join(modsDir, "mod-list.json"))
 	if err != nil {
 		abort(err)
 	}
-	defer dir.save()
+	defer list.save()
 
-	var mods []Dependency
-	for _, input := range args {
-		mods = append(mods, Dependency{Ident: newModIdent(input), Req: VersionAny})
-	}
+	mods := parseMods(args, false)
 	for _, mod := range mods {
-		file, entry, err := dir.Find(mod)
-		if err != nil {
-			errorln(err)
-			continue
-		}
-		if !entry.Enabled {
-			continue
-		}
-		entry.Enabled = false
-		fmt.Println("Disabled", file.Ident.Name)
+		list.disable(mod.Name)
 	}
 }
 
@@ -58,51 +45,17 @@ func enable(args []string) {
 		abort("no mods were provided")
 	}
 
-	dir, err := newDir(modsDir)
+	mods := parseMods(args, true)
+
+	list, err := newModList(path.Join(modsDir, "mod-list.json"))
 	if err != nil {
 		abort(err)
 	}
-	defer dir.save()
+	defer list.save()
 
-	var mods []Dependency
-	for _, input := range args {
-		mods = append(mods, Dependency{Ident: newModIdent(input), Req: VersionEq})
-	}
-
-	i := 0
-	for {
-		if i > len(mods)-1 {
-			break
-		}
+	for i := 0; i < len(mods); i += 1 {
 		mod := mods[i]
-		i++
-		file, entry, err := dir.Find(mod)
-		if err != nil {
-			errorln(err)
-			continue
-		}
-		if entry.Enabled {
-			if mod.Ident.Version == nil || mod.Ident.Version.cmp(entry.Version) == VersionEq {
-				continue
-			}
-		}
-		entry.Enabled = true
-		entry.Version = mod.Ident.Version
-		fmt.Println("Enabled", file.Ident.toString())
-
-		deps, err := file.Dependencies()
-		if err != nil {
-			errorln(err)
-		}
-		if deps == nil {
-			continue
-		}
-
-		for _, dep := range *deps {
-			if dep.Ident.Name != "base" && dep.Kind == DependencyRequired {
-				mods = append(mods, dep)
-			}
-		}
+		list.enable(mod.Name, mod.Version)
 	}
 }
 
@@ -138,16 +91,6 @@ func install(args []string) {
 		err := portalDownloadMod(mod, dir)
 		if err != nil {
 			errorln(err)
-		}
-	}
-}
-
-func sync(files []string) {
-	for _, file := range files {
-		if strings.HasSuffix(file, ".log") {
-			if err := parseLogFile(file); err != nil {
-				errorln(err)
-			}
 		}
 	}
 }

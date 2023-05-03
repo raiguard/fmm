@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"os"
 )
@@ -59,6 +60,7 @@ func (l *ModList) disable(name string) {
 		mod := &l.Mods[i]
 		if mod.Name == name {
 			mod.Enabled = false
+			fmt.Println("Disabled", name)
 			break
 		}
 	}
@@ -70,6 +72,7 @@ func (l *ModList) enable(name string, version *Version) {
 		if mod.Name == name {
 			mod.Enabled = true
 			mod.Version = version
+			fmt.Println("Enabled", name)
 			return
 		}
 	}
