@@ -16,12 +16,12 @@ func TestModlistOps(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	list.disable("Unzipped")
-	if list.isEnabled("Unzipped") {
+	list.Disable("Unzipped")
+	if list.IsEnabled("Unzipped") {
 		t.Error("Disable failed")
 	}
-	list.enable(ModIdent{"Unzipped", nil})
-	if !list.isEnabled("Unzipped") {
+	list.Enable(ModIdent{"Unzipped", nil})
+	if !list.IsEnabled("Unzipped") {
 		t.Error("Enable failed")
 	}
 }

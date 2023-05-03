@@ -95,14 +95,14 @@ func (d *Dir) Find(mod Dependency) (file *ModFile, entry *ModListMod, err error)
 	}
 
 	if entry == nil {
-		entry = d.List.add(mod.Ident.Name)
+		entry = d.List.Add(mod.Ident.Name)
 	}
 
 	return file, entry, nil
 }
 
 func (d *Dir) save() {
-	err := d.List.save()
+	err := d.List.Save()
 	if err != nil {
 		abort(err)
 	}

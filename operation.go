@@ -15,11 +15,11 @@ func disable(args []string) {
 	if err != nil {
 		abort(err)
 	}
-	defer list.save()
+	defer list.Save()
 
 	mods := parseMods(args, false)
 	for _, mod := range mods {
-		list.disable(mod.Name)
+		list.Disable(mod.Name)
 	}
 }
 
@@ -28,7 +28,7 @@ func disableAll() {
 	if err != nil {
 		abort(err)
 	}
-	defer list.save()
+	defer list.Save()
 
 	for i := range list.Mods {
 		mod := &list.Mods[i]
@@ -51,11 +51,11 @@ func enable(args []string) {
 	if err != nil {
 		abort(err)
 	}
-	defer list.save()
+	defer list.Save()
 
 	for i := 0; i < len(mods); i += 1 {
 		mod := mods[i]
-		list.enable(mod)
+		list.Enable(mod)
 	}
 }
 

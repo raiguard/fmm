@@ -9,7 +9,7 @@ import (
 
 type ModList struct {
 	Mods []ModListMod `json:"mods"`
-	path string
+	Path string
 }
 
 type ModListMod struct {
@@ -23,7 +23,7 @@ func newModList(path string) (*ModList, error) {
 	if err != nil {
 		return nil, err
 	}
-	list := ModList{path: path}
+	list := ModList{Path: path}
 	err = json.Unmarshal(file, &list)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func newModList(path string) (*ModList, error) {
 	return &list, nil
 }
 
-func (l *ModList) isEnabled(name string) bool {
+func (l *ModList) IsEnabled(name string) bool {
 	for i := range l.Mods {
 		mod := &l.Mods[i]
 		if mod.Name == name {
@@ -41,21 +41,21 @@ func (l *ModList) isEnabled(name string) bool {
 	return false
 }
 
-func (l *ModList) save() error {
+func (l *ModList) Save() error {
 	marshaled, err := json.MarshalIndent(l, "", "  ")
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(l.path, marshaled, fs.ModeExclusive)
+	err = os.WriteFile(l.Path, marshaled, fs.ModeExclusive)
 	return err
 }
 
-func (l *ModList) add(name string) *ModListMod {
+func (l *ModList) Add(name string) *ModListMod {
 	l.Mods = append(l.Mods, ModListMod{name, true, nil})
 	return &l.Mods[len(l.Mods)-1]
 }
 
-func (l *ModList) disable(name string) {
+func (l *ModList) Disable(name string) {
 	for i := range l.Mods {
 		mod := &l.Mods[i]
 		if mod.Name == name {
@@ -66,7 +66,7 @@ func (l *ModList) disable(name string) {
 	}
 }
 
-func (l *ModList) enable(mod ModIdent) {
+func (l *ModList) Enable(mod ModIdent) {
 	for i := range l.Mods {
 		entry := &l.Mods[i]
 		if entry.Name == mod.Name {
@@ -81,7 +81,7 @@ func (l *ModList) enable(mod ModIdent) {
 	l.Mods = append(l.Mods, entry)
 }
 
-func (l *ModList) remove(name string) {
+func (l *ModList) Remove(name string) {
 	for i := range l.Mods {
 		mod := &l.Mods[i]
 		if mod.Name != name {
