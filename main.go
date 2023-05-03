@@ -18,8 +18,9 @@ var (
 const usageStr string = `usage: fmm <operation> [args...]
 operations:
 	disable [args...]   Disable the given mods, or all mods if none are given
-	enable  [args...]   Enable the given mods and their dependencies
+	enable  [args...]   Enable the given mods and their dependencies, downloading if necessary
 	help                Show usage information
+	sync    [args...]   Disable all mods, then download and enable the given mods
 	upload  [files...]  Upload the given mod zip files to the mod portal`
 
 func printUsage(msg ...any) {
@@ -68,6 +69,8 @@ func main() {
 		task = enable
 	case "help", "h", "-h", "--help":
 		printUsage()
+	case "sync", "s":
+		task = sync
 	case "upload", "ul":
 		task = upload
 	default:

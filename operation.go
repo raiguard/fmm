@@ -53,6 +53,11 @@ func enable(args []string) {
 	}
 }
 
+func sync(args []string) {
+	disableAll()
+	enable(args)
+}
+
 func upload(files []string) {
 	if apiKey == "" {
 		abort("API key not specified.")
