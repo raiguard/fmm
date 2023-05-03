@@ -14,7 +14,7 @@ func disable(args []string) {
 	list := newModList(path.Join(modsDir, "mod-list.json"))
 	defer list.Save()
 
-	mods := parseMods(args, false)
+	mods := parseCliInput(args, false)
 	for _, mod := range mods {
 		list.Disable(mod.Name)
 	}
@@ -39,7 +39,7 @@ func enable(args []string) {
 		abort("no mods were provided")
 	}
 
-	mods := parseMods(args, true)
+	mods := parseCliInput(args, true)
 
 	list := newModList(path.Join(modsDir, "mod-list.json"))
 	defer list.Save()

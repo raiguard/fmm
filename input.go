@@ -7,6 +7,30 @@ import (
 	"strings"
 )
 
+func parseCliInput(input []string, parseDependencies bool) []ModIdent {
+	var output []ModIdent
+
+	for _, input := range input {
+		if strings.HasSuffix(input, ".zip") {
+			// TODO: Read from save
+		} else if strings.HasSuffix(input, ".log") {
+			output = append(output, parseLogFile(input)...)
+		} else if strings.HasSuffix(input, ".json") {
+			// TODO: mod-list.json
+		} else if strings.HasPrefix(input, "!") {
+			// TODO: Mod set
+		} else {
+			output = append(output, newModIdent(input))
+		}
+	}
+
+	if parseDependencies {
+		output = expandDependencies(output)
+	}
+
+	return output
+}
+
 func expandDependencies(mods []ModIdent) []ModIdent {
 	visited := make(map[string]bool)
 
@@ -75,30 +99,6 @@ func parseLogFile(filepath string) []ModIdent {
 			continue
 		}
 		output = append(output, ModIdent{modName, nil})
-	}
-
-	return output
-}
-
-func parseMods(input []string, parseDependencies bool) []ModIdent {
-	var output []ModIdent
-
-	for _, input := range input {
-		if strings.HasSuffix(input, ".zip") {
-			// TODO: Read from save
-		} else if strings.HasSuffix(input, ".log") {
-			output = append(output, parseLogFile(input)...)
-		} else if strings.HasSuffix(input, ".json") {
-			// TODO: mod-list.json
-		} else if strings.HasPrefix(input, "!") {
-			// TODO: Mod set
-		} else {
-			output = append(output, newModIdent(input))
-		}
-	}
-
-	if parseDependencies {
-		output = expandDependencies(output)
 	}
 
 	return output
