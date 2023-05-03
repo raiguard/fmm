@@ -59,8 +59,10 @@ func (l *ModList) Disable(name string) {
 	for i := range l.Mods {
 		mod := &l.Mods[i]
 		if mod.Name == name {
-			mod.Enabled = false
-			fmt.Println("Disabled", name)
+			if mod.Enabled {
+				mod.Enabled = false
+				fmt.Println("Disabled", name)
+			}
 			break
 		}
 	}
@@ -70,9 +72,11 @@ func (l *ModList) Enable(mod ModIdent) {
 	for i := range l.Mods {
 		entry := &l.Mods[i]
 		if entry.Name == mod.Name {
-			entry.Enabled = true
+			if !entry.Enabled {
+				entry.Enabled = true
+				fmt.Println("Enabled", mod.toString())
+			}
 			entry.Version = mod.Version
-			fmt.Println("Enabled", mod.toString())
 			return
 		}
 	}
