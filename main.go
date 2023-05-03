@@ -17,8 +17,8 @@ var (
 
 const usageStr string = `usage: fmm <operation> [args...]
 operations:
-	disable [mods...]   Disable the given mods, or all mods if none are given
-	enable  [mods...]   Enable the given mods and their dependencies
+	disable [args...]   Disable the given mods, or all mods if none are given
+	enable  [args...]   Enable the given mods and their dependencies
 	help                Show usage information
 	upload  [files...]  Upload the given mod zip files to the mod portal`
 
