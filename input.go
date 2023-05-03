@@ -7,25 +7,39 @@ import (
 	"strings"
 )
 
-func parseCliInput(input []string, parseDependencies bool) []ModIdent {
-	var output []ModIdent
+type ModIdentAndPresence struct {
+	Ident     ModIdent
+	IsPresent bool
+}
+
+func parseCliInput(input []string, parseDependencies bool) []ModIdentAndPresence {
+	var mods []ModIdent
 
 	for _, input := range input {
 		if strings.HasSuffix(input, ".zip") {
 			// TODO: Read from save
 		} else if strings.HasSuffix(input, ".log") {
-			output = append(output, parseLogFile(input)...)
+			mods = append(mods, parseLogFile(input)...)
 		} else if strings.HasSuffix(input, ".json") {
 			// TODO: mod-list.json
 		} else if strings.HasPrefix(input, "!") {
 			// TODO: Mod set
 		} else {
-			output = append(output, newModIdent(input))
+			mods = append(mods, newModIdent(input))
 		}
 	}
 
 	if parseDependencies {
-		output = expandDependencies(output)
+		mods = expandDependencies(mods)
+	}
+
+	var output []ModIdentAndPresence
+
+	dir := newDir(modsDir)
+
+	for _, mod := range mods {
+		present := dir.Find(Dependency{mod, DependencyRequired, VersionAny}) != nil
+		output = append(output, ModIdentAndPresence{mod, present})
 	}
 
 	return output

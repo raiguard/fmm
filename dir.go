@@ -39,7 +39,7 @@ func newDir(dirPath string) Dir {
 				continue
 			}
 			ident.Name = infoJson.Name
-			ident.Version = &infoJson.Version // TODO: Will this preserve InfoJson forever?
+			ident.Version = &infoJson.Version
 			deps = &infoJson.Dependencies
 		} else {
 			ident = newModIdent(name)

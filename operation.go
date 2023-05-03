@@ -16,7 +16,7 @@ func disable(args []string) {
 
 	mods := parseCliInput(args, false)
 	for _, mod := range mods {
-		list.Disable(mod.Name)
+		list.Disable(mod.Ident.Name)
 	}
 }
 
@@ -46,42 +46,12 @@ func enable(args []string) {
 
 	for i := 0; i < len(mods); i += 1 {
 		mod := mods[i]
-		list.Enable(mod)
+		if !mod.IsPresent {
+			portalDownloadMod(Dependency{mod.Ident, DependencyRequired, VersionEq})
+		}
+		list.Enable(mod.Ident)
 	}
 }
-
-// func install(args []string) {
-// 	if len(args) == 0 {
-// 		abort("no mods were provided")
-// 	}
-
-// 	if downloadUsername == "" {
-// 		abort("Username not specified")
-// 	}
-// 	if downloadToken == "" {
-// 		abort("Token not specified")
-// 	}
-
-// 	dir := newDir(modsDir)
-
-// 	var mods []Dependency
-// 	for _, input := range args {
-// 		mods = append(mods, Dependency{Ident: newModIdent(input), Req: VersionEq})
-// 	}
-
-// 	for _, mod := range mods {
-// 		// TODO: Do we want to do this?
-// 		if file, _ := dir.Find(mod); file != nil {
-// 			fmt.Println(file.Ident.toString(), "is already in the mods directory")
-// 			continue
-// 		}
-
-// 		err := portalDownloadMod(mod, dir)
-// 		if err != nil {
-// 			errorln(err)
-// 		}
-// 	}
-// }
 
 func upload(files []string) {
 	if apiKey == "" {

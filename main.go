@@ -68,10 +68,6 @@ func main() {
 		task = enable
 	case "help", "h", "-h", "--help":
 		printUsage()
-	// case "install", "i":
-	// 	task = install
-	// case "sync", "s":
-	// 	task = sync
 	case "upload", "ul":
 		task = upload
 	default:
