@@ -16,7 +16,7 @@ import (
 
 const initUploadUrl string = "https://mods.factorio.com/api/v2/mods/releases/init_upload"
 
-func portalDownloadMod(mod Dependency, dir *Dir) error {
+func portalDownloadMod(mod Dependency, dir Dir) error {
 	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Ident.Name)
 	res, err := http.Get(url)
 	if err != nil {

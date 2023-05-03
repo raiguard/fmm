@@ -10,15 +10,12 @@ import (
 func expandDependencies(mods []ModIdent) []ModIdent {
 	visited := make(map[string]bool)
 
-	dir, err := newDir(modsDir)
-	if err != nil {
-		abort(err)
-	}
+	dir := newDir(modsDir)
 
 	for i := 0; i < len(mods); i += 1 {
 		mod := mods[i]
 		visited[mod.Name] = true
-		file, _, err := dir.Find(Dependency{mod, DependencyRequired, VersionAny})
+		file, err := dir.Find(Dependency{mod, DependencyRequired, VersionAny})
 		var deps []Dependency
 		if file != nil {
 			realDeps, err := file.Dependencies()

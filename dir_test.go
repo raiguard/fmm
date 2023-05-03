@@ -7,12 +7,10 @@ import (
 )
 
 func TestDir(t *testing.T) {
-	dir, err := newDir("TEST/mods")
-	assert.NoError(t, err)
+	dir := newDir("TEST/mods")
 
 	// Check validity of mod structures
 	assert.Equal(t, len(dir.Files), 3)
-	assert.Equal(t, len(dir.List.Mods), 4)
 
 	expected := []ModIdent{
 		{"Unzipped", &Version{1, 0, 0, 0}},
@@ -21,12 +19,11 @@ func TestDir(t *testing.T) {
 	}
 
 	for _, expected := range expected {
-		file, entry, err := dir.Find(Dependency{
+		file, err := dir.Find(Dependency{
 			expected, DependencyRequired, VersionEq,
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, file.Ident.Name, expected.Name)
 		assert.Equal(t, file.Ident.Version.cmp(expected.Version), VersionEq)
-		assert.Equal(t, entry.Name, expected.Name)
 	}
 }

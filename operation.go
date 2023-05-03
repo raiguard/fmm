@@ -59,41 +59,38 @@ func enable(args []string) {
 	}
 }
 
-func install(args []string) {
-	if len(args) == 0 {
-		abort("no mods were provided")
-	}
+// func install(args []string) {
+// 	if len(args) == 0 {
+// 		abort("no mods were provided")
+// 	}
 
-	if downloadUsername == "" {
-		abort("Username not specified")
-	}
-	if downloadToken == "" {
-		abort("Token not specified")
-	}
+// 	if downloadUsername == "" {
+// 		abort("Username not specified")
+// 	}
+// 	if downloadToken == "" {
+// 		abort("Token not specified")
+// 	}
 
-	dir, err := newDir(modsDir)
-	if err != nil {
-		abort(err)
-	}
+// 	dir := newDir(modsDir)
 
-	var mods []Dependency
-	for _, input := range args {
-		mods = append(mods, Dependency{Ident: newModIdent(input), Req: VersionEq})
-	}
+// 	var mods []Dependency
+// 	for _, input := range args {
+// 		mods = append(mods, Dependency{Ident: newModIdent(input), Req: VersionEq})
+// 	}
 
-	for _, mod := range mods {
-		// TODO: Do we want to do this?
-		if file, _, _ := dir.Find(mod); file != nil {
-			fmt.Println(file.Ident.toString(), "is already in the mods directory")
-			continue
-		}
+// 	for _, mod := range mods {
+// 		// TODO: Do we want to do this?
+// 		if file, _ := dir.Find(mod); file != nil {
+// 			fmt.Println(file.Ident.toString(), "is already in the mods directory")
+// 			continue
+// 		}
 
-		err := portalDownloadMod(mod, dir)
-		if err != nil {
-			errorln(err)
-		}
-	}
-}
+// 		err := portalDownloadMod(mod, dir)
+// 		if err != nil {
+// 			errorln(err)
+// 		}
+// 	}
+// }
 
 func upload(files []string) {
 	if apiKey == "" {
