@@ -55,7 +55,7 @@ func enable(args []string) {
 
 	for i := 0; i < len(mods); i += 1 {
 		mod := mods[i]
-		list.enable(mod.Name, mod.Version)
+		list.enable(mod)
 	}
 }
 

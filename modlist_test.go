@@ -20,7 +20,7 @@ func TestModlistOps(t *testing.T) {
 	if list.isEnabled("Unzipped") {
 		t.Error("Disable failed")
 	}
-	list.enable("Unzipped", nil)
+	list.enable(ModIdent{"Unzipped", nil})
 	if !list.isEnabled("Unzipped") {
 		t.Error("Enable failed")
 	}

@@ -66,19 +66,19 @@ func (l *ModList) disable(name string) {
 	}
 }
 
-func (l *ModList) enable(name string, version *Version) {
+func (l *ModList) enable(mod ModIdent) {
 	for i := range l.Mods {
-		mod := &l.Mods[i]
-		if mod.Name == name {
-			mod.Enabled = true
-			mod.Version = version
-			fmt.Println("Enabled", name)
+		entry := &l.Mods[i]
+		if entry.Name == mod.Name {
+			entry.Enabled = true
+			entry.Version = mod.Version
+			fmt.Println("Enabled", mod.toString())
 			return
 		}
 	}
 	// Mod was not found, so add it
-	mod := ModListMod{Name: name, Enabled: true, Version: version}
-	l.Mods = append(l.Mods, mod)
+	entry := ModListMod{Name: mod.Name, Enabled: true, Version: mod.Version}
+	l.Mods = append(l.Mods, entry)
 }
 
 func (l *ModList) remove(name string) {
