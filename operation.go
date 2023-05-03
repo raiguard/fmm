@@ -47,7 +47,11 @@ func enable(args []string) {
 	for i := 0; i < len(mods); i += 1 {
 		mod := mods[i]
 		if !mod.IsPresent {
-			portalDownloadMod(Dependency{mod.Ident, DependencyRequired, VersionEq})
+			err := portalDownloadMod(Dependency{mod.Ident, DependencyRequired, VersionEq})
+			if err != nil {
+				errorln(err)
+				continue
+			}
 		}
 		list.Enable(mod.Ident)
 	}
