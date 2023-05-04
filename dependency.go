@@ -79,9 +79,9 @@ func newDependency(input string) (*Dependency, error) {
 	}, nil
 }
 
-func (d *Dependency) Test(mod *ModIdent) bool {
-	if d.Ident.Name != mod.Name {
-		return false
+func (d *Dependency) Test(ver *Version) bool {
+	if ver == nil {
+		return true
 	}
 
 	if d.Kind == DependencyIncompatible {
@@ -92,7 +92,7 @@ func (d *Dependency) Test(mod *ModIdent) bool {
 		return true
 	}
 
-	return d.Req&mod.Version.cmp(d.Ident.Version) > 0
+	return d.Req&ver.cmp(d.Ident.Version) > 0
 }
 
 func (d *Dependency) UnmarshalJSON(data []byte) error {

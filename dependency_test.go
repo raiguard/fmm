@@ -51,6 +51,6 @@ func TestDependencyTest(t *testing.T) {
 		dep, err := newDependency(test.dep)
 		assert.NoError(t, err)
 		mod := newModIdent(test.mod)
-		assert.Equal(t, dep.Test(&mod), test.result)
+		assert.Equal(t, dep.Test(mod.Version), test.result)
 	}
 }

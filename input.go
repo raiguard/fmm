@@ -47,42 +47,50 @@ func parseCliInput(input []string, parseDependencies bool) []ModIdentAndPresence
 
 func expandDependencies(mods []ModIdent) []ModIdent {
 	visited := make(map[string]bool)
+	toVisit := []Dependency{}
+	for _, mod := range mods {
+		toVisit = append(toVisit, Dependency{mod, DependencyRequired, VersionEq})
+	}
+	output := []ModIdent{}
 
 	dir := newDir(modsDir)
 
-	for i := 0; i < len(mods); i += 1 {
-		mod := mods[i]
-		visited[mod.Name] = true
-		file := dir.Find(Dependency{mod, DependencyRequired, VersionAny})
+	for i := 0; i < len(toVisit); i += 1 {
+		mod := toVisit[i]
+		if _, exists := visited[mod.Ident.Name]; exists {
+			continue
+		}
+		visited[mod.Ident.Name] = true
+		var ident ModIdent
 		var deps []Dependency
 		var err error
-		if file != nil {
-			realDeps, err := file.Dependencies()
-			if err != nil {
-				errorln(err)
-				continue
-			}
-			deps = *realDeps
+		if file := dir.Find(mod); file != nil {
+			ident = file.Ident
+			deps, err = file.Dependencies()
 		} else {
-			deps, err = portalGetDependencies(mod)
-			if err != nil {
-				errorln(err)
-				continue
+			var release *PortalModRelease
+			release, err = portalGetRelease(mod)
+			if err == nil {
+				ident = ModIdent{mod.Ident.Name, &release.Version}
+				deps = release.InfoJson.Dependencies
 			}
 		}
+		if err != nil {
+			errorln(err)
+			continue
+		}
+		output = append(output, ident)
 		for _, dep := range deps {
-			// FIXME: Dependency kind or version might be different / incompatible
-			if dep.Ident.Name == "base" || visited[dep.Ident.Name] {
+			if dep.Ident.Name == "base" {
 				continue
 			}
 			if dep.Kind == DependencyRequired || dep.Kind == DependencyNoLoadOrder {
-				visited[dep.Ident.Name] = true
-				mods = append(mods, dep.Ident)
+				toVisit = append(toVisit, dep)
 			}
 		}
 	}
 
-	return mods
+	return output
 }
 
 func parseLogFile(filepath string) []ModIdent {

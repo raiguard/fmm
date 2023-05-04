@@ -68,7 +68,7 @@ func (d Dir) Find(mod Dependency) *ModFile {
 		if thisfile.Ident.Name != mod.Ident.Name {
 			continue
 		}
-		if mod.Test(&thisfile.Ident) {
+		if mod.Test(thisfile.Ident.Version) {
 			return thisfile
 		}
 	}
@@ -100,9 +100,9 @@ type ModFile struct {
 	Type  fs.FileMode
 }
 
-func (f *ModFile) Dependencies() (*[]Dependency, error) {
+func (f *ModFile) Dependencies() ([]Dependency, error) {
 	if f.dependencies != nil {
-		return f.dependencies, nil
+		return *f.dependencies, nil
 	}
 
 	if !f.Type.IsRegular() {
@@ -137,7 +137,7 @@ func (f *ModFile) Dependencies() (*[]Dependency, error) {
 		f.dependencies = &unmarshaled.Dependencies
 	}
 
-	return f.dependencies, nil
+	return *f.dependencies, nil
 }
 
 type InfoJson struct {

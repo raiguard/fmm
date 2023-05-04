@@ -83,6 +83,7 @@ func (l *ModList) Enable(mod ModIdent) {
 	// Mod was not found, so add it
 	entry := ModListMod{Name: mod.Name, Enabled: true, Version: mod.Version}
 	l.Mods = append(l.Mods, entry)
+	fmt.Println("Enabled", mod.toString())
 }
 
 func (l *ModList) Remove(name string) {

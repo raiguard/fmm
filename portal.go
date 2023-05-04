@@ -38,9 +38,9 @@ func portalDownloadMod(mod Dependency) error {
 	// Check releases from newest to oldest and find the first matching one
 	var release *PortalModRelease
 	for i := len(unmarshaled.Releases) - 1; i >= 0; i -= 1 {
-		toCheck := unmarshaled.Releases[i]
-		if mod.Test(&ModIdent{mod.Ident.Name, &toCheck.Version}) {
-			release = &toCheck
+		toCheck := &unmarshaled.Releases[i]
+		if mod.Test(&toCheck.Version) {
+			release = toCheck
 			break
 		}
 	}
@@ -115,15 +115,15 @@ func portalUploadMod(filepath string) error {
 	return nil
 }
 
-func portalGetDependencies(mod ModIdent) ([]Dependency, error) {
-	fmt.Println("Fetching dependencies for", mod.toString())
-	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Name)
+func portalGetRelease(mod Dependency) (*PortalModRelease, error) {
+	fmt.Println("Fetching dependencies for", mod.Ident.toString())
+	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Ident.Name)
 	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	if res.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("%s was not found on the mod portal", mod.toString()))
+		return nil, errors.New(fmt.Sprintf("%s was not found on the mod portal", mod.Ident.toString()))
 	}
 
 	body, err := io.ReadAll(res.Body)
@@ -138,17 +138,15 @@ func portalGetDependencies(mod ModIdent) ([]Dependency, error) {
 		return nil, err
 	}
 
-	version := mod.Version
-	if version != nil {
-		for _, release := range unmarshaled.Releases {
-			if release.Version == *version {
-				return release.InfoJson.Dependencies, nil
-			}
+	releases := unmarshaled.Releases
+	for i := len(releases) - 1; i >= 0; i-- {
+		release := &releases[i]
+		if mod.Test(&release.Version) {
+			return release, nil
 		}
-		return nil, nil
 	}
 
-	return unmarshaled.Releases[len(unmarshaled.Releases)-1].InfoJson.Dependencies, nil
+	return &unmarshaled.Releases[len(unmarshaled.Releases)-1], nil
 }
 
 type ModInitUploadRes struct {
