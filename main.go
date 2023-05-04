@@ -24,6 +24,7 @@ operations:
 	upload  [files...]  Upload the given mod zip files to the mod portal`
 
 func printUsage(msg ...any) {
+	errorln(msg...)
 	errorln(usageStr)
 	os.Exit(1)
 }
@@ -58,7 +59,7 @@ func main() {
 
 	args := os.Args[1:]
 	if len(args) == 0 {
-		abort("no operation was specified")
+		printUsage("no operation was specified")
 	}
 
 	var task func([]string)
@@ -74,7 +75,7 @@ func main() {
 	case "upload", "ul":
 		task = upload
 	default:
-		abort(fmt.Sprintf("unrecognized operation %s", args[0]))
+		printUsage("unrecognized operation", args[0])
 	}
 	task(args[1:])
 }
