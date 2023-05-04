@@ -1,7 +1,11 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
+	"compress/zlib"
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -16,17 +20,24 @@ func parseCliInput(input []string, parseDependencies bool) []ModIdentAndPresence
 	var mods []ModIdent
 
 	for _, input := range input {
+		var thisMods []ModIdent
+		var err error
 		if strings.HasSuffix(input, ".zip") {
-			// TODO: Read from save
+			thisMods, err = parseSaveFile(input)
 		} else if strings.HasSuffix(input, ".log") {
-			mods = append(mods, parseLogFile(input)...)
+			thisMods = parseLogFile(input)
 		} else if strings.HasSuffix(input, ".json") {
 			// TODO: mod-list.json
 		} else if strings.HasPrefix(input, "!") {
 			// TODO: Mod set
 		} else {
-			mods = append(mods, newModIdent(input))
+			thisMods = append(thisMods, newModIdent(input))
 		}
+		if err != nil {
+			errorln(err)
+			continue
+		}
+		mods = append(mods, thisMods...)
 	}
 
 	if parseDependencies {
@@ -125,4 +136,64 @@ func parseLogFile(filepath string) []ModIdent {
 	}
 
 	return output
+}
+
+func parseSaveFile(filepath string) ([]ModIdent, error) {
+	output := []ModIdent{}
+
+	zipReader, err := zip.OpenReader(filepath)
+	if err != nil {
+		return nil, err
+	}
+	defer zipReader.Close()
+
+	var dat *zip.File
+	compressed := false
+	for _, file := range zipReader.File {
+		parts := strings.Split(file.Name, "/")
+		name := parts[len(parts)-1]
+		if name == "level.dat" || name == "level.dat0" {
+			dat = file
+			compressed = name == "level.dat0"
+			break
+		}
+	}
+	if dat == nil {
+		return nil, errors.New("Invalid save file: could not locate level data")
+	}
+
+	datReader, err := dat.Open()
+	if err != nil {
+		return nil, err
+	}
+	if compressed {
+		datReader, err = zlib.NewReader(datReader)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer datReader.Close()
+
+	bufReader := bufio.NewReader(datReader)
+
+	major, err := binary.ReadUvarint(bufReader)
+	if err != nil {
+		return nil, err
+	}
+	minor, err := binary.ReadUvarint(bufReader)
+	if err != nil {
+		return nil, err
+	}
+	patch, err := binary.ReadUvarint(bufReader)
+	if err != nil {
+		return nil, err
+	}
+	build, err := binary.ReadUvarint(bufReader)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("%d.%d.%d.%d\n", major, minor, patch, build)
+
+	return output, nil
 }
