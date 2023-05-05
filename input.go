@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
@@ -176,24 +177,18 @@ func parseSaveFile(filepath string) ([]ModIdent, error) {
 
 	bufReader := bufio.NewReader(datReader)
 
-	major, err := binary.ReadUvarint(bufReader)
-	if err != nil {
-		return nil, err
-	}
-	minor, err := binary.ReadUvarint(bufReader)
-	if err != nil {
-		return nil, err
-	}
-	patch, err := binary.ReadUvarint(bufReader)
-	if err != nil {
-		return nil, err
-	}
-	build, err := binary.ReadUvarint(bufReader)
-	if err != nil {
-		return nil, err
-	}
+	major := readUint16(bufReader)
+	minor := readUint16(bufReader)
+	patch := readUint16(bufReader)
+	build := readUint16(bufReader)
 
 	fmt.Printf("%d.%d.%d.%d\n", major, minor, patch, build)
 
 	return output, nil
+}
+
+func readUint16(reader *bufio.Reader) uint16 {
+	buf := []byte{0, 0}
+	io.ReadFull(reader, buf)
+	return binary.LittleEndian.Uint16(buf)
 }
