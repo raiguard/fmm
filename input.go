@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bufio"
 	"compress/zlib"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -163,32 +162,28 @@ func parseSaveFile(filepath string) ([]ModIdent, error) {
 		return nil, errors.New("Invalid save file: could not locate level data")
 	}
 
-	datReader, err := dat.Open()
+	rawReader, err := dat.Open()
 	if err != nil {
 		return nil, err
 	}
 	if compressed {
-		datReader, err = zlib.NewReader(datReader)
+		rawReader, err = zlib.NewReader(rawReader)
 	}
 	if err != nil {
 		return nil, err
 	}
-	defer datReader.Close()
+	defer rawReader.Close()
 
-	bufReader := bufio.NewReader(datReader)
+	bytes, err := io.ReadAll(rawReader)
+	if err != nil {
+		return nil, err
+	}
 
-	major := readUint16(bufReader)
-	minor := readUint16(bufReader)
-	patch := readUint16(bufReader)
-	build := readUint16(bufReader)
+	datReader := newDatReader(bytes)
 
-	fmt.Printf("%d.%d.%d.%d\n", major, minor, patch, build)
+	mapVersion := datReader.ReadUnoptimizedVersion()
+
+	fmt.Println(mapVersion.toString(true))
 
 	return output, nil
-}
-
-func readUint16(reader *bufio.Reader) uint16 {
-	buf := []byte{0, 0}
-	io.ReadFull(reader, buf)
-	return binary.LittleEndian.Uint16(buf)
 }
