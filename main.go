@@ -24,7 +24,9 @@ operations:
 	upload  [files...]  Upload the given mod zip files to the mod portal`
 
 func printUsage(msg ...any) {
-	errorln(msg...)
+	if len(msg) > 0 {
+		errorln(msg...)
+	}
 	errorln(usageStr)
 	os.Exit(1)
 }
