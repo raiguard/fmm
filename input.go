@@ -49,7 +49,7 @@ func parseCliInput(input []string, parseDependencies bool) []ModIdentAndPresence
 	dir := newDir(modsDir)
 
 	for _, mod := range mods {
-		present := dir.Find(Dependency{mod, DependencyRequired, VersionAny}) != nil
+		present := mod.Name == "base" || dir.Find(Dependency{mod, DependencyRequired, VersionAny}) != nil
 		output = append(output, ModIdentAndPresence{mod, present})
 	}
 
@@ -78,6 +78,9 @@ func expandDependencies(mods []ModIdent) []ModIdent {
 		if file := dir.Find(mod); file != nil {
 			ident = file.Ident
 			deps, err = file.Dependencies()
+		} else if mod.Ident.Name == "base" {
+			// TODO: Check against dependency constraint?
+			ident = mod.Ident
 		} else {
 			var release *PortalModRelease
 			release, err = portalGetRelease(mod)
@@ -139,8 +142,6 @@ func parseLogFile(filepath string) []ModIdent {
 }
 
 func parseSaveFile(filepath string) ([]ModIdent, error) {
-	output := []ModIdent{}
-
 	zipReader, err := zip.OpenReader(filepath)
 	if err != nil {
 		return nil, err
@@ -181,13 +182,31 @@ func parseSaveFile(filepath string) ([]ModIdent, error) {
 
 	datReader := newDatReader(bytes)
 
-	mapVersion := datReader.ReadUnoptimizedVersion()
-	allowedCommands := datReader.ReadUint8()
-	campaignName := datReader.ReadString()
-	levelName := datReader.ReadString()
-	modName := datReader.ReadString()
+	datReader.ReadUnoptimizedVersion()   // mapVersion
+	datReader.ReadUint8()                // branchVersion
+	datReader.ReadString()               // campaignName
+	datReader.ReadString()               // levelName
+	datReader.ReadString()               // modName
+	datReader.ReadUint8()                // difficulty
+	datReader.ReadBool()                 // finished
+	datReader.ReadBool()                 // playerWon
+	datReader.ReadString()               // nextLevel
+	datReader.ReadBool()                 // canContinue
+	datReader.ReadBool()                 // finishedButContinuing
+	datReader.ReadBool()                 // savingReplay
+	datReader.ReadBool()                 // allowNonAdminDebugOptions
+	datReader.ReadOptimizedVersion(true) // scenarioVersion
+	datReader.ReadUint8()                // scenarioBranchVersion
+	datReader.ReadUint8()                // allowedCommands
 
-	fmt.Println(mapVersion.toString(true), allowedCommands, campaignName, levelName, modName)
+	numMods := datReader.ReadUint16Optimized()
+	mods := make([]ModIdent, numMods)
+	for i := uint16(0); i < numMods; i += 1 {
+		mods[i] = datReader.ReadModWithCRC()
+	}
 
-	return output, nil
+	datReader.ReadUint32() // startupModSettingsCrc
+	// TODO: Startup mod settings PropertyTree
+
+	return mods, nil
 }

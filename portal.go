@@ -46,8 +46,7 @@ func portalDownloadMod(mod Dependency) error {
 	}
 
 	if release == nil {
-		return errors.New(fmt.Sprintf("%s was not found on the mod portal",
-			mod.Ident.toString()))
+		return errors.New(fmt.Sprintf("%s was not found on the mod portal", mod.Ident.toString()))
 	}
 
 	downloadUrl := fmt.Sprintf("https://mods.factorio.com/%s?username=%s&token=%s",
