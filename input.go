@@ -182,8 +182,12 @@ func parseSaveFile(filepath string) ([]ModIdent, error) {
 	datReader := newDatReader(bytes)
 
 	mapVersion := datReader.ReadUnoptimizedVersion()
+	allowedCommands := datReader.ReadUint8()
+	campaignName := datReader.ReadString()
+	levelName := datReader.ReadString()
+	modName := datReader.ReadString()
 
-	fmt.Println(mapVersion.toString(true))
+	fmt.Println(mapVersion.toString(true), allowedCommands, campaignName, levelName, modName)
 
 	return output, nil
 }
