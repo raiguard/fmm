@@ -45,6 +45,7 @@ func TestDependencyTest(t *testing.T) {
 		{"flib >= 0.10", "flib_0.10.0", true},
 		{"flib >= 0.10.0", "flib_0.10.0", true},
 		{"flib > 0.10", "flib_0.10.0", false},
+		{"flib>=0.10", "flib_0.10.0", true},
 	}
 
 	for _, test := range tests {
