@@ -1,20 +1,14 @@
 # fmm
 
-A CLI mod manager for Factorio. Easily enable, disable, download, remove,
-update, upload, or sync mods with a save file. Dependencies will be
-automatically downloaded and enabled.
-
-## Status
-
-This project is currently being rewritten from the ground up in Go. Most
-features are missing, and it has bugs!
+A CLI mod manager for Factorio. Easily download and enable mods, sync with save
+files or log file checksums, and upload mod zip files to the portal.
 
 ## Usage
 
 ```
 fmm help
 fmm enable RecipeBook
-fmm download space-exploration
+fmm sync ~/downloads/save-file.zip
 ```
 
 Read the [man pages](./man) to learn more.
