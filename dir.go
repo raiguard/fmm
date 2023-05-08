@@ -12,10 +12,7 @@ import (
 	"strings"
 )
 
-type Dir struct {
-	Files ModFiles
-	Path  string
-}
+type Dir []ModFile
 
 func newDir(dirPath string) Dir {
 	files, err := os.ReadDir(dirPath)
@@ -23,7 +20,7 @@ func newDir(dirPath string) Dir {
 		abort(err)
 	}
 
-	var mods ModFiles
+	var mods Dir
 	for _, file := range files {
 		name := file.Name()
 		if name == "mod-list.json" || name == "mod-settings.dat" {
@@ -55,16 +52,13 @@ func newDir(dirPath string) Dir {
 	// Sort files so we can reliably get the newest version
 	sort.Sort(mods)
 
-	return Dir{
-		Files: mods,
-		Path:  dirPath,
-	}
+	return mods
 }
 
-func (d Dir) Find(mod Dependency) *ModFile {
+func (dir Dir) Find(mod Dependency) *ModFile {
 	// Iterate in reverse to get the newest version first
-	for i := len(d.Files) - 1; i >= 0; i-- {
-		thisfile := &d.Files[i]
+	for i := len(dir) - 1; i >= 0; i-- {
+		thisfile := &dir[i]
 		if thisfile.Ident.Name != mod.Ident.Name {
 			continue
 		}
@@ -75,17 +69,14 @@ func (d Dir) Find(mod Dependency) *ModFile {
 	return nil
 }
 
-// Wrapper type with implementations for sorting
-type ModFiles []ModFile
-
-func (f ModFiles) Len() int {
-	return len(f)
+func (dir Dir) Len() int {
+	return len(dir)
 }
-func (f ModFiles) Swap(i, j int) {
-	f[i], f[j] = f[j], f[i]
+func (dir Dir) Swap(i, j int) {
+	dir[i], dir[j] = dir[j], dir[i]
 }
-func (f ModFiles) Less(i, j int) bool {
-	modi, modj := f[i].Ident, &f[j].Ident
+func (dir Dir) Less(i, j int) bool {
+	modi, modj := dir[i].Ident, &dir[j].Ident
 	if modi.Name != modj.Name {
 		return modi.Name < modj.Name
 	}

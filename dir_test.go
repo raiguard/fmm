@@ -10,7 +10,7 @@ func TestDir(t *testing.T) {
 	dir := newDir("TEST/mods")
 
 	// Check validity of mod structures
-	assert.Equal(t, len(dir.Files), 3)
+	assert.Equal(t, len(dir), 3)
 
 	expected := []ModIdent{
 		{"Unzipped", &Version{1, 0, 0, 0}},
