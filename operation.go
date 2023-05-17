@@ -57,6 +57,16 @@ func enable(args []string) {
 	}
 }
 
+func list(args []string) {
+	dir := newDir(modsDir)
+
+	for _, file := range dir {
+		// We don't use toString() here because we want the underscore
+		output := file.Ident.Name + "_" + file.Ident.Version.toString(false)
+		fmt.Println(output)
+	}
+}
+
 func sync(args []string) {
 	disableAll()
 	enable(args)

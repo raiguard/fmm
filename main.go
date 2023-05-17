@@ -72,6 +72,8 @@ func main() {
 		task = enable
 	case "help", "h", "-h", "--help":
 		printUsage()
+	case "list", "ls":
+		task = list
 	case "sync", "s":
 		task = sync
 	case "upload", "ul":

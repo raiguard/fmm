@@ -69,6 +69,7 @@ func (dir Dir) Find(mod Dependency) *ModFile {
 	return nil
 }
 
+// Implementations for sorting interface
 func (dir Dir) Len() int {
 	return len(dir)
 }
