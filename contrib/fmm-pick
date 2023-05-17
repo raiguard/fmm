@@ -1,0 +1,3 @@
+#!/bin/sh
+
+fmm list | fzf --multi --layout=reverse-list | fmm "$1" -x

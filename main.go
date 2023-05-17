@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"strings"
 
 	"github.com/adrg/xdg"
 )
@@ -15,11 +17,14 @@ var (
 	modsDir          string = "."
 )
 
-const usageStr string = `usage: fmm <operation> [args...]
+const usageStr string = `usage: fmm <operation> [flags...] [args...]
+flags:
+	-x                  Read args from stdin (one per line)
 operations:
 	disable [args...]   Disable the given mods, or all mods if none are given
 	enable  [args...]   Enable the given mods and their dependencies, downloading if necessary
 	help                Show usage information
+	list                List all mods in the mods directory
 	sync    [args...]   Disable all mods, then download and enable the given mods
 	upload  [files...]  Upload the given mod zip files to the mod portal`
 
@@ -81,5 +86,17 @@ func main() {
 	default:
 		printUsage("unrecognized operation", args[0])
 	}
-	task(args[1:])
+
+	// Read from stdin if '-x' was provided
+	args = args[1:]
+	if len(args) > 0 && args[0] == "-x" {
+		bytes, _ := io.ReadAll(os.Stdin)
+		if len(bytes) == 0 {
+			// Nothing was provided
+			return
+		}
+		args = strings.Split(strings.TrimSpace(string(bytes)), "\n")
+	}
+
+	task(args)
 }

@@ -35,10 +35,6 @@ func disableAll() {
 }
 
 func enable(args []string) {
-	if len(args) == 0 {
-		abort("no mods were provided")
-	}
-
 	mods := parseCliInput(args, true)
 
 	list := newModList(path.Join(modsDir, "mod-list.json"))
