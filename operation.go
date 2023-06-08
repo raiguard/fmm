@@ -54,12 +54,19 @@ func enable(args []string) {
 }
 
 func list(args []string) {
-	dir := newDir(modsDir)
+	if len(args) == 0 {
+		dir := newDir(modsDir)
 
-	for _, file := range dir {
-		// We don't use toString() here because we want the underscore
-		output := file.Ident.Name + "_" + file.Ident.Version.toString(false)
-		fmt.Println(output)
+		for _, file := range dir {
+			// We don't use toString() here because we want the underscore
+			output := file.Ident.Name + "_" + file.Ident.Version.toString(false)
+			fmt.Println(output)
+		}
+	}
+
+	mods := parseCliInput(args, false)
+	for _, mod := range mods {
+		fmt.Println(mod.Ident.toString())
 	}
 }
 
