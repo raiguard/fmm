@@ -58,12 +58,10 @@ func (d *DatReader) ReadUint32() uint32 {
 
 func (d *DatReader) ReadUint16Optimized() uint16 {
 	first, _ := d.reader.ReadByte()
-	firstNum := uint16(first)
-	if firstNum < 255 {
-		return firstNum
+	if first < 255 {
+		return uint16(first)
 	}
-	secondNum, _ := d.reader.ReadByte()
-	return firstNum + uint16(secondNum)
+	return d.ReadUint16()
 }
 
 func (d *DatReader) ReadOptimizedVersion(withBuild bool) Version {
