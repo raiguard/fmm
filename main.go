@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/adrg/xdg"
@@ -51,19 +54,6 @@ func printUsage(msg ...any) {
 // - Execute each enable or download action
 
 func main() {
-	xdgConfigPath, err := xdg.ConfigFile("fmm/fmm.ini")
-	if err == nil {
-		configPath = xdgConfigPath
-	}
-	if err := parseConfig(configPath); err != nil {
-		abort("could not parse config file:", err)
-	}
-
-	if _, err := os.Stat("mod-list.json"); err == nil {
-		fmt.Println("Using current directory")
-		modsDir = "."
-	}
-
 	args := os.Args[1:]
 	if len(args) == 0 {
 		printUsage("no operation was specified")
@@ -85,6 +75,22 @@ func main() {
 		task = upload
 	default:
 		printUsage("unrecognized operation", args[0])
+	}
+
+	if xdgConfigPath, err := xdg.SearchConfigFile("fmm/fmm.ini"); err == nil {
+		configPath = xdgConfigPath
+	}
+	if err := parseConfig(configPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		abort("could not parse config file:", err)
+	}
+
+	if _, err := os.Stat("mod-list.json"); err == nil {
+		fmt.Println("Using current directory")
+		modsDir = "."
+	}
+
+	if _, err := os.Stat(path.Join(modsDir, "mod-list.json")); err != nil {
+		abort("could not find mod-list.json in directory:", modsDir)
 	}
 
 	// Read from stdin if '-x' was provided
