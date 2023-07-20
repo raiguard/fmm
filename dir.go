@@ -106,28 +106,38 @@ func (f *ModFile) Dependencies() ([]Dependency, error) {
 		return nil, err
 	}
 
-	for _, file := range r.File {
-		// TODO: Use a regex to get the right one
-		if !strings.Contains(file.Name, "info.json") {
+	var file *zip.File
+	for _, existing := range r.File {
+		if !strings.Contains(existing.Name, "info.json") {
 			continue
 		}
-		rc, err := file.Open()
-		if err != nil {
-			return nil, err
+		parts := strings.Split(existing.Name, "/")
+		if len(parts) != 2 || parts[1] != "info.json" {
+			continue
 		}
-		defer rc.Close()
-		content, err := ioutil.ReadAll(rc)
-		if err != nil {
-			return nil, err
-		}
-
-		var unmarshaled InfoJson
-		err = json.Unmarshal(content, &unmarshaled)
-		if err != nil {
-			return nil, err
-		}
-		f.dependencies = &unmarshaled.Dependencies
+		file = existing
 	}
+
+	if file == nil {
+		return nil, errors.New("Mod does not contain an info.json file")
+	}
+
+	rc, err := file.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+	content, err := ioutil.ReadAll(rc)
+	if err != nil {
+		return nil, err
+	}
+
+	var unmarshaled InfoJson
+	err = json.Unmarshal(content, &unmarshaled)
+	if err != nil {
+		return nil, err
+	}
+	f.dependencies = &unmarshaled.Dependencies
 
 	return *f.dependencies, nil
 }
