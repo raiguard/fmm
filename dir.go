@@ -4,8 +4,8 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -127,7 +127,7 @@ func (f *ModFile) Dependencies() ([]Dependency, error) {
 		return nil, err
 	}
 	defer rc.Close()
-	content, err := ioutil.ReadAll(rc)
+	content, err := io.ReadAll(rc)
 	if err != nil {
 		return nil, err
 	}
