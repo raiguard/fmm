@@ -17,7 +17,8 @@ var (
 	configPath       string = "./fmm.ini"
 	downloadToken    string = ""
 	downloadUsername string = ""
-	modsDir          string = "."
+	gameDir          string = "."
+	modsDir          string = ""
 )
 
 const usageStr string = `usage: fmm <operation> [flags...] [args...]
@@ -84,13 +85,18 @@ func main() {
 		abort("could not parse config file:", err)
 	}
 
-	if _, err := os.Stat("mod-list.json"); err == nil {
+	if isFactorioDir(".") {
 		fmt.Println("Using current directory")
-		modsDir = "."
+		gameDir = "."
+	} else if isFactorioDir("..") {
+		fmt.Println("Using current directory")
+		gameDir = ".."
 	}
+	modsDir = path.Join(gameDir, "mods")
 
-	if _, err := os.Stat(path.Join(modsDir, "mod-list.json")); err != nil {
-		abort("could not find mod-list.json in directory:", modsDir)
+	// TODO: Auto-create mods folder and mod-list.json
+	if !entryExists(modsDir, "mod-list.json") {
+		abort("mods directory does not contain info.json")
 	}
 
 	// Read from stdin if '-x' was provided
@@ -105,4 +111,19 @@ func main() {
 	}
 
 	task(args)
+}
+
+func isFactorioDir(dir string) bool {
+	if !entryExists(dir, "data", "changelog.txt") {
+		return false
+	}
+	if !entryExists(dir, "data", "base", "info.json") {
+		return false
+	}
+	return entryExists(dir, "config-path.ini") || entryExists(dir, "config", "config.ini")
+}
+
+func entryExists(pathParts ...string) bool {
+	_, err := os.Stat(path.Join(pathParts...))
+	return err == nil
 }

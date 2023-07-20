@@ -35,13 +35,10 @@ func parseConfig(path string) error {
 		return err
 	}
 
-	if dir, ok := file.Get("", "mods_dir"); ok {
-		modsDir = dir
-	}
-
 	apiKey = getFromEnvOrConfig("FACTORIO_API_KEY", file, "portal", "api_key")
 	downloadToken = getFromEnvOrConfig("FACTORIO_TOKEN", file, "portal", "token")
 	downloadUsername = getFromEnvOrConfig("FACTORIO_USERNAME", file, "portal", "username")
+	gameDir = getFromEnvOrConfig("FACTORIO_PATH", file, "", "game_dir")
 
 	return nil
 }
