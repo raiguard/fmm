@@ -1,22 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
-	"path"
 	"strings"
-)
-
-var (
-	apiKey           string = ""
-	configPath       string = "./fmm.ini"
-	downloadToken    string = ""
-	downloadUsername string = ""
-	gameDir          string = "."
-	modsDir          string = ""
 )
 
 const usageStr string = `usage: fmm <operation> [flags...] [args...]
@@ -50,31 +38,26 @@ func main() {
 		printUsage("no operation was specified")
 	}
 
-	if isFactorioDir(".") {
-		fmt.Println("Using current directory")
-		gameDir = "."
-	} else if isFactorioDir("..") {
-		fmt.Println("Using previous directory")
-		gameDir = ".."
-	} else {
+	gameDir := "."
+	if !isFactorioDir(gameDir) {
 		gameDir = os.Getenv("FACTORIO_PATH")
 		if !isFactorioDir(gameDir) {
 			abort("invalid game directory")
 		}
 	}
-	modsDir = path.Join(gameDir, "mods")
-	// TODO: Auto-create mods folder and mod-list.json
-	if !entryExists(modsDir, "mod-list.json") {
-		abort("mods directory does not contain info.json")
-	}
 
-	apiKey = os.Getenv("FACTORIO_API_KEY")
-	err := getPlayerData()
+	manager, err := NewManager(".")
 	if err != nil {
-		abort(err)
+		manager, err = NewManager(os.Getenv("FACTORIO_PATH"))
+		if err != nil {
+			abort(err)
+		}
 	}
 
-	var task func([]string)
+	// downloadUsername = os.Getenv("FACTORIO_USERNAME")
+	// downloadToken = os.Getenv("FACTORIO_TOKEN")
+
+	var task func(*Manager, []string)
 	switch args[0] {
 	case "disable", "d":
 		task = disable
@@ -103,33 +86,9 @@ func main() {
 		args = strings.Split(strings.TrimSpace(string(bytes)), "\n")
 	}
 
-	task(args)
-}
+	task(manager, args)
 
-func getPlayerData() error {
-	downloadUsername = os.Getenv("FACTORIO_USERNAME")
-	downloadToken = os.Getenv("FACTORIO_TOKEN")
-
-	playerDataJsonPath := path.Join(gameDir, "player-data.json")
-	if !entryExists(playerDataJsonPath) {
-		return nil
+	if err := manager.Save(); err != nil {
+		errorln(errors.Join(errors.New("Unable to save modifications"), err))
 	}
-
-	data, err := os.ReadFile(playerDataJsonPath)
-	if err != nil {
-		return errors.New("Unable to read player-data.json")
-	}
-	var playerDataJson PlayerDataJson
-	err = json.Unmarshal(data, &playerDataJson)
-	if err != nil {
-		return errors.New("Invalid player-data.json format")
-	}
-	if playerDataJson.ServiceToken != nil {
-		downloadToken = *playerDataJson.ServiceToken
-	}
-	if playerDataJson.ServiceUsername != nil {
-		downloadUsername = *playerDataJson.ServiceUsername
-	}
-
-	return nil
 }

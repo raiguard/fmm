@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 )
 
 func abort(msg ...any) {
@@ -25,19 +24,4 @@ func printUsage(msg ...any) {
 	}
 	errorln(usageStr)
 	os.Exit(1)
-}
-
-func entryExists(pathParts ...string) bool {
-	_, err := os.Stat(path.Join(pathParts...))
-	return err == nil
-}
-
-func isFactorioDir(dir string) bool {
-	if !entryExists(dir, "data", "changelog.txt") {
-		return false
-	}
-	if !entryExists(dir, "data", "base", "info.json") {
-		return false
-	}
-	return entryExists(dir, "config-path.ini") || entryExists(dir, "config", "config.ini")
 }

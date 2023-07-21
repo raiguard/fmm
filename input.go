@@ -11,12 +11,7 @@ import (
 	"strings"
 )
 
-type ModIdentAndPresence struct {
-	Ident     ModIdent
-	IsPresent bool
-}
-
-func parseCliInput(input []string, parseDependencies bool) []ModIdentAndPresence {
+func parseCliInput(input []string, parseDependencies bool) []ModIdent {
 	var mods []ModIdent
 
 	for _, input := range input {
@@ -41,71 +36,69 @@ func parseCliInput(input []string, parseDependencies bool) []ModIdentAndPresence
 	}
 
 	if parseDependencies {
-		mods = expandDependencies(mods)
+		// mods = expandDependencies(mods)
 	}
 
-	var output []ModIdentAndPresence
+	// var output []ModIdentAndPresence
 
-	dir := newDir(modsDir)
+	// dir := newDir(modsDir)
 
-	for _, mod := range mods {
-		present := mod.Name == "base" || dir.Find(Dependency{mod, DependencyRequired, VersionAny}) != nil
-		output = append(output, ModIdentAndPresence{mod, present})
-	}
+	// for _, mod := range mods {
+	// 	present := mod.Name == "base" || dir.Find(Dependency{mod, DependencyRequired, VersionAny}) != nil
+	// 	output = append(output, ModIdentAndPresence{mod, present})
+	// }
 
-	return output
+	return mods
 }
 
-func expandDependencies(mods []ModIdent) []ModIdent {
-	visited := make(map[string]bool)
-	toVisit := []Dependency{}
-	for _, mod := range mods {
-		toVisit = append(toVisit, Dependency{mod, DependencyRequired, VersionEq})
-	}
-	output := []ModIdent{}
+// func expandDependencies(manager *Manager, mods []ModIdent) []ModIdent {
+// 	visited := make(map[string]bool)
+// 	toVisit := []Dependency{}
+// 	for _, mod := range mods {
+// 		toVisit = append(toVisit, Dependency{mod, DependencyRequired, VersionEq})
+// 	}
+// 	output := []ModIdent{}
 
-	dir := newDir(modsDir)
+// 	for i := 0; i < len(toVisit); i += 1 {
+// 		mod := toVisit[i]
+// 		if _, exists := visited[mod.Ident.Name]; exists {
+// 			continue
+// 		}
+// 		visited[mod.Ident.Name] = true
+// 		var ident ModIdent
+// 		var deps []Dependency
+// 		var err error
+// 		if file := manager.Find(mod); file != nil {
+// 			ident = file.Ident
+// 			deps, err = file.Dependencies()
+// 		} else if mod.Ident.Name == "base" {
+// 			// TODO: Check against dependency constraint?
+// 			ident = mod.Ident
+// 		} else {
+// 			var release *PortalModRelease
+// 			release, err = portalGetRelease(mod)
+// 			if err == nil {
+// 				ident = ModIdent{mod.Ident.Name, &release.Version}
+// 				deps = release.InfoJson.Dependencies
+// 			}
+// 		}
+// 		if err != nil {
+// 			errorln(err)
+// 			continue
+// 		}
+// 		output = append(output, ident)
+// 		for _, dep := range deps {
+// 			if dep.Ident.Name == "base" {
+// 				continue
+// 			}
+// 			if dep.Kind == DependencyRequired || dep.Kind == DependencyNoLoadOrder {
+// 				toVisit = append(toVisit, dep)
+// 			}
+// 		}
+// 	}
 
-	for i := 0; i < len(toVisit); i += 1 {
-		mod := toVisit[i]
-		if _, exists := visited[mod.Ident.Name]; exists {
-			continue
-		}
-		visited[mod.Ident.Name] = true
-		var ident ModIdent
-		var deps []Dependency
-		var err error
-		if file := dir.Find(mod); file != nil {
-			ident = file.Ident
-			deps, err = file.Dependencies()
-		} else if mod.Ident.Name == "base" {
-			// TODO: Check against dependency constraint?
-			ident = mod.Ident
-		} else {
-			var release *PortalModRelease
-			release, err = portalGetRelease(mod)
-			if err == nil {
-				ident = ModIdent{mod.Ident.Name, &release.Version}
-				deps = release.InfoJson.Dependencies
-			}
-		}
-		if err != nil {
-			errorln(err)
-			continue
-		}
-		output = append(output, ident)
-		for _, dep := range deps {
-			if dep.Ident.Name == "base" {
-				continue
-			}
-			if dep.Kind == DependencyRequired || dep.Kind == DependencyNoLoadOrder {
-				toVisit = append(toVisit, dep)
-			}
-		}
-	}
-
-	return output
-}
+// 	return output
+// }
 
 func parseLogFile(filepath string) []ModIdent {
 	var output []ModIdent
