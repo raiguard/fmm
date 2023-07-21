@@ -162,3 +162,8 @@ func parseInfoJson(path string) (*InfoJson, error) {
 
 	return &unmarshaled, nil
 }
+
+type PlayerDataJson struct {
+	ServiceToken    *string `json:"service-token"`
+	ServiceUsername *string `json:"service-username"`
+}

@@ -1,15 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path"
 	"strings"
-
-	"github.com/adrg/xdg"
 )
 
 var (
@@ -78,25 +76,28 @@ func main() {
 		printUsage("unrecognized operation", args[0])
 	}
 
-	if xdgConfigPath, err := xdg.SearchConfigFile("fmm/fmm.ini"); err == nil {
-		configPath = xdgConfigPath
-	}
-	if err := parseConfig(configPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		abort("could not parse config file:", err)
-	}
-
 	if isFactorioDir(".") {
 		fmt.Println("Using current directory")
 		gameDir = "."
 	} else if isFactorioDir("..") {
-		fmt.Println("Using current directory")
+		fmt.Println("Using previous directory")
 		gameDir = ".."
+	} else {
+		gameDir = os.Getenv("FACTORIO_PATH")
+		if !isFactorioDir(gameDir) {
+			abort("invalid game directory")
+		}
 	}
 	modsDir = path.Join(gameDir, "mods")
-
 	// TODO: Auto-create mods folder and mod-list.json
 	if !entryExists(modsDir, "mod-list.json") {
 		abort("mods directory does not contain info.json")
+	}
+
+	apiKey = os.Getenv("FACTORIO_API_KEY")
+	err := getPlayerData()
+	if err != nil {
+		abort(err)
 	}
 
 	// Read from stdin if '-x' was provided
@@ -126,4 +127,32 @@ func isFactorioDir(dir string) bool {
 func entryExists(pathParts ...string) bool {
 	_, err := os.Stat(path.Join(pathParts...))
 	return err == nil
+}
+
+func getPlayerData() error {
+	downloadUsername = os.Getenv("FACTORIO_USERNAME")
+	downloadToken = os.Getenv("FACTORIO_TOKEN")
+
+	playerDataJsonPath := path.Join(gameDir, "player-data.json")
+	if !entryExists(playerDataJsonPath) {
+		return errors.New("No player-data.json")
+	}
+
+	data, err := os.ReadFile(playerDataJsonPath)
+	if err != nil {
+		return errors.New("Unable to read player-data.json")
+	}
+	var playerDataJson PlayerDataJson
+	err = json.Unmarshal(data, &playerDataJson)
+	if err != nil {
+		return errors.New("Invalid player-data.json format")
+	}
+	if playerDataJson.ServiceToken != nil {
+		downloadToken = *playerDataJson.ServiceToken
+	}
+	if playerDataJson.ServiceUsername != nil {
+		downloadUsername = *playerDataJson.ServiceUsername
+	}
+
+	return nil
 }
