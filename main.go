@@ -30,14 +30,6 @@ operations:
 	sync    [args...]   Disable all mods, then download and enable the given mods
 	upload  [files...]  Upload the given mod zip files to the mod portal`
 
-func printUsage(msg ...any) {
-	if len(msg) > 0 {
-		errorln(msg...)
-	}
-	errorln(usageStr)
-	os.Exit(1)
-}
-
 // CONTROL FLOW:
 // - Read config file
 // - Parse input list into list of ModIdent, taking from:
@@ -112,21 +104,6 @@ func main() {
 	}
 
 	task(args)
-}
-
-func isFactorioDir(dir string) bool {
-	if !entryExists(dir, "data", "changelog.txt") {
-		return false
-	}
-	if !entryExists(dir, "data", "base", "info.json") {
-		return false
-	}
-	return entryExists(dir, "config-path.ini") || entryExists(dir, "config", "config.ini")
-}
-
-func entryExists(pathParts ...string) bool {
-	_, err := os.Stat(path.Join(pathParts...))
-	return err == nil
 }
 
 func getPlayerData() error {
