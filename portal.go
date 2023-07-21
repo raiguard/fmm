@@ -17,6 +17,12 @@ import (
 const initUploadUrl string = "https://mods.factorio.com/api/v2/mods/releases/init_upload"
 
 func portalDownloadMod(mod Dependency) error {
+	if downloadToken == "" {
+		return errors.New("token was not specified")
+	}
+	if downloadUsername == "" {
+		return errors.New("username was not specified")
+	}
 	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Ident.Name)
 	res, err := http.Get(url)
 	if err != nil {
@@ -49,8 +55,12 @@ func portalDownloadMod(mod Dependency) error {
 		return errors.New(fmt.Sprintf("%s was not found on the mod portal", mod.Ident.toString()))
 	}
 
-	downloadUrl := fmt.Sprintf("https://mods.factorio.com/%s?username=%s&token=%s",
-		release.DownloadUrl, downloadUsername, downloadToken)
+	downloadUrl := fmt.Sprintf(
+		"https://mods.factorio.com/%s?username=%s&token=%s",
+		release.DownloadUrl,
+		downloadUsername,
+		downloadToken,
+	)
 	outPath := path.Join(modsDir, release.FileName)
 
 	fmt.Printf("Downloading %s\n", release.FileName)
