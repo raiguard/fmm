@@ -58,24 +58,6 @@ func main() {
 		printUsage("no operation was specified")
 	}
 
-	var task func([]string)
-	switch args[0] {
-	case "disable", "d":
-		task = disable
-	case "enable", "e":
-		task = enable
-	case "help", "h", "-h", "--help":
-		printUsage()
-	case "list", "ls":
-		task = list
-	case "sync", "s":
-		task = sync
-	case "upload", "ul":
-		task = upload
-	default:
-		printUsage("unrecognized operation", args[0])
-	}
-
 	if isFactorioDir(".") {
 		fmt.Println("Using current directory")
 		gameDir = "."
@@ -98,6 +80,24 @@ func main() {
 	err := getPlayerData()
 	if err != nil {
 		abort(err)
+	}
+
+	var task func([]string)
+	switch args[0] {
+	case "disable", "d":
+		task = disable
+	case "enable", "e":
+		task = enable
+	case "help", "h", "-h", "--help":
+		printUsage()
+	case "list", "ls":
+		task = list
+	case "sync", "s":
+		task = sync
+	case "upload", "ul":
+		task = upload
+	default:
+		printUsage("unrecognized operation", args[0])
 	}
 
 	// Read from stdin if '-x' was provided
