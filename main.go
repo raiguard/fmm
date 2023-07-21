@@ -135,7 +135,7 @@ func getPlayerData() error {
 
 	playerDataJsonPath := path.Join(gameDir, "player-data.json")
 	if !entryExists(playerDataJsonPath) {
-		return errors.New("No player-data.json")
+		return nil
 	}
 
 	data, err := os.ReadFile(playerDataJsonPath)
