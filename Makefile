@@ -10,7 +10,7 @@ fmm: $(FILES)
 
 test:
 	@if [ -d TEST ]; then echo "rm -rf TEST"; rm -rf TEST; fi
-	cp -rf testfiles TEST
+	cp -rf mock TEST
 	go test ./...
 	rm -rf TEST
 
