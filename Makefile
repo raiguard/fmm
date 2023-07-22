@@ -11,8 +11,7 @@ fmm: $(FILES)
 test:
 	@if [ -d TEST ]; then echo "rm -rf TEST"; rm -rf TEST; fi
 	cp -rf testfiles TEST
-	go test ./cli
-	go test ./lib
+	go test ./...
 	rm -rf TEST
 
 clean:

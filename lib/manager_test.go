@@ -9,12 +9,13 @@ import (
 func TestManager(t *testing.T) {
 	manager, err := NewManager("../TEST")
 	require.NoError(t, err)
-	require.Equal(t, len(manager.mods), 3)
+	require.Equal(t, len(manager.mods), 4)
 
 	expected := []struct {
 		name    string
 		version Version
 	}{
+		{"base", Version{1, 1, 87, 0}},
 		{"Unzipped", Version{1, 0, 0, 0}},
 		{"UnzippedVersionless", Version{1, 0, 0, 0}},
 		{"Zipped", Version{1, 1, 0, 0}},
