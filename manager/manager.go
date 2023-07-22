@@ -91,7 +91,7 @@ func NewManager(gamePath string) (*Manager, error) {
 }
 
 func (m *Manager) Disable(modName string) error {
-	mod, err := m.getMod(modName)
+	mod, err := m.GetMod(modName)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (m *Manager) DisableAll() {
 }
 
 func (m *Manager) Enable(name string, version *Version) error {
-	mod, err := m.getMod(name)
+	mod, err := m.GetMod(name)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (m *Manager) Enable(name string, version *Version) error {
 	return nil
 }
 
-func (m *Manager) getMod(name string) (*Mod, error) {
+func (m *Manager) GetMod(name string) (*Mod, error) {
 	mod := m.mods[name]
 	if mod == nil {
 		return nil, errors.New("Mod not found")
@@ -150,6 +150,15 @@ func (m *Manager) Save() error {
 		return err
 	}
 	return os.WriteFile(m.modListJsonPath, marshaled, fs.ModeExclusive)
+}
+
+func (m *Manager) HasPlayerData() bool {
+	return m.downloadUsername != "" && m.downloadToken != ""
+}
+
+func (m *Manager) SetPlayerData(username string, token string) {
+	m.downloadUsername = username
+	m.downloadToken = token
 }
 
 func (m *Manager) getPlayerData() error {

@@ -21,7 +21,7 @@ func TestDir(t *testing.T) {
 	}
 
 	for _, expected := range expected {
-		mod, err := manager.getMod(expected.name)
+		mod, err := manager.GetMod(expected.name)
 		assert.NoError(t, err)
 		release := mod.getLatestRelease()
 		assert.NotNil(t, release)

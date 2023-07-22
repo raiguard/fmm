@@ -66,8 +66,9 @@ func Run() {
 		}
 	}
 
-	// downloadUsername = os.Getenv("FACTORIO_USERNAME")
-	// downloadToken = os.Getenv("FACTORIO_TOKEN")
+	if !manager.HasPlayerData() {
+		manager.SetPlayerData(os.Getenv("FACTORIO_USERNAME"), os.Getenv("FACTORIO_TOKEN"))
+	}
 
 	// Read from stdin if '-x' was provided
 	args = args[1:]
