@@ -147,8 +147,9 @@ func list(manager *fmm.Manager, args []string) {
 }
 
 func sync(manager *fmm.Manager, args []string) {
-	// manager.disableAll()
-	// manager.enable(args)
+	manager.DisableAll()
+	fmt.Println("Disabled all mods")
+	enable(manager, args)
 }
 
 func upload(manager *fmm.Manager, files []string) {
