@@ -1,4 +1,4 @@
-package manager
+package fmm
 
 type Mod struct {
 	Enabled  *Version

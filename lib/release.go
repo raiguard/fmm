@@ -1,4 +1,4 @@
-package manager
+package fmm
 
 import (
 	"archive/zip"

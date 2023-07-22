@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	fmm "github.com/raiguard/fmm/manager"
+	fmm "github.com/raiguard/fmm/lib"
 )
 
 const usageStr string = `Usage: fmm <operation> [flags...] [args...]

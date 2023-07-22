@@ -1,14 +1,12 @@
-package cli
+package fmm
 
 import (
 	"strings"
-
-	fmm "github.com/raiguard/fmm/manager"
 )
 
 type ModIdent struct {
 	Name    string
-	Version *fmm.Version
+	Version *Version
 }
 
 func NewModIdent(input string) ModIdent {
@@ -19,7 +17,7 @@ func NewModIdent(input string) ModIdent {
 	}
 
 	name := strings.Join(parts[:len(parts)-1], "_")
-	version, err := fmm.NewVersion(parts[len(parts)-1])
+	version, err := NewVersion(parts[len(parts)-1])
 	if err != nil {
 		return ModIdent{input, nil}
 	}

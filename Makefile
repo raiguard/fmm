@@ -12,7 +12,7 @@ test:
 	@if [ -d TEST ]; then echo "rm -rf TEST"; rm -rf TEST; fi
 	cp -rf testfiles TEST
 	go test ./cli
-	go test ./manager
+	go test ./lib
 	rm -rf TEST
 
 clean:
