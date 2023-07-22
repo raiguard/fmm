@@ -3,6 +3,16 @@
 A CLI mod manager for Factorio. Easily download and enable mods, sync with save
 files or log file checksums, and upload mod zip files to the portal.
 
+This project is undergoing heavy refactoring at the moment, so many features
+are broken and/or missing.
+
+## Installation
+
+Clone the repository, and run `go install`. Requires [Go](https://go.dev) 1.20
+or newer.
+
+Distribution packages will be available once the project is stable.
+
 ## Usage
 
 ```
@@ -31,10 +41,3 @@ For uploading mods, specify your API key with the `FACTORIO_API_KEY` variable.
 If you have logged in to your Factorio account, fmm will automatically pull
 your username and token from the `player-data.json` file. Alternatively, you
 can specify them with `FACTORIO_USERNAME` and `FACTORIO_TOKEN` respectively.
-
-## Installation
-
-Clone the repository, and run `go install`. Requires [Go](https://go.dev) 1.20
-or newer.
-
-Distribution packages will be available once the project is stable.
