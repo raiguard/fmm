@@ -4,11 +4,14 @@ import (
 	"strings"
 )
 
+// A small representation of a mod, with an optional version.
 type ModIdent struct {
 	Name    string
 	Version *Version
 }
 
+// Returns a ModIdent parsed from an input string with the format of 'name',
+// 'name_version', or 'name_version.zip'.
 func NewModIdent(input string) ModIdent {
 	input = strings.TrimSuffix(input, ".zip")
 	parts := strings.Split(input, "_")
@@ -24,6 +27,7 @@ func NewModIdent(input string) ModIdent {
 	return ModIdent{name, version}
 }
 
+// Returns a string in the format of 'name' or 'name_version'.
 func (i *ModIdent) ToString() string {
 	if i.Version != nil {
 		return i.Name + " " + i.Version.ToString(false)

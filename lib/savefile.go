@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+// Returns a slice of mod names and versions extracted from the given save
+// file.
 func ParseSaveFile(filepath string) ([]ModIdent, error) {
 	zipReader, err := zip.OpenReader(filepath)
 	if err != nil {
