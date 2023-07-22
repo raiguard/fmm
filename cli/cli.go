@@ -90,8 +90,7 @@ func disable(manager *fmm.Manager, args []string) {
 		return
 	}
 
-	mods := parseCliInput(args, false)
-	for _, mod := range mods {
+	for _, mod := range getMods(args) {
 		if err := manager.Disable(mod.Name); err != nil {
 			errorf("failed to disable %s\n", mod.ToString())
 			errorln(err)
@@ -102,9 +101,7 @@ func disable(manager *fmm.Manager, args []string) {
 }
 
 func enable(manager *fmm.Manager, args []string) {
-	mods := parseCliInput(args, true)
-
-	for _, mod := range mods {
+	for _, mod := range getMods(args) {
 		// if !mod.IsPresent {
 		// 	err := portalDownloadMod(Dependency{mod.Ident, DependencyRequired, VersionEq})
 		// 	if err != nil {
