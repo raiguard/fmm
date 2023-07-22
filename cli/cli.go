@@ -54,7 +54,10 @@ func Run() {
 	}
 
 	if !manager.HasPlayerData() {
-		manager.SetPlayerData(os.Getenv("FACTORIO_USERNAME"), os.Getenv("FACTORIO_TOKEN"))
+		manager.SetPlayerData(fmm.PlayerData{
+			Token:    os.Getenv("FACTORIO_TOKEN"),
+			Username: os.Getenv("FACTORIO_USERNAME"),
+		})
 	}
 
 	manager.SetApiKey(os.Getenv("FACTORIO_API_KEY"))

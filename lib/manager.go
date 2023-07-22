@@ -19,13 +19,19 @@ type mods map[string]*Mod
 type Manager struct {
 	DoSave bool
 
-	apiKey           string
-	downloadToken    string
-	downloadUsername string
-	gamePath         string
-	modListJsonPath  string
-	mods             mods
-	modsPath         string
+	apiKey     string
+	playerData PlayerData
+
+	gamePath        string
+	modListJsonPath string
+	modsPath        string
+
+	mods mods
+}
+
+type PlayerData struct {
+	Token    string
+	Username string
 }
 
 // Creates a new Manager for the given game directory. A game directory is
@@ -41,8 +47,8 @@ func NewManager(gamePath string) (*Manager, error) {
 		DoSave:          true,
 		gamePath:        gamePath,
 		modListJsonPath: filepath.Join(gamePath, "mods", "mod-list.json"),
-		mods:            mods{},
 		modsPath:        filepath.Join(gamePath, "mods"),
+		mods:            mods{},
 	}
 
 	if err := m.readPlayerData(); err != nil {
@@ -162,25 +168,35 @@ func (m *Manager) Save() error {
 	return os.WriteFile(m.modListJsonPath, marshaled, fs.ModeExclusive)
 }
 
-// Retrives the current API key, used for uploading mods.
+// Returns the current upload API key.
 func (m *Manager) GetApiKey() string {
 	return m.apiKey
 }
 
-// Sets the API key, used for uploading mods.
+// Returns true if the Manager has an upload API key.
+func (m *Manager) HasApiKey() bool {
+	return m.apiKey != ""
+}
+
+// Sets the API key used for mod uploading.
 func (m *Manager) SetApiKey(key string) {
 	m.apiKey = key
 }
 
-// Returns true if the Manager has the player's username and token data.
-func (m *Manager) HasPlayerData() bool {
-	return m.downloadUsername != "" && m.downloadToken != ""
+// Returns the current player data.
+func (m *Manager) GetPlayerData() PlayerData {
+	return m.playerData
 }
 
-// Sets the player's username and token data.
-func (m *Manager) SetPlayerData(username string, token string) {
-	m.downloadUsername = username
-	m.downloadToken = token
+// Returns true if the Manager has valid player data.
+func (m *Manager) HasPlayerData() bool {
+	return m.playerData.Token != "" && m.playerData.Username != ""
+}
+
+// Sets the player data used for downloading mods. The player data will be
+// automatically retrieved from the game directory if it is available.
+func (m *Manager) SetPlayerData(playerData PlayerData) {
+	m.playerData = playerData
 }
 
 func (m *Manager) readPlayerData() error {
@@ -199,10 +215,10 @@ func (m *Manager) readPlayerData() error {
 		return errors.Join(errors.New("invalid player-data.json format"), err)
 	}
 	if playerDataJson.ServiceToken != nil {
-		m.downloadToken = *playerDataJson.ServiceToken
+		m.playerData.Token = *playerDataJson.ServiceToken
 	}
 	if playerDataJson.ServiceUsername != nil {
-		m.downloadUsername = *playerDataJson.ServiceUsername
+		m.playerData.Username = *playerDataJson.ServiceUsername
 	}
 
 	return nil
