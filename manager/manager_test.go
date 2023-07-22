@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDir(t *testing.T) {
+func TestManager(t *testing.T) {
 	manager, err := NewManager("../TEST")
 	assert.NoError(t, err)
 	assert.Equal(t, len(manager.mods), 3)
@@ -23,7 +23,7 @@ func TestDir(t *testing.T) {
 	for _, expected := range expected {
 		mod, err := manager.GetMod(expected.name)
 		assert.NoError(t, err)
-		release := mod.getLatestRelease()
+		release := mod.GetLatestRelease()
 		assert.NotNil(t, release)
 		assert.Equal(t, release.Name, expected.name)
 		assert.Equal(t, release.Version.Cmp(&expected.version), VersionEq)

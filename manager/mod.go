@@ -6,17 +6,15 @@ type Mod struct {
 	releases Releases
 }
 
-type Releases []*Release
-
-func (m *Mod) getLatestRelease() *Release {
+func (m *Mod) GetLatestRelease() *Release {
 	return m.releases[len(m.releases)-1]
 }
 
-func (m *Mod) getRelease(version *Version) *Release {
+func (m *Mod) GetRelease(version *Version) *Release {
 	if version == nil {
-		return m.getLatestRelease()
+		return m.GetLatestRelease()
 	}
-	return m.getMatchingRelease(&Dependency{
+	return m.GetMatchingRelease(&Dependency{
 		m.Name,
 		version,
 		DependencyRequired,
@@ -24,7 +22,7 @@ func (m *Mod) getRelease(version *Version) *Release {
 	})
 }
 
-func (m *Mod) getMatchingRelease(dep *Dependency) *Release {
+func (m *Mod) GetMatchingRelease(dep *Dependency) *Release {
 	// Iterate in reverse to get the newest version first
 	for i := len(m.releases) - 1; i >= 0; i-- {
 		release := m.releases[i]
@@ -34,6 +32,8 @@ func (m *Mod) getMatchingRelease(dep *Dependency) *Release {
 	}
 	return nil
 }
+
+type Releases []*Release
 
 // Implementations for sorting interface
 // TODO: Use Go 1.21 `slices` module once it is released

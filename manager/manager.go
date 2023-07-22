@@ -81,7 +81,7 @@ func NewManager(gamePath string) (*Manager, error) {
 		if mod == nil {
 			continue
 		}
-		if release := mod.getRelease(modEntry.Version); release != nil {
+		if release := mod.GetRelease(modEntry.Version); release != nil {
 			enabled := release.Version
 			mod.Enabled = &enabled
 		}
@@ -115,7 +115,7 @@ func (m *Manager) Enable(name string, version *Version) error {
 	if err != nil {
 		return err
 	}
-	release := mod.getRelease(version)
+	release := mod.GetRelease(version)
 	if release == nil {
 		return errors.New("Unable to find a matching release")
 	}

@@ -22,7 +22,7 @@ const (
 	DependencyNoLoadOrder
 )
 
-func newDependency(input string) (*Dependency, error) {
+func NewDependency(input string) (*Dependency, error) {
 	input = strings.TrimSpace(input)
 
 	kind := DependencyRequired
@@ -98,7 +98,7 @@ func (d *Dependency) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	dep, err := newDependency(s)
+	dep, err := NewDependency(s)
 	if err != nil {
 		return err
 	}

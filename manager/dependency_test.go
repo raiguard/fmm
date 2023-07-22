@@ -17,7 +17,7 @@ func TestNewDependency(t *testing.T) {
 		{"flib", "flib", nil, DependencyRequired, VersionAny},
 	}
 	for _, test := range tests {
-		dep, err := newDependency(test.input)
+		dep, err := NewDependency(test.input)
 		if err != nil {
 			t.Error(err)
 		}
@@ -50,7 +50,7 @@ func TestDependencyTest(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		dep, err := newDependency(test.dep)
+		dep, err := NewDependency(test.dep)
 		assert.NoError(t, err)
 		assert.Equal(t, dep.Test(&test.version), test.result)
 	}
