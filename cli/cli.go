@@ -64,9 +64,12 @@ func Run() {
 
 	manager.SetApiKey(os.Getenv("FACTORIO_API_KEY"))
 
-	bytes, err := io.ReadAll(os.Stdin)
-	if err == nil && len(bytes) > 0 {
-		args = append(args, strings.Split(strings.TrimSpace(string(bytes)), "\n")...)
+	stdinStat, _ := os.Stdin.Stat()
+	if stdinStat.Mode()&os.ModeNamedPipe > 0 {
+		bytes, err := io.ReadAll(os.Stdin)
+		if err == nil {
+			args = append(args, strings.Split(strings.TrimSpace(string(bytes)), "\n")...)
+		}
 	}
 
 	task(manager, args)
