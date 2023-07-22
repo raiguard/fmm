@@ -2,15 +2,18 @@ PREFIX = $(DESTDIR)/usr/local
 BINDIR = $(PREFIX)/bin
 MANDIR = $(PREFIX)/share/man
 
+FILES = $(shell find . -type f -name "*.go")
+
 all: fmm docs
 
-fmm: *.go
+fmm: $(FILES)
 	go build
 
 test:
 	@if [ -d TEST ]; then echo "rm -rf TEST"; rm -rf TEST; fi
 	cp -rf testfiles TEST
-	go test
+	go test ./cli
+	go test ./manager
 	rm -rf TEST
 
 docs: man/fmm.1 man/fmm.5
