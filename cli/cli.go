@@ -11,8 +11,6 @@ import (
 )
 
 const usageStr string = `usage: fmm <command> [flags...] [args...]
-flags:
-	-x                  Read args from stdin (one per line)
 commands:
 	disable [args...]   Disable the given mods, or all mods if none are given
 	enable  [args...]   Enable the given mods and their dependencies, downloading if necessary
@@ -44,6 +42,7 @@ func Run() {
 	default:
 		printUsage("unrecognized operation", args[0])
 	}
+	args = args[1:]
 
 	manager, err := fmm.NewManager(".")
 	if err != nil {
@@ -65,15 +64,9 @@ func Run() {
 
 	manager.SetApiKey(os.Getenv("FACTORIO_API_KEY"))
 
-	// Read from stdin if '-x' was provided
-	args = args[1:]
-	if len(args) > 0 && args[0] == "-x" {
-		bytes, _ := io.ReadAll(os.Stdin)
-		if len(bytes) == 0 {
-			// Nothing was provided
-			return
-		}
-		args = strings.Split(strings.TrimSpace(string(bytes)), "\n")
+	bytes, err := io.ReadAll(os.Stdin)
+	if err == nil && len(bytes) > 0 {
+		args = append(args, strings.Split(strings.TrimSpace(string(bytes)), "\n")...)
 	}
 
 	task(manager, args)
