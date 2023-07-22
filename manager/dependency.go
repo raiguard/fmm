@@ -1,4 +1,4 @@
-package main
+package manager
 
 import (
 	"encoding/json"
@@ -44,7 +44,7 @@ func newDependency(input string) (*Dependency, error) {
 	var ver *Version
 	for i := len(input) - 1; i >= 0; i-- {
 		if i > 0 && !(input[i] == '.' || (input[i] >= '0' && input[i] <= '9')) {
-			parsed, err := newVersion(input[i:])
+			parsed, err := NewVersion(input[i:])
 			if err == nil {
 				ver = parsed
 				input = strings.TrimSpace(input[:i])
@@ -89,7 +89,7 @@ func (d *Dependency) Test(ver *Version) bool {
 		return true
 	}
 
-	return d.Req&ver.cmp(d.Version) > 0
+	return d.Req&ver.Cmp(d.Version) > 0
 }
 
 func (d *Dependency) UnmarshalJSON(data []byte) error {

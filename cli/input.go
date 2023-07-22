@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"archive/zip"
@@ -26,7 +26,7 @@ func parseCliInput(input []string, parseDependencies bool) []ModIdent {
 		} else if strings.HasPrefix(input, "!") {
 			// TODO: Mod set
 		} else {
-			thisMods = append(thisMods, newModIdent(input))
+			thisMods = append(thisMods, NewModIdent(input))
 		}
 		if err != nil {
 			errorln(err)

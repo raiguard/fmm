@@ -1,4 +1,4 @@
-package main
+package manager
 
 import (
 	"archive/zip"
@@ -38,7 +38,7 @@ func releaseFromFile(path string) (*Release, error) {
 		return nil, errors.Join(errors.New("Error when parsing info.json"), err)
 	}
 
-	expectedFilename := fmt.Sprintf("%s_%s.zip", infoJson.Name, infoJson.Version.toString(false))
+	expectedFilename := fmt.Sprintf("%s_%s.zip", infoJson.Name, infoJson.Version.ToString(false))
 	if filename != expectedFilename && (info.Mode().IsRegular() || filename != infoJson.Name) {
 		return nil, errors.New(fmt.Sprint("Release filename does not match the expected filename", expectedFilename))
 	}

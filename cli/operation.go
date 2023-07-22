@@ -1,10 +1,12 @@
-package main
+package cli
 
 import (
 	"fmt"
+
+	fmm "github.com/raiguard/fmm/manager"
 )
 
-func disable(manager *Manager, args []string) {
+func disable(manager *fmm.Manager, args []string) {
 	if len(args) == 0 {
 		manager.DisableAll()
 		fmt.Println("Disabled all mods")
@@ -14,7 +16,7 @@ func disable(manager *Manager, args []string) {
 	mods := parseCliInput(args, false)
 	for _, mod := range mods {
 		if err := manager.Disable(mod.Name); err != nil {
-			errorf("Failed to disable %s\n", mod.toString())
+			errorf("Failed to disable %s\n", mod.ToString())
 			errorln(err)
 		} else {
 			fmt.Println("Disabled", mod.Name)
@@ -22,7 +24,7 @@ func disable(manager *Manager, args []string) {
 	}
 }
 
-func enable(manager *Manager, args []string) {
+func enable(manager *fmm.Manager, args []string) {
 	mods := parseCliInput(args, true)
 
 	for _, mod := range mods {
@@ -34,15 +36,15 @@ func enable(manager *Manager, args []string) {
 		// 	}
 		// }
 		if err := manager.Enable(mod.Name, mod.Version); err != nil {
-			errorf("Failed to enable %s\n", mod.toString())
+			errorf("Failed to enable %s\n", mod.ToString())
 			errorln(err)
 		} else {
-			fmt.Println("Enabled", mod.toString())
+			fmt.Println("Enabled", mod.ToString())
 		}
 	}
 }
 
-func list(manager *Manager, args []string) {
+func list(manager *fmm.Manager, args []string) {
 	// if len(args) == 0 {
 	// 	dir := newDir(manager.modsDir)
 
@@ -59,12 +61,12 @@ func list(manager *Manager, args []string) {
 	// }
 }
 
-func sync(manager *Manager, args []string) {
+func sync(manager *fmm.Manager, args []string) {
 	// manager.disableAll()
 	// manager.enable(args)
 }
 
-func upload(manager *Manager, files []string) {
+func upload(manager *fmm.Manager, files []string) {
 	// if apiKey == "" {
 	// 	abort("API key not specified.")
 	// }

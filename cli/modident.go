@@ -1,15 +1,17 @@
-package main
+package cli
 
 import (
 	"strings"
+
+	fmm "github.com/raiguard/fmm/manager"
 )
 
 type ModIdent struct {
 	Name    string
-	Version *Version
+	Version *fmm.Version
 }
 
-func newModIdent(input string) ModIdent {
+func NewModIdent(input string) ModIdent {
 	input = strings.TrimSuffix(input, ".zip")
 	parts := strings.Split(input, "_")
 	if len(parts) == 1 {
@@ -17,16 +19,16 @@ func newModIdent(input string) ModIdent {
 	}
 
 	name := strings.Join(parts[:len(parts)-1], "_")
-	version, err := newVersion(parts[len(parts)-1])
+	version, err := fmm.NewVersion(parts[len(parts)-1])
 	if err != nil {
 		return ModIdent{input, nil}
 	}
 	return ModIdent{name, version}
 }
 
-func (i *ModIdent) toString() string {
+func (i *ModIdent) ToString() string {
 	if i.Version != nil {
-		return i.Name + " " + i.Version.toString(false)
+		return i.Name + " " + i.Version.ToString(false)
 	}
 	return i.Name
 }

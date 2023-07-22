@@ -1,4 +1,4 @@
-package main
+package manager
 
 type Mod struct {
 	Enabled  *Version
@@ -45,5 +45,5 @@ func (r Releases) Swap(i, j int) {
 }
 func (r Releases) Less(i, j int) bool {
 	releaseI, releaseJ := r[i], r[j]
-	return releaseI.Version.cmp(&releaseJ.Version) == VersionLt
+	return releaseI.Version.Cmp(&releaseJ.Version) == VersionLt
 }

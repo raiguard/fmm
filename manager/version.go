@@ -1,4 +1,4 @@
-package main
+package manager
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ const (
 	VersionLtEq = 6
 )
 
-func newVersion(input string) (*Version, error) {
+func NewVersion(input string) (*Version, error) {
 	parts := strings.Split(strings.TrimSpace(input), ".")
 	if len(parts) < 2 || len(parts) > 4 {
 		return nil, errors.New("Version string must have between 2 and 4 parts")
@@ -37,7 +37,7 @@ func newVersion(input string) (*Version, error) {
 	return &ver, nil
 }
 
-func (v *Version) cmp(other *Version) VersionCmpRes {
+func (v *Version) Cmp(other *Version) VersionCmpRes {
 	if other == nil {
 		return VersionEq
 	}
@@ -51,7 +51,7 @@ func (v *Version) cmp(other *Version) VersionCmpRes {
 	return VersionEq
 }
 
-func (v *Version) toString(includeBuild bool) string {
+func (v *Version) ToString(includeBuild bool) string {
 	if includeBuild {
 		return fmt.Sprintf("%d.%d.%d.%d", v[0], v[1], v[2], v[3])
 	} else {
@@ -60,7 +60,7 @@ func (v *Version) toString(includeBuild bool) string {
 }
 
 func (v *Version) MarshalJSON() ([]byte, error) {
-	return []byte("\"" + v.toString(false) + "\""), nil
+	return []byte("\"" + v.ToString(false) + "\""), nil
 }
 
 func (v *Version) UnmarshalJSON(data []byte) error {
@@ -69,7 +69,7 @@ func (v *Version) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	ver, err := newVersion(s)
+	ver, err := NewVersion(s)
 	if err != nil {
 		return err
 	}

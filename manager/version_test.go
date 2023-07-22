@@ -1,4 +1,4 @@
-package main
+package manager
 
 import "testing"
 
@@ -15,18 +15,18 @@ func TestVersion(t *testing.T) {
 		{"010.001.0100.0000001", "10.1.100", "10.1.100.1", 10, 1, 100, 1},
 	}
 	for _, test := range tests {
-		ver, err := newVersion(test.input)
+		ver, err := NewVersion(test.input)
 		if err != nil {
 			t.Error(err)
 		}
 		if ver[0] != test.p0 || ver[1] != test.p1 || ver[2] != test.p2 || ver[3] != test.p3 {
 			t.Error("Version parse mismatch:", test.input, ver)
 		}
-		verStr := ver.toString(false)
+		verStr := ver.ToString(false)
 		if verStr != test.output {
 			t.Error("Version string mismatch:", test.input, verStr)
 		}
-		verStrWithBuild := ver.toString(true)
+		verStrWithBuild := ver.ToString(true)
 		if verStrWithBuild != test.outputWithBuild {
 			t.Error("Version string mismatch:", test.input, verStr)
 		}
@@ -44,7 +44,7 @@ func TestVersionCmp(t *testing.T) {
 		{Version{1, 5}, Version{1, 5, 0, 0}, VersionEq},
 	}
 	for _, test := range tests {
-		res := test.v1.cmp(&test.v2)
+		res := test.v1.Cmp(&test.v2)
 		if res != test.res {
 			t.Error("Version comparison failure:", test.v1, test.v2, test.res, res)
 		}

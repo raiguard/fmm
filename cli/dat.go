@@ -1,9 +1,11 @@
-package main
+package cli
 
 import (
 	"bytes"
 	"encoding/binary"
 	"io"
+
+	fmm "github.com/raiguard/fmm/manager"
 )
 
 type DatReader struct {
@@ -64,8 +66,8 @@ func (d *DatReader) ReadUint16Optimized() uint16 {
 	return d.ReadUint16()
 }
 
-func (d *DatReader) ReadOptimizedVersion(withBuild bool) Version {
-	ver := Version{
+func (d *DatReader) ReadOptimizedVersion(withBuild bool) fmm.Version {
+	ver := fmm.Version{
 		d.ReadUint16Optimized(),
 		d.ReadUint16Optimized(),
 		d.ReadUint16Optimized(),
@@ -76,8 +78,8 @@ func (d *DatReader) ReadOptimizedVersion(withBuild bool) Version {
 	return ver
 }
 
-func (d *DatReader) ReadUnoptimizedVersion() Version {
-	return Version{
+func (d *DatReader) ReadUnoptimizedVersion() fmm.Version {
+	return fmm.Version{
 		d.ReadUint16(),
 		d.ReadUint16(),
 		d.ReadUint16(),

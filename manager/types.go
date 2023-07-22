@@ -1,6 +1,6 @@
 // Miscellaneous types that don't fit anywhere else
 
-package main
+package manager
 
 import "strings"
 
@@ -32,7 +32,7 @@ func (m modListJsonMods) Less(i, j int) bool {
 	if modi.Name != modj.Name {
 		return strings.ToLower(modi.Name) < strings.ToLower(modj.Name)
 	}
-	return modi.Version.cmp(modj.Version) == VersionLt
+	return modi.Version.Cmp(modj.Version) == VersionLt
 }
 
 type playerDataJson struct {
