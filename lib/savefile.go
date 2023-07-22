@@ -27,7 +27,7 @@ func ParseSaveFile(filepath string) ([]ModIdent, error) {
 		}
 	}
 	if dat == nil {
-		return nil, errors.New("Invalid save file: could not locate level data")
+		return nil, errors.New("invalid save file: could not locate level data")
 	}
 
 	rawReader, err := dat.Open()

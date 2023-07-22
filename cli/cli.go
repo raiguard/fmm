@@ -10,10 +10,10 @@ import (
 	fmm "github.com/raiguard/fmm/lib"
 )
 
-const usageStr string = `Usage: fmm <operation> [flags...] [args...]
-Flags:
+const usageStr string = `usage: fmm <command> [flags...] [args...]
+flags:
 	-x                  Read args from stdin (one per line)
-Operations:
+commands:
 	disable [args...]   Disable the given mods, or all mods if none are given
 	enable  [args...]   Enable the given mods and their dependencies, downloading if necessary
 	help                Show usage information
@@ -21,24 +21,10 @@ Operations:
 	sync    [args...]   Disable all mods, then download and enable the given mods
 	upload  [files...]  Upload the given mod zip files to the mod portal`
 
-// CONTROL FLOW:
-// - Read config file
-// - Parse input list into list of ModIdent, taking from:
-//   - User representation ("EditorExtensions")
-//   - Save file
-//   - Log file
-//   - Mod-list.json
-//   - Mod sets?
-// - Add missing dependencies, fetching from portal if needed
-//   - Keep note of which are present and which need to be downloaded
-// - Check for incompatibilities and circular dependencies in list and currently enabled mods
-// - Confirm actions with user?
-// - Execute each enable or download action
-
 func Run() {
 	args := os.Args[1:]
 	if len(args) == 0 {
-		printUsage("No operation was specified")
+		printUsage("no operation was specified")
 	}
 
 	var task func(*fmm.Manager, []string)
@@ -56,7 +42,7 @@ func Run() {
 	case "upload", "ul":
 		task = upload
 	default:
-		printUsage("Unrecognized operation", args[0])
+		printUsage("unrecognized operation", args[0])
 	}
 
 	manager, err := fmm.NewManager(".")
@@ -87,24 +73,24 @@ func Run() {
 	task(manager, args)
 
 	if err := manager.Save(); err != nil {
-		errorln(errors.Join(errors.New("Unable to save modifications"), err))
+		errorln(errors.Join(errors.New("unable to save modifications"), err))
 	}
 }
 
 func disable(manager *fmm.Manager, args []string) {
 	if len(args) == 0 {
 		manager.DisableAll()
-		fmt.Println("Disabled all mods")
+		fmt.Println("disabled all mods")
 		return
 	}
 
 	mods := parseCliInput(args, false)
 	for _, mod := range mods {
 		if err := manager.Disable(mod.Name); err != nil {
-			errorf("Failed to disable %s\n", mod.ToString())
+			errorf("failed to disable %s\n", mod.ToString())
 			errorln(err)
 		} else {
-			fmt.Println("Disabled", mod.Name)
+			fmt.Println("disabled", mod.Name)
 		}
 	}
 }
@@ -121,10 +107,10 @@ func enable(manager *fmm.Manager, args []string) {
 		// 	}
 		// }
 		if err := manager.Enable(mod.Name, mod.Version); err != nil {
-			errorf("Failed to enable %s\n", mod.ToString())
+			errorf("failed to enable %s\n", mod.ToString())
 			errorln(err)
 		} else {
-			fmt.Println("Enabled", mod.ToString())
+			fmt.Println("enabled", mod.ToString())
 		}
 	}
 }
@@ -148,7 +134,7 @@ func list(manager *fmm.Manager, args []string) {
 
 func sync(manager *fmm.Manager, args []string) {
 	manager.DisableAll()
-	fmt.Println("Disabled all mods")
+	fmt.Println("disabled all mods")
 	enable(manager, args)
 }
 

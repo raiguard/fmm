@@ -63,7 +63,7 @@ func portalDownloadMod(mod Dependency) error {
 	)
 	outPath := path.Join(modsDir, release.FileName)
 
-	fmt.Printf("Downloading %s\n", release.FileName)
+	fmt.Printf("downloading %s\n", release.FileName)
 	if _, err := grab.Get(outPath, downloadUrl); err != nil {
 		return err
 	}
@@ -105,7 +105,7 @@ func portalUploadMod(filepath string) error {
 	}
 	defer file.Close()
 
-	fmt.Printf("Uploading %s\n", filepath)
+	fmt.Printf("uploading %s\n", filepath)
 
 	// Upload file
 	uploadBody := &bytes.Buffer{}
@@ -125,7 +125,7 @@ func portalUploadMod(filepath string) error {
 }
 
 func portalGetRelease(mod Dependency) (*PortalModRelease, error) {
-	fmt.Println("Fetching data for", mod.Ident.Name)
+	fmt.Println("fetching data for", mod.Ident.Name)
 	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Ident.Name)
 	res, err := http.Get(url)
 	if err != nil {
@@ -155,7 +155,7 @@ func portalGetRelease(mod Dependency) (*PortalModRelease, error) {
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("There is no compatible version of %s on the mod portal", mod.Ident.Name))
+	return nil, errors.New(fmt.Sprintf("there is no compatible version of %s on the mod portal", mod.Ident.Name))
 }
 
 type ModInitUploadRes struct {

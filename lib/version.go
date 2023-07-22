@@ -24,7 +24,7 @@ const (
 func NewVersion(input string) (*Version, error) {
 	parts := strings.Split(strings.TrimSpace(input), ".")
 	if len(parts) < 2 || len(parts) > 4 {
-		return nil, errors.New("Version string must have between 2 and 4 parts")
+		return nil, errors.New("version string must have between 2 and 4 parts")
 	}
 	var ver Version
 	for i, part := range parts {

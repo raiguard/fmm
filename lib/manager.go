@@ -34,7 +34,7 @@ type Manager struct {
 // be automatically retrieved from `player-data.json` if it exists.
 func NewManager(gamePath string) (*Manager, error) {
 	if !isFactorioDir(gamePath) {
-		return nil, errors.New("Invalid Factorio data directory")
+		return nil, errors.New("invalid Factorio data directory")
 	}
 
 	m := Manager{
@@ -46,13 +46,13 @@ func NewManager(gamePath string) (*Manager, error) {
 	}
 
 	if err := m.readPlayerData(); err != nil {
-		return nil, errors.Join(errors.New("Unable to get player data"), err)
+		return nil, errors.Join(errors.New("unable to get player data"), err)
 	}
 
 	modListJsonPath := filepath.Join(m.modsPath, "mod-list.json")
 	if !entryExists(m.modsPath) {
 		if err := os.Mkdir("mods", 0755); err != nil {
-			return nil, errors.Join(errors.New("Failed to create mods directory"), err)
+			return nil, errors.Join(errors.New("failed to create mods directory"), err)
 		}
 		modListJson := modListJson{
 			Mods: []modListJsonMod{
@@ -61,21 +61,21 @@ func NewManager(gamePath string) (*Manager, error) {
 		}
 		data, _ := json.Marshal(modListJson)
 		if err := os.WriteFile(modListJsonPath, data, fs.ModeExclusive); err != nil {
-			return nil, errors.Join(errors.New("Failed to create mod-list.json"), err)
+			return nil, errors.Join(errors.New("failed to create mod-list.json"), err)
 		}
 	}
 
 	if err := m.parseMods(); err != nil {
-		return nil, errors.Join(errors.New("Error parsing mods"), err)
+		return nil, errors.Join(errors.New("error parsing mods"), err)
 	}
 
 	modListJsonData, err := os.ReadFile(modListJsonPath)
 	if err != nil {
-		return nil, errors.Join(errors.New("Error reading mod-list.json"), err)
+		return nil, errors.Join(errors.New("error reading mod-list.json"), err)
 	}
 	var modListJson modListJson
 	if err = json.Unmarshal(modListJsonData, &modListJson); err != nil {
-		return nil, errors.Join(errors.New("Error parsing mod-list.json"), err)
+		return nil, errors.Join(errors.New("error parsing mod-list.json"), err)
 	}
 	for _, modEntry := range modListJson.Mods {
 		if !modEntry.Enabled {
@@ -101,7 +101,7 @@ func (m *Manager) Disable(modName string) error {
 		return err
 	}
 	if mod.Enabled == nil {
-		return errors.New("Mod is already disabled")
+		return errors.New("mod is already disabled")
 	}
 	mod.Enabled = nil
 	return nil
@@ -125,7 +125,7 @@ func (m *Manager) Enable(name string, version *Version) error {
 	}
 	release := mod.GetRelease(version)
 	if release == nil {
-		return errors.New("Unable to find a matching release")
+		return errors.New("unable to find a matching release")
 	}
 	enabled := release.Version
 	mod.Enabled = &enabled
@@ -136,7 +136,7 @@ func (m *Manager) Enable(name string, version *Version) error {
 func (m *Manager) GetMod(name string) (*Mod, error) {
 	mod := m.mods[name]
 	if mod == nil {
-		return nil, errors.New("Mod not found")
+		return nil, errors.New("mod not found")
 	}
 	return mod, nil
 }
@@ -191,12 +191,12 @@ func (m *Manager) readPlayerData() error {
 
 	data, err := os.ReadFile(playerDataJsonPath)
 	if err != nil {
-		return errors.Join(errors.New("Unable to read player-data.json"), err)
+		return errors.Join(errors.New("unable to read player-data.json"), err)
 	}
 	var playerDataJson playerDataJson
 	err = json.Unmarshal(data, &playerDataJson)
 	if err != nil {
-		return errors.Join(errors.New("Invalid player-data.json format"), err)
+		return errors.Join(errors.New("invalid player-data.json format"), err)
 	}
 	if playerDataJson.ServiceToken != nil {
 		m.downloadToken = *playerDataJson.ServiceToken
@@ -211,7 +211,7 @@ func (m *Manager) readPlayerData() error {
 func (m *Manager) parseMods() error {
 	entries, err := os.ReadDir(m.modsPath)
 	if err != nil {
-		return errors.Join(errors.New("Could not read mods directory"), err)
+		return errors.Join(errors.New("could not read mods directory"), err)
 	}
 
 	for _, entry := range entries {
@@ -221,7 +221,7 @@ func (m *Manager) parseMods() error {
 		}
 		release, err := releaseFromFile(filepath.Join(m.modsPath, filename))
 		if err != nil {
-			return errors.Join(errors.New(fmt.Sprint("Unable to parse ", filename)), err)
+			return errors.Join(errors.New(fmt.Sprint("unable to parse ", filename)), err)
 		}
 		mod := m.mods[release.Name]
 		if mod == nil {

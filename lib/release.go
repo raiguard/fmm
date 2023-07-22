@@ -21,7 +21,7 @@ type Release struct {
 func releaseFromFile(path string) (*Release, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return nil, errors.Join(errors.New("Unable to get file info"), err)
+		return nil, errors.Join(errors.New("unable to get file info"), err)
 	}
 	filename := filepath.Base(path)
 	var infoJson infoJson
@@ -35,7 +35,7 @@ func releaseFromFile(path string) (*Release, error) {
 	}
 
 	if err != nil {
-		return nil, errors.Join(errors.New("Error when parsing info.json"), err)
+		return nil, errors.Join(errors.New("error when parsing info.json"), err)
 	}
 
 	var suffix string
@@ -44,7 +44,7 @@ func releaseFromFile(path string) (*Release, error) {
 	}
 	expectedFilename := fmt.Sprintf("%s_%s%s", infoJson.Name, infoJson.Version.ToString(false), suffix)
 	if filename != expectedFilename && (info.Mode().IsRegular() || filename != infoJson.Name) {
-		return nil, errors.New(fmt.Sprint("Release filename does not match the expected filename ", expectedFilename))
+		return nil, errors.New(fmt.Sprint("release filename does not match the expected filename ", expectedFilename))
 	}
 
 	return &Release{
@@ -94,7 +94,7 @@ func readZipInfoJson(path string) (infoJson, error) {
 	}
 
 	if file == nil {
-		return infoJson{}, errors.New("Could not locate info.json file")
+		return infoJson{}, errors.New("could not locate info.json file")
 	}
 
 	rc, err := file.Open()
