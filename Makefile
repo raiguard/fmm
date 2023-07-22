@@ -1,10 +1,9 @@
 PREFIX = $(DESTDIR)/usr/local
 BINDIR = $(PREFIX)/bin
-MANDIR = $(PREFIX)/share/man
 
 FILES = $(shell find . -type f -name "*.go")
 
-all: fmm docs
+all: fmm
 
 fmm: $(FILES)
 	go build
@@ -16,32 +15,13 @@ test:
 	go test ./manager
 	rm -rf TEST
 
-docs: man/fmm.1 man/fmm.5
-
-man/fmm.1: man/fmm.1.scd
-	scdoc < $< > $@
-
-man/fmm.5: man/fmm.5.scd
-	scdoc < $< > $@
-
 clean:
 	go clean
-	rm -f man/fmm.1
-	rm -f man/fmm.5
 
 install:
-	install -d \
-		$(BINDIR) \
-		$(MANDIR)/man1/ \
-		$(MANDIR)/man5/
-	install -pm 0755 fmm $(BINDIR)/
-	install -pm 0644 man/fmm.1 $(MANDIR)/man1/
-	install -pm 0644 man/fmm.5 $(MANDIR)/man5/
+	install -Dpm 0755 fmm $(BINDIR)/fmm
 
 uninstall:
-	rm -f \
-		$(BINDIR)/fmm \
-		$(MANDIR)/man1/fmm.1 \
-		$(MANDIR)/man5/fmm.5
+	rm -f $(BINDIR)/fmm
 
-.PHONY: test docs clean install uninstall
+.PHONY: test clean install uninstall
