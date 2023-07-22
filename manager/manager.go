@@ -41,7 +41,7 @@ func NewManager(gamePath string) (*Manager, error) {
 		modsPath:        filepath.Join(gamePath, "mods"),
 	}
 
-	if err := m.getPlayerData(); err != nil {
+	if err := m.readPlayerData(); err != nil {
 		return nil, errors.Join(errors.New("Unable to get player data"), err)
 	}
 
@@ -152,6 +152,14 @@ func (m *Manager) Save() error {
 	return os.WriteFile(m.modListJsonPath, marshaled, fs.ModeExclusive)
 }
 
+func (m *Manager) GetApiKey() string {
+	return m.apiKey
+}
+
+func (m *Manager) SetApiKey(key string) {
+	m.apiKey = key
+}
+
 func (m *Manager) HasPlayerData() bool {
 	return m.downloadUsername != "" && m.downloadToken != ""
 }
@@ -161,7 +169,7 @@ func (m *Manager) SetPlayerData(username string, token string) {
 	m.downloadToken = token
 }
 
-func (m *Manager) getPlayerData() error {
+func (m *Manager) readPlayerData() error {
 	playerDataJsonPath := filepath.Join(m.gamePath, "player-data.json")
 	if !entryExists(playerDataJsonPath) {
 		return nil

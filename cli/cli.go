@@ -70,6 +70,8 @@ func Run() {
 		manager.SetPlayerData(os.Getenv("FACTORIO_USERNAME"), os.Getenv("FACTORIO_TOKEN"))
 	}
 
+	manager.SetApiKey(os.Getenv("FACTORIO_API_KEY"))
+
 	// Read from stdin if '-x' was provided
 	args = args[1:]
 	if len(args) > 0 && args[0] == "-x" {
