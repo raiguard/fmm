@@ -18,8 +18,8 @@ func (m modListJsonMods) Swap(i, j int) {
 }
 func (m modListJsonMods) Less(i, j int) bool {
 	modi, modj := &m[i], &m[j]
-	if internalMods[modi.Name] != internalMods[modj.Name] {
-		return internalMods[modi.Name]
+	if modi.isInternal != modj.isInternal {
+		return modi.isInternal
 	}
 	if modi.Name != modj.Name {
 		return strings.ToLower(modi.Name) < strings.ToLower(modj.Name)
@@ -31,6 +31,8 @@ type modListJsonMod struct {
 	Name    string   `json:"name"`
 	Enabled bool     `json:"enabled"`
 	Version *Version `json:"version,omitempty"`
+	// TODO: Remove this in Go 1.21
+	isInternal bool
 }
 
 type playerDataJson struct {

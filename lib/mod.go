@@ -1,9 +1,10 @@
 package fmm
 
 type Mod struct {
-	Enabled  *Version
-	Name     string
-	releases Releases
+	Name       string
+	Enabled    *Version
+	releases   Releases
+	isInternal bool
 }
 
 func (m *Mod) GetLatestRelease() *Release {

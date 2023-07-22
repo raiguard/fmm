@@ -38,13 +38,18 @@ func releaseFromFile(path string) (*Release, error) {
 		return nil, errors.Join(errors.New("error when parsing info.json"), err)
 	}
 
-	var suffix string
+	var filenameIsValid bool
+	versionStr := infoJson.Version.ToString(false)
 	if info.Mode().IsRegular() {
-		suffix = ".zip"
+		filenameIsValid = filename == fmt.Sprintf("%s_%s.zip", infoJson.Name, versionStr)
+	} else {
+		filenameIsValid = filename == fmt.Sprintf("%s_%s", infoJson.Name, versionStr)
+		if !filenameIsValid {
+			filenameIsValid = filename == infoJson.Name
+		}
 	}
-	expectedFilename := fmt.Sprintf("%s_%s%s", infoJson.Name, infoJson.Version.ToString(false), suffix)
-	if filename != expectedFilename && (info.Mode().IsRegular() || filename != infoJson.Name) {
-		return nil, errors.New(fmt.Sprint("release filename does not match the expected filename ", expectedFilename))
+	if !filenameIsValid {
+		return nil, errors.New("invalid release filename")
 	}
 
 	return &Release{

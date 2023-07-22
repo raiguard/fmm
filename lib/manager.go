@@ -9,10 +9,6 @@ import (
 	"sort"
 )
 
-var internalMods = map[string]bool{
-	"base": true,
-}
-
 type mods map[string]*Mod
 
 // Manager manages mdos for a given game directory. A game directory is
@@ -24,9 +20,10 @@ type Manager struct {
 	apiKey     string
 	playerData PlayerData
 
-	gamePath        string
-	modListJsonPath string
-	modsPath        string
+	gamePath         string
+	internalModsPath string
+	modListJsonPath  string
+	modsPath         string
 
 	mods mods
 }
@@ -41,16 +38,19 @@ type PlayerData struct {
 // config/config.ini file. The player's username and token will
 // be automatically retrieved from `player-data.json` if it exists.
 func NewManager(gamePath string) (*Manager, error) {
-	if !isFactorioDir(gamePath) {
-		return nil, errors.New("invalid Factorio data directory")
+	if !isValidGameDir(gamePath) {
+		return nil, ErrInvalidGameDirectory
 	}
 
+	// TODO: Handle config-path.cfg and config.ini path definitions
+
 	m := Manager{
-		DoSave:          true,
-		gamePath:        gamePath,
-		modListJsonPath: filepath.Join(gamePath, "mods", "mod-list.json"),
-		modsPath:        filepath.Join(gamePath, "mods"),
-		mods:            mods{},
+		DoSave:           true,
+		gamePath:         gamePath,
+		internalModsPath: filepath.Join(gamePath, "data"),
+		modListJsonPath:  filepath.Join(gamePath, "mods", "mod-list.json"),
+		modsPath:         filepath.Join(gamePath, "mods"),
+		mods:             mods{},
 	}
 
 	if err := m.readPlayerData(); err != nil {
@@ -63,8 +63,16 @@ func NewManager(gamePath string) (*Manager, error) {
 		}
 	}
 
+	if err := m.parseInternalMods(); err != nil {
+		return nil, errors.Join(errors.New("error parsing internal mods"), err)
+	}
+
 	if err := m.parseMods(); err != nil {
 		return nil, errors.Join(errors.New("error parsing mods"), err)
+	}
+
+	for _, mod := range m.mods {
+		sort.Sort(mod.releases)
 	}
 
 	if err := m.parseModList(); err != nil {
@@ -87,10 +95,13 @@ func (m *Manager) Disable(modName string) error {
 	return nil
 }
 
+// TODO: Handle config-path.cfg and config.ini path definitions
+
 // Requests all non-internal mods to be disabled.
 func (m *Manager) DisableAll() {
 	for _, mod := range m.mods {
-		if !internalMods[mod.Name] {
+		// base is the only mod that is always enabled by default
+		if mod.Name != "base" {
 			mod.Enabled = nil
 		}
 	}
@@ -129,9 +140,10 @@ func (m *Manager) Save() error {
 	var ModListJson modListJson
 	for name, mod := range m.mods {
 		ModListJson.Mods = append(ModListJson.Mods, modListJsonMod{
-			Name:    name,
-			Enabled: mod.Enabled != nil,
-			Version: mod.Enabled,
+			Name:       name,
+			Enabled:    mod.Enabled != nil,
+			Version:    mod.Enabled,
+			isInternal: mod.isInternal,
 		})
 	}
 	sort.Sort(ModListJson.Mods)
@@ -173,36 +185,25 @@ func (m *Manager) SetPlayerData(playerData PlayerData) {
 	m.playerData = playerData
 }
 
-func (m *Manager) readPlayerData() error {
-	playerDataJsonPath := filepath.Join(m.gamePath, "player-data.json")
-	if !entryExists(playerDataJsonPath) {
-		return nil
+func (m *Manager) addRelease(release *Release, isInternal bool) {
+	mod := m.mods[release.Name]
+	if mod == nil {
+		mod = &Mod{
+			Name:       release.Name,
+			releases:   []*Release{},
+			isInternal: isInternal,
+		}
+		m.mods[release.Name] = mod
 	}
+	mod.releases = append(mod.releases, release)
 
-	data, err := os.ReadFile(playerDataJsonPath)
-	if err != nil {
-		return errors.Join(errors.New("unable to read player-data.json"), err)
-	}
-	var playerDataJson playerDataJson
-	err = json.Unmarshal(data, &playerDataJson)
-	if err != nil {
-		return errors.Join(errors.New("invalid player-data.json format"), err)
-	}
-	if playerDataJson.ServiceToken != nil {
-		m.playerData.Token = *playerDataJson.ServiceToken
-	}
-	if playerDataJson.ServiceUsername != nil {
-		m.playerData.Username = *playerDataJson.ServiceUsername
-	}
-
-	return nil
 }
 
 func (m *Manager) parseModList() error {
 	modListJsonData, err := os.ReadFile(m.modListJsonPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			// TODO: Enable base automatically
+			m.Enable("base", nil)
 			return nil
 		}
 		return errors.Join(errors.New("error reading mod-list.json"), err)
@@ -228,6 +229,31 @@ func (m *Manager) parseModList() error {
 	return nil
 }
 
+func (m *Manager) parseInternalMods() error {
+	entries, err := os.ReadDir(m.internalModsPath)
+	if err != nil {
+		return errors.Join(errors.New("could not read internal mods directory"), err)
+	}
+
+	for _, entry := range entries {
+		filename := entry.Name()
+		if filename == "core" || !entry.Type().IsDir() {
+			continue
+		}
+		// Not all directories are necessarily mods
+		if _, err := os.Stat(filepath.Join(m.internalModsPath, filename, "info.json")); err != nil {
+			continue
+		}
+		release, err := releaseFromFile(filepath.Join(m.internalModsPath, filename))
+		if err != nil {
+			return errors.Join(errors.New(fmt.Sprint("unable to parse ", filename)), err)
+		}
+		m.addRelease(release, true)
+	}
+
+	return nil
+}
+
 func (m *Manager) parseMods() error {
 	entries, err := os.ReadDir(m.modsPath)
 	if err != nil {
@@ -241,21 +267,34 @@ func (m *Manager) parseMods() error {
 		}
 		release, err := releaseFromFile(filepath.Join(m.modsPath, filename))
 		if err != nil {
-			return errors.Join(errors.New(fmt.Sprint("unable to parse ", filename)), err)
+			return errors.Join(errors.New(fmt.Sprint("invalid mod ", filename)), err)
 		}
-		mod := m.mods[release.Name]
-		if mod == nil {
-			mod = &Mod{
-				Name:     release.Name,
-				releases: []*Release{},
-			}
-			m.mods[release.Name] = mod
-		}
-		mod.releases = append(mod.releases, release)
+		m.addRelease(release, false)
 	}
 
-	for _, mod := range m.mods {
-		sort.Sort(mod.releases)
+	return nil
+}
+
+func (m *Manager) readPlayerData() error {
+	playerDataJsonPath := filepath.Join(m.gamePath, "player-data.json")
+	if !entryExists(playerDataJsonPath) {
+		return nil
+	}
+
+	data, err := os.ReadFile(playerDataJsonPath)
+	if err != nil {
+		return errors.Join(errors.New("unable to read player-data.json"), err)
+	}
+	var playerDataJson playerDataJson
+	err = json.Unmarshal(data, &playerDataJson)
+	if err != nil {
+		return errors.Join(errors.New("invalid player-data.json format"), err)
+	}
+	if playerDataJson.ServiceToken != nil {
+		m.playerData.Token = *playerDataJson.ServiceToken
+	}
+	if playerDataJson.ServiceUsername != nil {
+		m.playerData.Username = *playerDataJson.ServiceUsername
 	}
 
 	return nil
@@ -266,6 +305,6 @@ func entryExists(pathParts ...string) bool {
 	return err == nil
 }
 
-func isFactorioDir(dir string) bool {
-	return entryExists(dir, "config-path.cfg") || entryExists(dir, "config", "config.ini")
+func isValidGameDir(dir string) bool {
+	return entryExists(dir, "data", "base", "info.json")
 }

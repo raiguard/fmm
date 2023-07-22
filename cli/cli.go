@@ -47,6 +47,9 @@ func Run() {
 
 	manager, err := fmm.NewManager(".")
 	if err != nil {
+		if !errors.Is(err, fmm.ErrInvalidGameDirectory) {
+			abort(err)
+		}
 		manager, err = fmm.NewManager(os.Getenv("FACTORIO_PATH"))
 		if err != nil {
 			abort(err)
