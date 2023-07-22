@@ -3,7 +3,7 @@ package manager
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewDependency(t *testing.T) {
@@ -21,16 +21,16 @@ func TestNewDependency(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		assert.Equal(t, dep.Name, test.name)
+		require.Equal(t, dep.Name, test.name)
 		if test.version == nil {
-			assert.Nil(t, dep.Version)
+			require.Nil(t, dep.Version)
 		} else {
-			assert.NotNil(t, dep.Version)
-			assert.Equal(t, dep.Version.Cmp(test.version), test.req)
+			require.NotNil(t, dep.Version)
+			require.Equal(t, dep.Version.Cmp(test.version), test.req)
 		}
 
-		assert.Equal(t, dep.Kind, test.kind)
-		assert.Equal(t, dep.Req, test.req)
+		require.Equal(t, dep.Kind, test.kind)
+		require.Equal(t, dep.Req, test.req)
 	}
 }
 
@@ -51,7 +51,7 @@ func TestDependencyTest(t *testing.T) {
 
 	for _, test := range tests {
 		dep, err := NewDependency(test.dep)
-		assert.NoError(t, err)
-		assert.Equal(t, dep.Test(&test.version), test.result)
+		require.NoError(t, err)
+		require.Equal(t, dep.Test(&test.version), test.result)
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	fmm "github.com/raiguard/fmm/manager"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestModIdent(t *testing.T) {
@@ -18,13 +18,13 @@ func TestModIdent(t *testing.T) {
 	}
 	for _, test := range tests {
 		mod := NewModIdent(test.input)
-		assert.Equal(t, mod.Name, test.expected.Name)
+		require.Equal(t, mod.Name, test.expected.Name)
 		if test.expected.Version != nil {
-			assert.NotNil(t, mod.Version)
-			assert.Equal(t, test.expected.Version.Cmp(mod.Version), fmm.VersionEq)
+			require.NotNil(t, mod.Version)
+			require.Equal(t, test.expected.Version.Cmp(mod.Version), fmm.VersionEq)
 		} else {
-			assert.Nil(t, mod.Version)
+			require.Nil(t, mod.Version)
 		}
-		assert.Equal(t, mod.ToString(), test.output)
+		require.Equal(t, mod.ToString(), test.output)
 	}
 }

@@ -3,13 +3,13 @@ package manager
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestManager(t *testing.T) {
 	manager, err := NewManager("../TEST")
-	assert.NoError(t, err)
-	assert.Equal(t, len(manager.mods), 3)
+	require.NoError(t, err)
+	require.Equal(t, len(manager.mods), 3)
 
 	expected := []struct {
 		name    string
@@ -22,10 +22,10 @@ func TestManager(t *testing.T) {
 
 	for _, expected := range expected {
 		mod, err := manager.GetMod(expected.name)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		release := mod.GetLatestRelease()
-		assert.NotNil(t, release)
-		assert.Equal(t, release.Name, expected.name)
-		assert.Equal(t, release.Version.Cmp(&expected.version), VersionEq)
+		require.NotNil(t, release)
+		require.Equal(t, release.Name, expected.name)
+		require.Equal(t, release.Version.Cmp(&expected.version), VersionEq)
 	}
 }
