@@ -28,6 +28,10 @@ type Manager struct {
 	modsPath         string
 }
 
+// Creates a new Manager for the given game directory. A game directory is
+// considered valid if it has either a config-path.cfg file or a
+// config/config.ini file. The player's username and token will
+// be automatically retrieved from `player-data.json` if it exists.
 func NewManager(gamePath string) (*Manager, error) {
 	if !isFactorioDir(gamePath) {
 		return nil, errors.New("Invalid Factorio data directory")
@@ -90,6 +94,7 @@ func NewManager(gamePath string) (*Manager, error) {
 	return &m, nil
 }
 
+// Requests the mod to be disabled.
 func (m *Manager) Disable(modName string) error {
 	mod, err := m.GetMod(modName)
 	if err != nil {
@@ -102,6 +107,7 @@ func (m *Manager) Disable(modName string) error {
 	return nil
 }
 
+// Requests all non-internal mods to be disabled.
 func (m *Manager) DisableAll() {
 	for _, mod := range m.mods {
 		if !internalMods[mod.Name] {
@@ -110,6 +116,8 @@ func (m *Manager) DisableAll() {
 	}
 }
 
+// Requests the mod to be enabled. If version is nil, it will default to the
+// newest available release.
 func (m *Manager) Enable(name string, version *Version) error {
 	mod, err := m.GetMod(name)
 	if err != nil {
@@ -124,6 +132,7 @@ func (m *Manager) Enable(name string, version *Version) error {
 	return nil
 }
 
+// Retrieves the corresponding Mod object.
 func (m *Manager) GetMod(name string) (*Mod, error) {
 	mod := m.mods[name]
 	if mod == nil {
@@ -132,6 +141,7 @@ func (m *Manager) GetMod(name string) (*Mod, error) {
 	return mod, nil
 }
 
+// Applies the requested modifications and saves to mod-list.json.
 func (m *Manager) Save() error {
 	if !m.DoSave {
 		return nil
@@ -152,18 +162,22 @@ func (m *Manager) Save() error {
 	return os.WriteFile(m.modListJsonPath, marshaled, fs.ModeExclusive)
 }
 
+// Retrives the current API key, used for uploading mods.
 func (m *Manager) GetApiKey() string {
 	return m.apiKey
 }
 
+// Sets the API key, used for uploading mods.
 func (m *Manager) SetApiKey(key string) {
 	m.apiKey = key
 }
 
+// Returns true if the Manager has the player's username and token data.
 func (m *Manager) HasPlayerData() bool {
 	return m.downloadUsername != "" && m.downloadToken != ""
 }
 
+// Sets the player's username and token data.
 func (m *Manager) SetPlayerData(username string, token string) {
 	m.downloadUsername = username
 	m.downloadToken = token
