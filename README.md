@@ -34,17 +34,7 @@ can specify them with `FACTORIO_USERNAME` and `FACTORIO_TOKEN` respectively.
 
 ## Installation
 
+Clone the repository, and run `go install`. Requires [Go](https://go.dev) 1.20
+or newer.
+
 Distribution packages will be available once the project is stable.
-
-## Building
-
-Dependencies:
-- [go](https://go.dev)
-- [scdoc](https://git.sr.ht/~sircmpwn/scdoc) (for man pages)
-
-```
-make
-sudo make install
-```
-
-If `make` is unavailable, `go build` should work just fine.
