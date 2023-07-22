@@ -211,11 +211,7 @@ func (m *Manager) parseMods() error {
 }
 
 func entryExists(pathParts ...string) bool {
-	fmt.Println("Checking file", filepath.Join(pathParts...))
 	_, err := os.Stat(filepath.Join(pathParts...))
-	if err != nil {
-		fmt.Println("FAILED")
-	}
 	return err == nil
 }
 
