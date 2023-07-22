@@ -6,9 +6,10 @@ import (
 )
 
 type Dependency struct {
-	Ident ModIdent
-	Kind  DependencyKind
-	Req   VersionCmpRes
+	Name    string
+	Version *Version
+	Kind    DependencyKind
+	Req     VersionCmpRes
 }
 
 type DependencyKind uint8
@@ -40,7 +41,7 @@ func newDependency(input string) (*Dependency, error) {
 	}
 
 	// Iterate in reverse and find the first non-digit and non-dot
-	var ver *Version = nil
+	var ver *Version
 	for i := len(input) - 1; i >= 0; i-- {
 		if i > 0 && !(input[i] == '.' || (input[i] >= '0' && input[i] <= '9')) {
 			parsed, err := newVersion(input[i:])
@@ -72,11 +73,7 @@ func newDependency(input string) (*Dependency, error) {
 
 	name := strings.TrimSpace(input)
 
-	return &Dependency{
-		Ident: ModIdent{name, ver},
-		Kind:  kind,
-		Req:   req,
-	}, nil
+	return &Dependency{name, ver, kind, req}, nil
 }
 
 func (d *Dependency) Test(ver *Version) bool {
@@ -92,7 +89,7 @@ func (d *Dependency) Test(ver *Version) bool {
 		return true
 	}
 
-	return d.Req&ver.cmp(d.Ident.Version) > 0
+	return d.Req&ver.cmp(d.Version) > 0
 }
 
 func (d *Dependency) UnmarshalJSON(data []byte) error {
@@ -106,7 +103,8 @@ func (d *Dependency) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	d.Ident = dep.Ident
+	d.Name = dep.Name
+	d.Version = dep.Version
 	d.Kind = dep.Kind
 	d.Req = dep.Req
 

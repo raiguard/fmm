@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"sort"
 )
 
@@ -15,6 +16,8 @@ var internalMods = map[string]bool{
 	"core": true,
 }
 
+type mods map[string]*Mod
+
 type Manager struct {
 	DoSave bool
 
@@ -22,15 +25,9 @@ type Manager struct {
 	downloadToken    string
 	downloadUsername string
 	gamePath         string
+	modListJsonPath  string
 	mods             mods
 	modsPath         string
-	modListJsonPath  string
-	states           map[string]*StateData
-}
-
-type StateData struct {
-	Enabled bool
-	Version *Version
 }
 
 func NewManager(gamePath string) (*Manager, error) {
@@ -42,9 +39,8 @@ func NewManager(gamePath string) (*Manager, error) {
 		DoSave:          true,
 		gamePath:        gamePath,
 		modListJsonPath: path.Join(gamePath, "mods", "mod-list.json"),
-		mods:            []Mod{},
+		mods:            mods{},
 		modsPath:        path.Join(gamePath, "mods"),
-		states:          map[string]*StateData{},
 	}
 
 	if err := m.getPlayerData(); err != nil {
@@ -62,6 +58,10 @@ func NewManager(gamePath string) (*Manager, error) {
 		// }
 	}
 
+	if err := m.parseMods(); err != nil {
+		return nil, errors.Join(errors.New("Error parsing mods"), err)
+	}
+
 	modListJsonData, err := os.ReadFile(modListJsonPath)
 	if err != nil {
 		return nil, errors.Join(errors.New("Error reading mod-list.json"), err)
@@ -71,46 +71,62 @@ func NewManager(gamePath string) (*Manager, error) {
 		return nil, errors.Join(errors.New("Error parsing mod-list.json"), err)
 	}
 	for _, modEntry := range modListJson.Mods {
-		stateData := StateData{Enabled: modEntry.Enabled}
-		if modEntry.Version != nil {
-			*stateData.Version = *modEntry.Version
+		if !modEntry.Enabled {
+			continue
 		}
-		m.states[modEntry.Name] = &stateData
-	}
-
-	if err := m.parseMods(); err != nil {
-		return nil, errors.Join(errors.New("Error parsing mods"), err)
+		mod := m.mods[modEntry.Name]
+		if mod == nil {
+			continue
+		}
+		if release := mod.getRelease(modEntry.Version); release != nil {
+			enabled := release.Version
+			mod.Enabled = &enabled
+		}
 	}
 
 	return &m, nil
 }
 
-func (m *Manager) Disable(modName string) {
-	if stateData, ok := m.states[modName]; ok {
-		stateData.Enabled = false
+func (m *Manager) Disable(modName string) error {
+	mod, err := m.getMod(modName)
+	if err != nil {
+		return err
 	}
+	if mod.Enabled == nil {
+		return errors.New("Mod is already disabled")
+	}
+	mod.Enabled = nil
+	return nil
 }
 
 func (m *Manager) DisableAll() {
-	for name, stateData := range m.states {
-		if !internalMods[name] {
-			stateData.Enabled = false
+	for _, mod := range m.mods {
+		if !internalMods[mod.Name] {
+			mod.Enabled = nil
 		}
 	}
 }
 
-func (m *Manager) Enable(mod ModIdent) error {
-	stateData, ok := m.states[mod.Name]
-	if !ok {
-		return errors.New(fmt.Sprintf("Unable to enable %s: does not exist in the mods directory", mod.toString()))
+func (m *Manager) Enable(name string, version *Version) error {
+	mod, err := m.getMod(name)
+	if err != nil {
+		return err
 	}
-
-	stateData.Enabled = true
-	if mod.Version != nil {
-		*stateData.Version = *mod.Version
+	release := mod.getRelease(version)
+	if release == nil {
+		return errors.New("Unable to find a matching release")
 	}
-
+	enabled := release.Version
+	mod.Enabled = &enabled
 	return nil
+}
+
+func (m *Manager) getMod(name string) (*Mod, error) {
+	mod := m.mods[name]
+	if mod == nil {
+		return nil, errors.New("Mod not found")
+	}
+	return mod, nil
 }
 
 func (m *Manager) Save() error {
@@ -118,11 +134,11 @@ func (m *Manager) Save() error {
 		return nil
 	}
 	var ModListJson modListJson
-	for name, stateData := range m.states {
+	for name, mod := range m.mods {
 		ModListJson.Mods = append(ModListJson.Mods, modListJsonMod{
 			Name:    name,
-			Enabled: stateData.Enabled,
-			Version: stateData.Version,
+			Enabled: mod.Enabled != nil,
+			Version: mod.Enabled,
 		})
 	}
 	sort.Sort(ModListJson.Mods)
@@ -159,46 +175,34 @@ func (m *Manager) getPlayerData() error {
 }
 
 func (m *Manager) parseMods() error {
-	files, err := os.ReadDir(m.modsPath)
+	entries, err := os.ReadDir(m.modsPath)
 	if err != nil {
 		return errors.Join(errors.New("Could not read mods directory"), err)
 	}
 
-	for _, file := range files {
-		name := file.Name()
-		if name == "mod-list.json" || name == "mod-settings.dat" {
+	for _, entry := range entries {
+		filename := entry.Name()
+		if filename == "mod-list.json" || filename == "mod-settings.dat" {
 			continue
 		}
-		var ident ModIdent
-		fileType := file.Type()
-		var deps *[]Dependency
-		if fileType.IsDir() || fileType&fs.ModeSymlink > 0 {
-			infoJson, err := parseInfoJson(path.Join(m.modsPath, name, "info.json"))
-			if err != nil {
-				// TODO: Multi-error handling
-				errorln(err)
-				continue
+		release, err := releaseFromFile(filepath.Join(m.modsPath, filename))
+		if err != nil {
+			return errors.Join(errors.New(fmt.Sprint("Unable to parse ", filename)), err)
+		}
+		mod := m.mods[release.Name]
+		if mod == nil {
+			mod = &Mod{
+				Name:     release.Name,
+				releases: []*Release{},
 			}
-			ident.Name = infoJson.Name
-			ident.Version = &infoJson.Version
-			deps = &infoJson.Dependencies
-		} else {
-			ident = newModIdent(name)
+			m.mods[release.Name] = mod
 		}
-		// TODO: Make optional?
-		if _, ok := m.states[ident.Name]; !ok {
-			m.states[ident.Name] = &StateData{Enabled: true}
-		}
-		m.mods = append(m.mods, Mod{
-			dependencies: deps,
-			Ident:        ident,
-			Path:         path.Join(m.modsPath, name),
-			Type:         fileType,
-		})
+		mod.releases = append(mod.releases, release)
 	}
 
-	// Sort files so we can reliably get the newest version
-	sort.Sort(m.mods)
+	for _, mod := range m.mods {
+		sort.Sort(mod.releases)
+	}
 
 	return nil
 }

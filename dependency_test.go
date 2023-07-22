@@ -21,12 +21,12 @@ func TestNewDependency(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		assert.Equal(t, dep.Ident.Name, test.name)
+		assert.Equal(t, dep.Name, test.name)
 		if test.version == nil {
-			assert.Nil(t, dep.Ident.Version)
+			assert.Nil(t, dep.Version)
 		} else {
-			assert.NotNil(t, dep.Ident.Version)
-			assert.Equal(t, dep.Ident.Version.cmp(test.version), test.req)
+			assert.NotNil(t, dep.Version)
+			assert.Equal(t, dep.Version.cmp(test.version), test.req)
 		}
 
 		assert.Equal(t, dep.Kind, test.kind)

@@ -13,8 +13,12 @@ func disable(manager *Manager, args []string) {
 
 	mods := parseCliInput(args, false)
 	for _, mod := range mods {
-		manager.Disable(mod.Name)
-		fmt.Println("Disabled", mod.Name)
+		if err := manager.Disable(mod.Name); err != nil {
+			errorf("Failed to disable %s\n", mod.toString())
+			errorln(err)
+		} else {
+			fmt.Println("Disabled", mod.Name)
+		}
 	}
 }
 
@@ -29,7 +33,8 @@ func enable(manager *Manager, args []string) {
 		// 		continue
 		// 	}
 		// }
-		if err := manager.Enable(mod); err != nil {
+		if err := manager.Enable(mod.Name, mod.Version); err != nil {
+			errorf("Failed to enable %s\n", mod.toString())
 			errorln(err)
 		} else {
 			fmt.Println("Enabled", mod.toString())
