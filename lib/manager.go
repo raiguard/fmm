@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,6 +15,9 @@ var internalMods = map[string]bool{
 
 type mods map[string]*Mod
 
+// Manager manages mdos for a given game directory. A game directory is
+// considered valid if it has either a config-path.cfg file or a
+// config/config.ini file.
 type Manager struct {
 	DoSave bool
 
@@ -55,19 +57,9 @@ func NewManager(gamePath string) (*Manager, error) {
 		return nil, errors.Join(errors.New("unable to get player data"), err)
 	}
 
-	modListJsonPath := filepath.Join(m.modsPath, "mod-list.json")
 	if !entryExists(m.modsPath) {
 		if err := os.Mkdir("mods", 0755); err != nil {
 			return nil, errors.Join(errors.New("failed to create mods directory"), err)
-		}
-		modListJson := modListJson{
-			Mods: []modListJsonMod{
-				{Name: "base", Enabled: true},
-			},
-		}
-		data, _ := json.Marshal(modListJson)
-		if err := os.WriteFile(modListJsonPath, data, fs.ModeExclusive); err != nil {
-			return nil, errors.Join(errors.New("failed to create mod-list.json"), err)
 		}
 	}
 
@@ -75,26 +67,8 @@ func NewManager(gamePath string) (*Manager, error) {
 		return nil, errors.Join(errors.New("error parsing mods"), err)
 	}
 
-	modListJsonData, err := os.ReadFile(modListJsonPath)
-	if err != nil {
-		return nil, errors.Join(errors.New("error reading mod-list.json"), err)
-	}
-	var modListJson modListJson
-	if err = json.Unmarshal(modListJsonData, &modListJson); err != nil {
+	if err := m.parseModList(); err != nil {
 		return nil, errors.Join(errors.New("error parsing mod-list.json"), err)
-	}
-	for _, modEntry := range modListJson.Mods {
-		if !modEntry.Enabled {
-			continue
-		}
-		mod := m.mods[modEntry.Name]
-		if mod == nil {
-			continue
-		}
-		if release := mod.GetRelease(modEntry.Version); release != nil {
-			enabled := release.Version
-			mod.Enabled = &enabled
-		}
 	}
 
 	return &m, nil
@@ -165,7 +139,7 @@ func (m *Manager) Save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(m.modListJsonPath, marshaled, fs.ModeExclusive)
+	return os.WriteFile(m.modListJsonPath, marshaled, 0666)
 }
 
 // Returns the current upload API key.
@@ -221,6 +195,36 @@ func (m *Manager) readPlayerData() error {
 		m.playerData.Username = *playerDataJson.ServiceUsername
 	}
 
+	return nil
+}
+
+func (m *Manager) parseModList() error {
+	modListJsonData, err := os.ReadFile(m.modListJsonPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			// TODO: Enable base automatically
+			return nil
+		}
+		return errors.Join(errors.New("error reading mod-list.json"), err)
+	}
+
+	var modListJson modListJson
+	if err = json.Unmarshal(modListJsonData, &modListJson); err != nil {
+		return errors.Join(errors.New("error parsing mod-list.json"), err)
+	}
+	for _, modEntry := range modListJson.Mods {
+		if !modEntry.Enabled {
+			continue
+		}
+		mod := m.mods[modEntry.Name]
+		if mod == nil {
+			continue
+		}
+		if release := mod.GetRelease(modEntry.Version); release != nil {
+			enabled := release.Version
+			mod.Enabled = &enabled
+		}
+	}
 	return nil
 }
 
