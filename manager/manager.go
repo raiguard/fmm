@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 )
 
 var internalMods = map[string]bool{
 	"base": true,
-	"core": true,
 }
 
 type mods map[string]*Mod
@@ -38,24 +36,29 @@ func NewManager(gamePath string) (*Manager, error) {
 	m := Manager{
 		DoSave:          true,
 		gamePath:        gamePath,
-		modListJsonPath: path.Join(gamePath, "mods", "mod-list.json"),
+		modListJsonPath: filepath.Join(gamePath, "mods", "mod-list.json"),
 		mods:            mods{},
-		modsPath:        path.Join(gamePath, "mods"),
+		modsPath:        filepath.Join(gamePath, "mods"),
 	}
 
 	if err := m.getPlayerData(); err != nil {
 		return nil, errors.Join(errors.New("Unable to get player data"), err)
 	}
 
-	modListJsonPath := path.Join(m.modsPath, "mod-list.json")
+	modListJsonPath := filepath.Join(m.modsPath, "mod-list.json")
 	if !entryExists(m.modsPath) {
 		if err := os.Mkdir("mods", 0755); err != nil {
 			return nil, errors.Join(errors.New("Failed to create mods directory"), err)
 		}
-		// TODO: Auto-create mod-list.json
-		// if err := os.WriteFile(modListJsonPath, ; err != nil {
-		// 	return m, errors.Join(errors.New("Failed to create mod-list.json"), err)
-		// }
+		modListJson := modListJson{
+			Mods: []modListJsonMod{
+				{Name: "base", Enabled: true},
+			},
+		}
+		data, _ := json.Marshal(modListJson)
+		if err := os.WriteFile(modListJsonPath, data, fs.ModeExclusive); err != nil {
+			return nil, errors.Join(errors.New("Failed to create mod-list.json"), err)
+		}
 	}
 
 	if err := m.parseMods(); err != nil {
@@ -150,7 +153,7 @@ func (m *Manager) Save() error {
 }
 
 func (m *Manager) getPlayerData() error {
-	playerDataJsonPath := path.Join(m.gamePath, "player-data.json")
+	playerDataJsonPath := filepath.Join(m.gamePath, "player-data.json")
 	if !entryExists(playerDataJsonPath) {
 		return nil
 	}
@@ -208,16 +211,14 @@ func (m *Manager) parseMods() error {
 }
 
 func entryExists(pathParts ...string) bool {
-	_, err := os.Stat(path.Join(pathParts...))
+	fmt.Println("Checking file", filepath.Join(pathParts...))
+	_, err := os.Stat(filepath.Join(pathParts...))
+	if err != nil {
+		fmt.Println("FAILED")
+	}
 	return err == nil
 }
 
 func isFactorioDir(dir string) bool {
-	if !entryExists(dir, "data", "changelog.txt") {
-		return false
-	}
-	if !entryExists(dir, "data", "base", "info.json") {
-		return false
-	}
-	return entryExists(dir, "config-path.ini") || entryExists(dir, "config", "config.ini")
+	return entryExists(dir, "config-path.cfg") || entryExists(dir, "config", "config.ini")
 }

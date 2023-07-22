@@ -38,9 +38,13 @@ func releaseFromFile(path string) (*Release, error) {
 		return nil, errors.Join(errors.New("Error when parsing info.json"), err)
 	}
 
-	expectedFilename := fmt.Sprintf("%s_%s.zip", infoJson.Name, infoJson.Version.ToString(false))
+	var suffix string
+	if info.Mode().IsRegular() {
+		suffix = ".zip"
+	}
+	expectedFilename := fmt.Sprintf("%s_%s%s", infoJson.Name, infoJson.Version.ToString(false), suffix)
 	if filename != expectedFilename && (info.Mode().IsRegular() || filename != infoJson.Name) {
-		return nil, errors.New(fmt.Sprint("Release filename does not match the expected filename", expectedFilename))
+		return nil, errors.New(fmt.Sprint("Release filename does not match the expected filename ", expectedFilename))
 	}
 
 	return &Release{
