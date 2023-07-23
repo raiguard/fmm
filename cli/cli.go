@@ -30,7 +30,7 @@ func Run(args []string) {
 		task = disable
 	case "enable", "e":
 		task = enable
-	case "help", "h", "-h", "--help":
+	case "help", "h", "-h", "--help", "-help":
 		printUsage()
 	case "list", "ls":
 		task = list
@@ -97,13 +97,6 @@ func disable(manager *fmm.Manager, args []string) {
 
 func enable(manager *fmm.Manager, args []string) {
 	for _, mod := range getMods(args) {
-		// if !mod.IsPresent {
-		// 	err := portalDownloadMod(Dependency{mod.Ident, DependencyRequired, VersionEq})
-		// 	if err != nil {
-		// 		errorln(err)
-		// 		continue
-		// 	}
-		// }
 		if err := manager.Enable(mod.Name, mod.Version); err != nil {
 			errorf("failed to enable %s\n", mod.ToString())
 			errorln(err)
@@ -113,22 +106,7 @@ func enable(manager *fmm.Manager, args []string) {
 	}
 }
 
-func list(manager *fmm.Manager, args []string) {
-	// if len(args) == 0 {
-	// 	dir := newDir(manager.modsDir)
-
-	// 	for _, file := range dir {
-	// 		// We don't use toString() here because we want the underscore
-	// 		output := file.Ident.Name + "_" + file.Ident.Version.toString(false)
-	// 		fmt.Println(output)
-	// 	}
-	// }
-
-	// mods := parseCliInput(args, false)
-	// for _, mod := range mods {
-	// 	fmt.Println(mod.Ident.toString())
-	// }
-}
+func list(manager *fmm.Manager, args []string) {}
 
 func sync(manager *fmm.Manager, args []string) {
 	manager.DisableAll()
@@ -136,16 +114,4 @@ func sync(manager *fmm.Manager, args []string) {
 	enable(manager, args)
 }
 
-func upload(manager *fmm.Manager, files []string) {
-	// if apiKey == "" {
-	// 	abort("API key not specified.")
-	// }
-	// if len(files) == 0 {
-	// 	abort("no files were provided")
-	// }
-	// for _, file := range files {
-	// 	if err := portalUploadMod(file); err != nil {
-	// 		abort("Upload failed:", err)
-	// 	}
-	// }
-}
+func upload(manager *fmm.Manager, files []string) {}
