@@ -1,7 +1,11 @@
 package main
 
-import "github.com/raiguard/fmm/cli"
+import (
+	"os"
+
+	"github.com/raiguard/fmm/cli"
+)
 
 func main() {
-	cli.Run()
+	cli.Run(os.Args[1:])
 }

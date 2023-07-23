@@ -19,8 +19,7 @@ commands:
 	sync    [args...]   Disable all mods, then download and enable the given mods
 	upload  [files...]  Upload the given mod zip files to the mod portal`
 
-func Run() {
-	args := os.Args[1:]
+func Run(args []string) {
 	if len(args) == 0 {
 		printUsage("no operation was specified")
 	}
