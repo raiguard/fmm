@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 )
 
@@ -72,7 +73,19 @@ func NewManager(gamePath string) (*Manager, error) {
 	}
 
 	for _, mod := range m.mods {
-		sort.Sort(mod.releases)
+		slices.SortFunc(mod.releases, func(a *Release, b *Release) int {
+			switch a.Version.Cmp(&b.Version) {
+			case VersionLt:
+				return -1
+			case VersionGt:
+				return 1
+			case VersionEq:
+				return 0
+			// Should be unreachable
+			default:
+				return 0
+			}
+		})
 	}
 
 	if err := m.parseModList(); err != nil {
