@@ -18,7 +18,7 @@ const (
 	VersionGt
 	VersionGtEq
 	VersionLt
-	VersionLtEq = 6
+	VersionLtEq
 )
 
 func NewVersion(input string) (*Version, error) {
