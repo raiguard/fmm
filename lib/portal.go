@@ -16,14 +16,14 @@ import (
 
 const initUploadUrl string = "https://mods.factorio.com/api/v2/mods/releases/init_upload"
 
-func portalDownloadMod(mod Dependency) error {
-	if downloadToken == "" {
+func (m *Manager) downloadMod(mod *Dependency) error {
+	if m.playerData.Token == "" {
 		return errors.New("token was not specified")
 	}
-	if downloadUsername == "" {
+	if m.playerData.Username == "" {
 		return errors.New("username was not specified")
 	}
-	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Ident.Name)
+	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Name)
 	res, err := http.Get(url)
 	if err != nil {
 		return err
@@ -52,16 +52,16 @@ func portalDownloadMod(mod Dependency) error {
 	}
 
 	if release == nil {
-		return errors.New(fmt.Sprintf("%s was not found on the mod portal", mod.Ident.toString()))
+		return errors.New(fmt.Sprintf("%s %s was not found on the mod portal", mod.Name, mod.Version.ToString(false)))
 	}
 
 	downloadUrl := fmt.Sprintf(
 		"https://mods.factorio.com/%s?username=%s&token=%s",
 		release.DownloadUrl,
-		downloadUsername,
-		downloadToken,
+		m.playerData.Username,
+		m.playerData.Token,
 	)
-	outPath := path.Join(modsDir, release.FileName)
+	outPath := path.Join(m.modsPath, release.FileName)
 
 	fmt.Printf("downloading %s\n", release.FileName)
 	if _, err := grab.Get(outPath, downloadUrl); err != nil {
@@ -71,18 +71,18 @@ func portalDownloadMod(mod Dependency) error {
 	return nil
 }
 
-func portalUploadMod(filepath string) error {
+func (m *Manager) portalUploadMod(filepath string) error {
 	// Init upload
 	initUploadBody := &bytes.Buffer{}
 	w := multipart.NewWriter(initUploadBody)
-	ident := newModIdent(path.Base(filepath))
+	ident := NewModIdent(path.Base(filepath))
 	w.WriteField("mod", ident.Name)
 	w.Close()
 	req, err := http.NewRequest("POST", initUploadUrl, initUploadBody)
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", m.apiKey))
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -124,15 +124,15 @@ func portalUploadMod(filepath string) error {
 	return nil
 }
 
-func portalGetRelease(mod Dependency) (*PortalModRelease, error) {
-	fmt.Println("fetching data for", mod.Ident.Name)
-	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Ident.Name)
+func portalGetRelease(mod *Dependency) (*PortalModRelease, error) {
+	fmt.Println("fetching data for", mod.Name)
+	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Name)
 	res, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
 	if res.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("%s was not found on the mod portal", mod.Ident.toString()))
+		return nil, errors.New(fmt.Sprintf("%s %s was not found on the mod portal", mod.Name, mod.Version.ToString(false)))
 	}
 
 	body, err := io.ReadAll(res.Body)
@@ -155,7 +155,7 @@ func portalGetRelease(mod Dependency) (*PortalModRelease, error) {
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("there is no compatible version of %s on the mod portal", mod.Ident.Name))
+	return nil, errors.New(fmt.Sprintf("there is no compatible version of %s on the mod portal", mod.Name))
 }
 
 type ModInitUploadRes struct {
@@ -172,6 +172,6 @@ type PortalFullMod struct {
 type PortalModRelease struct {
 	DownloadUrl string   `json:"download_url"`
 	FileName    string   `json:"file_name"`
-	InfoJson    InfoJson `json:"info_json"`
+	InfoJson    infoJson `json:"info_json"`
 	Version     Version
 }
