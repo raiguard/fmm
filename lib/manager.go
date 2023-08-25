@@ -108,19 +108,22 @@ func (m *Manager) DisableAll() {
 }
 
 // Requests the mod to be enabled. If version is nil, it will default to the
-// newest available release.
-func (m *Manager) Enable(name string, version *Version) error {
+// newest available release. Returns the version that was enabled, if any.
+func (m *Manager) Enable(name string, version *Version) (*Version, error) {
 	mod, err := m.GetMod(name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	release := mod.GetRelease(version)
 	if release == nil {
-		return errors.New("unable to find a matching release")
+		return nil, errors.New("unable to find a matching release")
 	}
-	enabled := release.Version
-	mod.Enabled = &enabled
-	return nil
+	if mod.Enabled != nil && *mod.Enabled == release.Version {
+		return nil, nil
+	}
+	toEnable := &release.Version
+	mod.Enabled = toEnable
+	return toEnable, nil
 }
 
 // Retrieves the corresponding Mod object.

@@ -97,11 +97,12 @@ func disable(manager *fmm.Manager, args []string) {
 
 func enable(manager *fmm.Manager, args []string) {
 	for _, mod := range getMods(args) {
-		if err := manager.Enable(mod.Name, mod.Version); err != nil {
+		ver, err := manager.Enable(mod.Name, mod.Version)
+		if err != nil {
 			errorf("failed to enable %s\n", mod.ToString())
 			errorln(err)
-		} else {
-			fmt.Println("enabled", mod.ToString())
+		} else if ver != nil {
+			fmt.Println("enabled", mod.Name, ver.ToString(false))
 		}
 	}
 }
