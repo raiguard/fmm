@@ -12,11 +12,12 @@ import (
 
 const usageStr string = `usage: fmm <command> [flags...] [args...]
 commands:
+	add     [args...]   Download and enable the given mods and their dependencies
 	disable [args...]   Disable the given mods, or all mods if none are given
-	enable  [args...]   Enable the given mods and their dependencies, downloading if necessary
+	enable  [args...]   Enable the given mods and their dependencies
 	help                Show usage information
 	list    [files...]  List all mods in the mods directory, or in the given save files
-	sync    [args...]   Disable all mods, then download and enable the given mods
+	sync    [args...]   Disable all mods, then download and enable the given mods and their dependencies
 	upload  [files...]  Upload the given mod zip files to the mod portal`
 
 func Run(args []string) {
@@ -26,6 +27,8 @@ func Run(args []string) {
 
 	var task func(*fmm.Manager, []string)
 	switch args[0] {
+	case "add", "a":
+		task = add
 	case "disable", "d":
 		task = disable
 	case "enable", "e":
@@ -76,6 +79,11 @@ func Run(args []string) {
 	if err := manager.Save(); err != nil {
 		errorln(errors.Join(errors.New("unable to save modifications"), err))
 	}
+}
+
+func add(manager *fmm.Manager, args []string) {
+	// Just pass through to enable for now
+	enable(manager, args)
 }
 
 func disable(manager *fmm.Manager, args []string) {
