@@ -74,7 +74,7 @@ func (p *ModPortal) GetMatchingRelease(dep *Dependency) (*PortalModRelease, erro
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("no release matching the dependency %s was found on the mod portal", dep.ToString()))
+	return nil, ErrNoCompatibleRelease
 }
 
 // DownloadMatchingRelease downloads the latest mod release matching the given dependency.
@@ -208,7 +208,8 @@ type PortalModRelease struct {
 func (r *PortalModRelease) compatibleWithBaseVersion(baseVersion *Version) bool {
 	for _, dep := range r.InfoJson.Dependencies {
 		if dep.Name == "base" {
-			return dep.Test(baseVersion)
+			// Ensure that the Factorio versions match up as well
+			return baseVersion[0] == dep.Version[0] && baseVersion[1] == dep.Version[1] && dep.Test(baseVersion)
 		}
 	}
 	return true
