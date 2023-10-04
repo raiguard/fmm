@@ -105,7 +105,7 @@ func disable(manager *fmm.Manager, args []string) {
 
 func enable(manager *fmm.Manager, args []string) {
 	for _, mod := range getMods(args) {
-		ver, err := manager.Enable(mod.Name, mod.Version)
+		ver, err := manager.Enable(mod)
 		if err != nil {
 			errorf("failed to enable %s\n", mod.ToString())
 			errorln(err)
@@ -123,4 +123,10 @@ func sync(manager *fmm.Manager, args []string) {
 	enable(manager, args)
 }
 
-func upload(manager *fmm.Manager, files []string) {}
+func upload(manager *fmm.Manager, files []string) {
+	for _, file := range files {
+		if err := manager.Portal.UploadMod(file); err != nil {
+			fmt.Println(err)
+		}
+	}
+}

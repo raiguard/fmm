@@ -21,6 +21,14 @@ const (
 	VersionLtEq
 )
 
+var versionCmpResString = map[VersionCmpRes]string{
+	VersionEq:   "=",
+	VersionGt:   ">",
+	VersionGtEq: ">=",
+	VersionLt:   "<",
+	VersionLtEq: "<=",
+}
+
 func NewVersion(input string) (*Version, error) {
 	parts := strings.Split(strings.TrimSpace(input), ".")
 	if len(parts) < 2 || len(parts) > 4 {

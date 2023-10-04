@@ -8,81 +8,125 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 
 	"github.com/cavaliergopher/grab/v3"
 )
 
-const initUploadUrl string = "https://mods.factorio.com/api/v2/mods/releases/init_upload"
+type ModPortal struct {
+	apiKey       string
+	baseVersion  Version
+	downloadPath string
+	mods         map[string]*PortalModInfo
+	playerData   PlayerData
+	server       string
+}
 
-func (m *Manager) downloadMod(mod *Dependency) error {
-	if m.playerData.Token == "" {
-		return errors.New("token was not specified")
+// GetModInfo fetches information for the given mod from the mod portal.
+func (p *ModPortal) GetModInfo(name string) (*PortalModInfo, error) {
+	if mod := p.mods[name]; mod != nil {
+		return mod, nil
 	}
-	if m.playerData.Username == "" {
-		return errors.New("username was not specified")
+
+	url, err := url.JoinPath(p.server, "api/mods", name, "full")
+	if err != nil {
+		return nil, err
 	}
-	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Name)
 	res, err := http.Get(url)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	if res.StatusCode != http.StatusOK {
+		return nil, errors.New(fmt.Sprintf("%s was not found on the mod portal", name))
 	}
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	res.Body.Close()
 
-	var unmarshaled PortalFullMod
-	err = json.Unmarshal(body, &unmarshaled)
+	var mod PortalModInfo
+	err = json.Unmarshal(body, &mod)
+	if err != nil {
+		return nil, err
+	}
+
+	return &mod, nil
+}
+
+// GetMatchingRelease fetches information for the newest release matching the given dependency.
+func (p *ModPortal) GetMatchingRelease(dep *Dependency) (*PortalModRelease, error) {
+	mod, err := p.GetModInfo(dep.Name)
+	if err != nil {
+		return nil, err
+	}
+	// Iterate backwards to get the newest release first
+	for i := len(mod.Releases) - 1; i >= 0; i-- {
+		release := &mod.Releases[i]
+		if dep.Test(&release.Version) && release.compatibleWithBaseVersion(&p.baseVersion) {
+			return release, nil
+		}
+	}
+
+	return nil, errors.New(fmt.Sprintf("no release matching the dependency %s was found on the mod portal", dep.ToString()))
+}
+
+// DownloadMatchingRelease downloads the latest mod release matching the given dependency.
+func (p *ModPortal) DownloadMatchingRelease(dep *Dependency) error {
+	if p.playerData.Token == "" {
+		return errors.New("token was not specified")
+	}
+	if p.playerData.Username == "" {
+		return errors.New("username was not specified")
+	}
+	release, err := p.GetMatchingRelease(dep)
 	if err != nil {
 		return err
 	}
 
-	// Check releases from newest to oldest and find the first matching one
-	var release *PortalModRelease
-	for i := len(unmarshaled.Releases) - 1; i >= 0; i -= 1 {
-		toCheck := &unmarshaled.Releases[i]
-		if mod.Test(&toCheck.Version) {
-			release = toCheck
-			break
-		}
-	}
-
-	if release == nil {
-		return errors.New(fmt.Sprintf("%s %s was not found on the mod portal", mod.Name, mod.Version.ToString(false)))
-	}
-
 	downloadUrl := fmt.Sprintf(
-		"https://mods.factorio.com/%s?username=%s&token=%s",
+		"%s/%s?username=%s&token=%s",
+		p.server,
 		release.DownloadUrl,
-		m.playerData.Username,
-		m.playerData.Token,
+		p.playerData.Username,
+		p.playerData.Token,
 	)
-	outPath := path.Join(m.modsPath, release.FileName)
+	outPath := path.Join(p.downloadPath, release.FileName)
 
-	fmt.Printf("downloading %s\n", release.FileName)
-	if _, err := grab.Get(outPath, downloadUrl); err != nil {
-		return err
-	}
-
-	return nil
+	fmt.Printf("downloading %s\n", release.FileName) // TODO: This doesn't belong here
+	_, err = grab.Get(outPath, downloadUrl)
+	return err
 }
 
-func (m *Manager) portalUploadMod(filepath string) error {
+// DownloadLatestRelease downloads the latest release compatible with the current base version.
+func (p *ModPortal) DownloadLatestRelease(name string) error {
+	return p.DownloadMatchingRelease(&Dependency{
+		Name: name,
+		Kind: DependencyRequired,
+		Req:  VersionAny,
+	})
+}
+
+// UploadMod uploads the given file to the mod portal.
+func (p *ModPortal) UploadMod(filepath string) error {
 	// Init upload
 	initUploadBody := &bytes.Buffer{}
 	w := multipart.NewWriter(initUploadBody)
 	ident := NewModIdent(path.Base(filepath))
 	w.WriteField("mod", ident.Name)
 	w.Close()
-	req, err := http.NewRequest("POST", initUploadUrl, initUploadBody)
+	url, err := url.JoinPath(p.server, "api/v2/mods/releases/init_upload")
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", m.apiKey))
+	req, err := http.NewRequest(http.MethodPost, url, initUploadBody)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", p.apiKey))
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -105,7 +149,7 @@ func (m *Manager) portalUploadMod(filepath string) error {
 	}
 	defer file.Close()
 
-	fmt.Printf("uploading %s\n", filepath)
+	fmt.Printf("uploading %s\n", filepath) // TODO: Relocate this
 
 	// Upload file
 	uploadBody := &bytes.Buffer{}
@@ -124,46 +168,12 @@ func (m *Manager) portalUploadMod(filepath string) error {
 	return nil
 }
 
-func portalGetRelease(mod *Dependency) (*PortalModRelease, error) {
-	fmt.Println("fetching data for", mod.Name)
-	url := fmt.Sprintf("https://mods.factorio.com/api/mods/%s/full", mod.Name)
-	res, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	if res.StatusCode != http.StatusOK {
-		return nil, errors.New(fmt.Sprintf("%s %s was not found on the mod portal", mod.Name, mod.Version.ToString(false)))
-	}
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-	res.Body.Close()
-
-	var unmarshaled PortalFullMod
-	err = json.Unmarshal(body, &unmarshaled)
-	if err != nil {
-		return nil, err
-	}
-
-	releases := unmarshaled.Releases
-	for i := len(releases) - 1; i >= 0; i-- {
-		release := &releases[i]
-		if mod.Test(&release.Version) {
-			return release, nil
-		}
-	}
-
-	return nil, errors.New(fmt.Sprintf("there is no compatible version of %s on the mod portal", mod.Name))
-}
-
 type ModInitUploadRes struct {
 	UploadUrl *string `json:"upload_url"`
 	Message   *string // When an error occurs
 }
 
-type PortalFullMod struct {
+type PortalModInfo struct {
 	Name     string
 	Releases []PortalModRelease
 	Title    string
@@ -173,5 +183,14 @@ type PortalModRelease struct {
 	DownloadUrl string   `json:"download_url"`
 	FileName    string   `json:"file_name"`
 	InfoJson    infoJson `json:"info_json"`
-	Version     Version
+	Version     Version  `json:"version"`
+}
+
+func (r *PortalModRelease) compatibleWithBaseVersion(baseVersion *Version) bool {
+	for _, dep := range r.InfoJson.Dependencies {
+		if dep.Name == "base" {
+			return dep.Test(baseVersion)
+		}
+	}
+	return true
 }

@@ -10,23 +10,19 @@ import (
 	"sort"
 )
 
-type mods map[string]*Mod
-
 // Manager manages mdos for a given game directory. A game directory is
 // considered valid if it has either a config-path.cfg file or a
 // config/config.ini file.
 type Manager struct {
 	DoSave bool
-
-	apiKey     string
-	playerData PlayerData
+	Portal ModPortal
 
 	gamePath         string
 	internalModsPath string
 	modListJsonPath  string
 	modsPath         string
 
-	mods mods
+	mods map[string]*Mod
 }
 
 type PlayerData struct {
@@ -46,12 +42,19 @@ func NewManager(gamePath string) (*Manager, error) {
 	// TODO: Handle config-path.cfg and config.ini path definitions
 
 	m := Manager{
-		DoSave:           true,
+		DoSave: true,
+		Portal: ModPortal{
+			baseVersion:  [4]uint16{},
+			downloadPath: filepath.Join(gamePath, "mods"),
+			mods:         map[string]*PortalModInfo{},
+			server:       "https://mods.factorio.com",
+		},
+
 		gamePath:         gamePath,
 		internalModsPath: filepath.Join(gamePath, "data"),
 		modListJsonPath:  filepath.Join(gamePath, "mods", "mod-list.json"),
 		modsPath:         filepath.Join(gamePath, "mods"),
-		mods:             mods{},
+		mods:             map[string]*Mod{},
 	}
 
 	if err := m.readPlayerData(); err != nil {
@@ -102,7 +105,7 @@ func (m *Manager) Disable(modName string) error {
 		return err
 	}
 	if mod.Enabled == nil {
-		return errors.New("mod is already disabled")
+		return &errModAlreadyDisabled{ModIdent: ModIdent{Name: modName}}
 	}
 	mod.Enabled = nil
 	return nil
@@ -120,14 +123,14 @@ func (m *Manager) DisableAll() {
 	}
 }
 
-// Requests the mod to be enabled. If version is nil, it will default to the
-// newest available release. Returns the version that was enabled, if any.
-func (m *Manager) Enable(name string, version *Version) (*Version, error) {
-	mod, err := m.GetMod(name)
+// Enable the given mod, if it exists. If version is nil, it will default to
+// the newest local release. Returns the version that was enabled, if any.
+func (m *Manager) Enable(ident ModIdent) (*Version, error) {
+	mod, err := m.GetMod(ident.Name)
 	if err != nil {
 		return nil, err
 	}
-	release := mod.GetRelease(version)
+	release := mod.GetRelease(ident.Version)
 	if release == nil {
 		return nil, errors.New("unable to find a matching release")
 	}
@@ -172,33 +175,33 @@ func (m *Manager) Save() error {
 
 // Returns the current upload API key.
 func (m *Manager) GetApiKey() string {
-	return m.apiKey
+	return m.Portal.apiKey
 }
 
 // Returns true if the Manager has an upload API key.
 func (m *Manager) HasApiKey() bool {
-	return m.apiKey != ""
+	return m.Portal.apiKey != ""
 }
 
 // Sets the API key used for mod uploading.
 func (m *Manager) SetApiKey(key string) {
-	m.apiKey = key
+	m.Portal.apiKey = key
 }
 
 // Returns the current player data.
 func (m *Manager) GetPlayerData() PlayerData {
-	return m.playerData
+	return m.Portal.playerData
 }
 
 // Returns true if the Manager has valid player data.
 func (m *Manager) HasPlayerData() bool {
-	return m.playerData.Token != "" && m.playerData.Username != ""
+	return m.Portal.playerData.Token != "" && m.Portal.playerData.Username != ""
 }
 
 // Sets the player data used for downloading mods. The player data will be
 // automatically retrieved from the game directory if it is available.
 func (m *Manager) SetPlayerData(playerData PlayerData) {
-	m.playerData = playerData
+	m.Portal.playerData = playerData
 }
 
 func (m *Manager) addRelease(release *Release, isInternal bool) {
@@ -219,7 +222,7 @@ func (m *Manager) parseModList() error {
 	modListJsonData, err := os.ReadFile(m.modListJsonPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			m.Enable("base", nil)
+			m.Enable(ModIdent{Name: "base"})
 			return nil
 		}
 		return errors.Join(errors.New("error reading mod-list.json"), err)
@@ -307,10 +310,10 @@ func (m *Manager) readPlayerData() error {
 		return errors.Join(errors.New("invalid player-data.json format"), err)
 	}
 	if playerDataJson.ServiceToken != nil {
-		m.playerData.Token = *playerDataJson.ServiceToken
+		m.Portal.playerData.Token = *playerDataJson.ServiceToken
 	}
 	if playerDataJson.ServiceUsername != nil {
-		m.playerData.Username = *playerDataJson.ServiceUsername
+		m.Portal.playerData.Username = *playerDataJson.ServiceUsername
 	}
 
 	return nil

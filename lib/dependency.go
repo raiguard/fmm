@@ -2,6 +2,7 @@ package fmm
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -21,6 +22,13 @@ const (
 	DependencyIncompatible
 	DependencyNoLoadOrder
 )
+
+var dependencyKindString = map[DependencyKind]string{
+	DependencyOptional:       "? ",
+	DependencyHiddenOptional: "(?) ",
+	DependencyIncompatible:   "! ",
+	DependencyNoLoadOrder:    "~ ",
+}
 
 func NewDependency(input string) (*Dependency, error) {
 	input = strings.TrimSpace(input)
@@ -90,6 +98,10 @@ func (d *Dependency) Test(ver *Version) bool {
 	}
 
 	return d.Req&ver.Cmp(d.Version) > 0
+}
+
+func (d *Dependency) ToString() string {
+	return fmt.Sprintf("%s%s %s %s", dependencyKindString[d.Kind], d.Name, versionCmpResString[d.Req], d.Version.ToString(false))
 }
 
 func (d *Dependency) UnmarshalJSON(data []byte) error {
