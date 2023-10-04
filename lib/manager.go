@@ -44,7 +44,6 @@ func NewManager(gamePath string) (*Manager, error) {
 	m := Manager{
 		DoSave: true,
 		Portal: ModPortal{
-			baseVersion:  [4]uint16{},
 			downloadPath: filepath.Join(gamePath, "mods"),
 			mods:         map[string]*PortalModInfo{},
 			server:       "https://mods.factorio.com",
@@ -95,7 +94,31 @@ func NewManager(gamePath string) (*Manager, error) {
 		return nil, errors.Join(errors.New("error parsing mod-list.json"), err)
 	}
 
+	if base, _ := m.GetMod("base"); base != nil {
+		m.Portal.baseVersion = &base.GetLatestRelease().Version
+	}
+
 	return &m, nil
+}
+
+// Add downloads and enables the given mod. Returns the version that was added.
+func (m *Manager) Add(mod ModIdent) (*Version, error) {
+	ver, err := m.Enable(mod)
+	if err != nil && !errors.Is(err, ErrModNotFoundLocal) {
+		return nil, err
+	} else if err != nil {
+		filepath, err := m.Portal.DownloadRelease(mod.Name, mod.Version)
+		if err != nil {
+			return nil, err
+		}
+		release, err := releaseFromFile(filepath)
+		if err != nil {
+			return nil, err
+		}
+		m.addRelease(release, false)
+		ver = &release.Version
+	}
+	return ver, nil
 }
 
 // Requests the mod to be disabled.
@@ -105,7 +128,7 @@ func (m *Manager) Disable(modName string) error {
 		return err
 	}
 	if mod.Enabled == nil {
-		return &errModAlreadyDisabled{ModIdent: ModIdent{Name: modName}}
+		return ErrModAlreadyDisabled
 	}
 	mod.Enabled = nil
 	return nil
@@ -146,7 +169,7 @@ func (m *Manager) Enable(ident ModIdent) (*Version, error) {
 func (m *Manager) GetMod(name string) (*Mod, error) {
 	mod := m.mods[name]
 	if mod == nil {
-		return nil, errors.New("mod not found")
+		return nil, ErrModNotFoundLocal
 	}
 	return mod, nil
 }
@@ -328,51 +351,57 @@ func isValidGameDir(dir string) bool {
 	return entryExists(dir, "data", "base", "info.json")
 }
 
-// func expandDependencies(manager *Manager, mods []ModIdent) []ModIdent {
-// 	visited := make(map[string]bool)
-// 	toVisit := []Dependency{}
-// 	for _, mod := range mods {
-// 		toVisit = append(toVisit, Dependency{mod, DependencyRequired, VersionEq})
-// 	}
-// 	output := []ModIdent{}
+func (m *Manager) ExpandDependencies(mods []ModIdent, fetchFromPortal bool) []ModIdent {
+	visited := map[string]bool{}
+	toVisit := []Dependency{}
+	for _, mod := range mods {
+		toVisit = append(toVisit, Dependency{
+			Name:    mod.Name,
+			Version: mod.Version,
+			Kind:    DependencyRequired,
+			Req:     VersionEq,
+		})
+	}
+	output := []ModIdent{}
 
-// 	for i := 0; i < len(toVisit); i += 1 {
-// 		mod := toVisit[i]
-// 		if _, exists := visited[mod.Ident.Name]; exists {
-// 			continue
-// 		}
-// 		visited[mod.Ident.Name] = true
-// 		var ident ModIdent
-// 		var deps []Dependency
-// 		var err error
-// 		if file := manager.Find(mod); file != nil {
-// 			ident = file.Ident
-// 			deps, err = file.Dependencies()
-// 		} else if mod.Ident.Name == "base" {
-// 			// TODO: Check against dependency constraint?
-// 			ident = mod.Ident
-// 		} else {
-// 			var release *PortalModRelease
-// 			release, err = portalGetRelease(mod)
-// 			if err == nil {
-// 				ident = ModIdent{mod.Ident.Name, &release.Version}
-// 				deps = release.InfoJson.Dependencies
-// 			}
-// 		}
-// 		if err != nil {
-// 			errorln(err)
-// 			continue
-// 		}
-// 		output = append(output, ident)
-// 		for _, dep := range deps {
-// 			if dep.Ident.Name == "base" {
-// 				continue
-// 			}
-// 			if dep.Kind == DependencyRequired || dep.Kind == DependencyNoLoadOrder {
-// 				toVisit = append(toVisit, dep)
-// 			}
-// 		}
-// 	}
+	for i := 0; i < len(toVisit); i += 1 {
+		dep := toVisit[i]
+		if visited[dep.Name] {
+			continue
+		}
+		visited[dep.Name] = true
+		var ident ModIdent
+		var deps []*Dependency
+		var err error
+		if mod, _ := m.GetMod(dep.Name); mod != nil {
+			release := mod.GetMatchingRelease(&dep)
+			if release == nil {
+				// TODO:
+				continue
+			}
+			ident = ModIdent{Name: release.Name, Version: &release.Version}
+			deps = release.Dependencies
+		} else if fetchFromPortal {
+			var release *PortalModRelease
+			release, err = m.Portal.GetMatchingRelease(&dep)
+			if err == nil {
+				ident = ModIdent{dep.Name, &release.Version}
+				deps = release.InfoJson.Dependencies
+			}
+		} else {
+			err = ErrModNotFoundLocal
+		}
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		output = append(output, ident)
+		for _, dep := range deps {
+			if dep.Kind == DependencyRequired || dep.Kind == DependencyNoLoadOrder {
+				toVisit = append(toVisit, *dep)
+			}
+		}
+	}
 
-// 	return output
-// }
+	return output
+}

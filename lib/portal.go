@@ -17,7 +17,7 @@ import (
 
 type ModPortal struct {
 	apiKey       string
-	baseVersion  Version
+	baseVersion  *Version
 	downloadPath string
 	mods         map[string]*PortalModInfo
 	playerData   PlayerData
@@ -30,6 +30,7 @@ func (p *ModPortal) GetModInfo(name string) (*PortalModInfo, error) {
 		return mod, nil
 	}
 
+	fmt.Println("fetching info for", name) // TODO: Relocate this
 	url, err := url.JoinPath(p.server, "api/mods", name, "full")
 	if err != nil {
 		return nil, err
@@ -54,6 +55,8 @@ func (p *ModPortal) GetModInfo(name string) (*PortalModInfo, error) {
 		return nil, err
 	}
 
+	p.mods[name] = &mod
+
 	return &mod, nil
 }
 
@@ -66,7 +69,7 @@ func (p *ModPortal) GetMatchingRelease(dep *Dependency) (*PortalModRelease, erro
 	// Iterate backwards to get the newest release first
 	for i := len(mod.Releases) - 1; i >= 0; i-- {
 		release := &mod.Releases[i]
-		if dep.Test(&release.Version) && release.compatibleWithBaseVersion(&p.baseVersion) {
+		if dep.Test(&release.Version) && release.compatibleWithBaseVersion(p.baseVersion) {
 			return release, nil
 		}
 	}
@@ -75,16 +78,17 @@ func (p *ModPortal) GetMatchingRelease(dep *Dependency) (*PortalModRelease, erro
 }
 
 // DownloadMatchingRelease downloads the latest mod release matching the given dependency.
-func (p *ModPortal) DownloadMatchingRelease(dep *Dependency) error {
+// Returns the filepath of the newly downloaded mod.
+func (p *ModPortal) DownloadMatchingRelease(dep *Dependency) (string, error) {
 	if p.playerData.Token == "" {
-		return errors.New("token was not specified")
+		return "", errors.New("token was not specified")
 	}
 	if p.playerData.Username == "" {
-		return errors.New("username was not specified")
+		return "", errors.New("username was not specified")
 	}
 	release, err := p.GetMatchingRelease(dep)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	downloadUrl := fmt.Sprintf(
@@ -97,16 +101,31 @@ func (p *ModPortal) DownloadMatchingRelease(dep *Dependency) error {
 	outPath := path.Join(p.downloadPath, release.FileName)
 
 	fmt.Printf("downloading %s\n", release.FileName) // TODO: This doesn't belong here
-	_, err = grab.Get(outPath, downloadUrl)
-	return err
+	res, err := grab.Get(outPath, downloadUrl)
+	if err != nil {
+		return "", err
+	}
+	return res.Filename, nil
 }
 
 // DownloadLatestRelease downloads the latest release compatible with the current base version.
-func (p *ModPortal) DownloadLatestRelease(name string) error {
+func (p *ModPortal) DownloadLatestRelease(name string) (string, error) {
 	return p.DownloadMatchingRelease(&Dependency{
 		Name: name,
 		Kind: DependencyRequired,
 		Req:  VersionAny,
+	})
+}
+
+func (p *ModPortal) DownloadRelease(name string, version *Version) (string, error) {
+	if version == nil {
+		return p.DownloadLatestRelease(name)
+	}
+	return p.DownloadMatchingRelease(&Dependency{
+		Name:    name,
+		Version: version,
+		Kind:    DependencyRequired,
+		Req:     VersionEq,
 	})
 }
 

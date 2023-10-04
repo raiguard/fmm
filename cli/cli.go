@@ -82,8 +82,15 @@ func Run(args []string) {
 }
 
 func add(manager *fmm.Manager, args []string) {
-	// Just pass through to enable for now
-	enable(manager, args)
+	for _, mod := range manager.ExpandDependencies(getMods(args), true) {
+		ver, err := manager.Add(mod)
+		if err != nil {
+			errorf("failed to add %s\n", mod.ToString())
+			errorln(err)
+		} else if ver != nil {
+			fmt.Println("enabled", mod.Name, ver.ToString(false))
+		}
+	}
 }
 
 func disable(manager *fmm.Manager, args []string) {
@@ -104,7 +111,7 @@ func disable(manager *fmm.Manager, args []string) {
 }
 
 func enable(manager *fmm.Manager, args []string) {
-	for _, mod := range getMods(args) {
+	for _, mod := range manager.ExpandDependencies(getMods(args), false) {
 		ver, err := manager.Enable(mod)
 		if err != nil {
 			errorf("failed to enable %s\n", mod.ToString())
@@ -120,7 +127,7 @@ func list(manager *fmm.Manager, args []string) {}
 func sync(manager *fmm.Manager, args []string) {
 	manager.DisableAll()
 	fmt.Println("disabled all mods")
-	enable(manager, args)
+	add(manager, args)
 }
 
 func upload(manager *fmm.Manager, files []string) {

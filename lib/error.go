@@ -1,33 +1,10 @@
 package fmm
 
-import "fmt"
-
-type (
-	errInvalidGameDirectory struct{}
-	errModAlreadyDisabled   struct{ ModIdent }
-	errModAlreadyEnabled    struct{ ModIdent }
-	errModDoesNotExist      struct{ ModIdent }
-)
-
-func (m *errInvalidGameDirectory) Error() string {
-	return "invalid game directory"
-}
-
-func (m *errModAlreadyDisabled) Error() string {
-	return fmt.Sprintf("%s is already disabled", m.ToString())
-}
-
-func (m *errModAlreadyEnabled) Error() string {
-	return fmt.Sprintf("%s is already enabled", m.ToString())
-}
-
-func (m *errModDoesNotExist) Error() string {
-	return fmt.Sprintf("%s does not exist", m.ToString())
-}
+import "errors"
 
 var (
-	ErrInvalidGameDirectory = &errInvalidGameDirectory{}
-	ErrModAlreadyDisabled   = &errModAlreadyDisabled{}
-	ErrModAlreadyEnabled    = &errModAlreadyEnabled{}
-	ErrModDoesNotExist      = &errModDoesNotExist{}
+	ErrInvalidGameDirectory = errors.New("invalid game directory")
+	ErrModAlreadyDisabled   = errors.New("mod is already disabled")
+	ErrModAlreadyEnabled    = errors.New("mod is already enabled")
+	ErrModNotFoundLocal     = errors.New("mod was not found in the local mods directory")
 )

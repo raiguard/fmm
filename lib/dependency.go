@@ -101,7 +101,11 @@ func (d *Dependency) Test(ver *Version) bool {
 }
 
 func (d *Dependency) ToString() string {
-	return fmt.Sprintf("%s%s %s %s", dependencyKindString[d.Kind], d.Name, versionCmpResString[d.Req], d.Version.ToString(false))
+	versionStr := ""
+	if d.Version != nil {
+		versionStr = d.Version.ToString(false)
+	}
+	return fmt.Sprintf("%s%s %s %s", dependencyKindString[d.Kind], d.Name, versionCmpResString[d.Req], versionStr)
 }
 
 func (d *Dependency) UnmarshalJSON(data []byte) error {
