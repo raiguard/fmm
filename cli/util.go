@@ -47,7 +47,7 @@ func getMods(args []string) []fmm.ModIdent {
 			thisMods = append(thisMods, fmm.NewModIdent(input))
 		}
 		if err != nil {
-			errorln(err)
+			fmt.Println(err)
 			continue
 		}
 		mods = append(mods, thisMods...)
