@@ -104,21 +104,24 @@ func NewManager(gamePath string) (*Manager, error) {
 // Add downloads and enables the given mod. Returns the version that was added.
 func (m *Manager) Add(mod ModIdent) (*Version, error) {
 	ver, err := m.Enable(mod)
-	if err != nil && !errors.Is(err, ErrModNotFoundLocal) {
-		return nil, err
-	} else if err != nil {
-		filepath, err := m.Portal.DownloadRelease(mod.Name, mod.Version)
-		if err != nil {
-			return nil, err
-		}
-		release, err := releaseFromFile(filepath)
-		if err != nil {
-			return nil, err
-		}
-		m.addRelease(release, false)
-		ver = &release.Version
+	if err == nil {
+		return ver, nil
 	}
-	return ver, nil
+
+	if !errors.Is(err, ErrModNotFoundLocal) && !errors.Is(err, ErrNoCompatibleRelease) {
+		return nil, err
+	}
+
+	filepath, err := m.Portal.DownloadRelease(mod.Name, mod.Version)
+	if err != nil {
+		return nil, err
+	}
+	release, err := releaseFromFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+	m.addRelease(release, false)
+	return &release.Version, nil
 }
 
 // Requests the mod to be disabled.
@@ -155,7 +158,7 @@ func (m *Manager) Enable(ident ModIdent) (*Version, error) {
 	}
 	release := mod.GetRelease(ident.Version)
 	if release == nil {
-		return nil, errors.New("unable to find a matching release")
+		return nil, ErrNoCompatibleRelease
 	}
 	if mod.Enabled != nil && *mod.Enabled == release.Version {
 		return nil, nil
@@ -172,6 +175,17 @@ func (m *Manager) GetMod(name string) (*Mod, error) {
 		return nil, ErrModNotFoundLocal
 	}
 	return mod, nil
+}
+
+// GetMods returns a list of the mods managed by this Manager.
+func (m *Manager) GetMods() []ModIdent {
+	mods := []ModIdent{}
+	for _, mod := range m.mods {
+		for _, release := range mod.releases {
+			mods = append(mods, ModIdent{Name: mod.Name, Version: &release.Version})
+		}
+	}
+	return mods
 }
 
 // Applies the requested modifications and saves to mod-list.json.
@@ -238,7 +252,6 @@ func (m *Manager) addRelease(release *Release, isInternal bool) {
 		m.mods[release.Name] = mod
 	}
 	mod.releases = append(mod.releases, release)
-
 }
 
 func (m *Manager) parseModList() error {
@@ -370,32 +383,35 @@ func (m *Manager) ExpandDependencies(mods []ModIdent, fetchFromPortal bool) []Mo
 			continue
 		}
 		visited[dep.Name] = true
-		var ident ModIdent
+		var ident *ModIdent
 		var deps []*Dependency
-		var err error
-		if mod, _ := m.GetMod(dep.Name); mod != nil {
+		mod, err := m.GetMod(dep.Name)
+		if err != nil && err != ErrModNotFoundLocal {
+			fmt.Println(err)
+		}
+		if mod != nil {
 			release := mod.GetMatchingRelease(&dep)
-			if release == nil {
-				// TODO:
-				continue
+			if release != nil {
+				ident = &ModIdent{Name: release.Name, Version: &release.Version}
+				deps = release.Dependencies
 			}
-			ident = ModIdent{Name: release.Name, Version: &release.Version}
-			deps = release.Dependencies
-		} else if fetchFromPortal {
+		}
+		if ident == nil && fetchFromPortal {
 			var release *PortalModRelease
 			release, err = m.Portal.GetMatchingRelease(&dep)
 			if err == nil {
-				ident = ModIdent{dep.Name, &release.Version}
+				ident = &ModIdent{dep.Name, &release.Version}
 				deps = release.InfoJson.Dependencies
 			}
-		} else {
-			err = ErrModNotFoundLocal
 		}
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		output = append(output, ident)
+		if ident == nil {
+			panic("Unreachable")
+		}
+		output = append(output, *ident)
 		for _, dep := range deps {
 			if dep.Kind == DependencyRequired || dep.Kind == DependencyNoLoadOrder {
 				toVisit = append(toVisit, *dep)

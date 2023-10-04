@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 
 	fmm "github.com/raiguard/fmm/lib"
@@ -122,7 +124,39 @@ func enable(manager *fmm.Manager, args []string) {
 	}
 }
 
-func list(manager *fmm.Manager, args []string) {}
+func list(manager *fmm.Manager, args []string) {
+	mods := []fmm.ModIdent{}
+	if len(args) == 0 {
+		mods = manager.GetMods()
+	} else {
+		for _, filepath := range args {
+			fileMods, err := fmm.ParseSaveFile(filepath)
+			if err != nil {
+				fmt.Println(err)
+			}
+			mods = append(mods, fileMods...)
+		}
+	}
+	slices.SortFunc(mods, func(a fmm.ModIdent, b fmm.ModIdent) int {
+		if a.Name != b.Name {
+			return cmp.Compare(a.Name, b.Name)
+		}
+		switch a.Version.Cmp(b.Version) {
+		case fmm.VersionLt:
+			return -1
+		case fmm.VersionGt:
+			return 1
+		case fmm.VersionEq:
+			return 0
+		// Should be unreachable
+		default:
+			return 0
+		}
+	})
+	for _, mod := range mods {
+		fmt.Println(mod.ToString())
+	}
+}
 
 func sync(manager *fmm.Manager, args []string) {
 	manager.DisableAll()
