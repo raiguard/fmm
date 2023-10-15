@@ -12,7 +12,7 @@ import (
 	fmm "github.com/raiguard/fmm/lib"
 )
 
-const usageStr string = `usage: fmm <command> [flags...] [args...]
+const usageStr string = `usage: fmm <command> [args...]
 commands:
 	add     [args...]   Download and enable the given mods and their dependencies
 	disable [args...]   Disable the given mods, or all mods if none are given

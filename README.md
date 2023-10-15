@@ -16,15 +16,14 @@ Distribution packages will be available once the project is stable.
 ## Usage
 
 ```
-fmm <operation> [flags...] [args...]
-flags:
-	-x                  Read args from stdin (one per line)
-operations:
+usage: fmm <command> [args...]
+commands:
+	add     [args...]   Download and enable the given mods and their dependencies
 	disable [args...]   Disable the given mods, or all mods if none are given
-	enable  [args...]   Enable the given mods and their dependencies, downloading if necessary
+	enable  [args...]   Enable the given mods and their dependencies
 	help                Show usage information
 	list    [files...]  List all mods in the mods directory, or in the given save files
-	sync    [args...]   Disable all mods, then download and enable the given mods
+	sync    [args...]   Disable all mods, then download and enable the given mods and their dependencies
 	upload  [files...]  Upload the given mod zip files to the mod portal
 ```
 

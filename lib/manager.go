@@ -1,13 +1,13 @@
 package fmm
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 )
 
 // Manager manages mdos for a given game directory. A game directory is
@@ -193,16 +193,37 @@ func (m *Manager) Save() error {
 	if !m.DoSave {
 		return nil
 	}
-	var ModListJson modListJson
+	var ModListJson ModListJson
 	for name, mod := range m.mods {
-		ModListJson.Mods = append(ModListJson.Mods, modListJsonMod{
+		ModListJson.Mods = append(ModListJson.Mods, ModListJsonMod{
 			Name:       name,
 			Enabled:    mod.Enabled != nil,
 			Version:    mod.Enabled,
 			isInternal: mod.isInternal,
 		})
 	}
-	sort.Sort(ModListJson.Mods)
+
+	slices.SortFunc(ModListJson.Mods, func(a, b ModListJsonMod) int {
+		if a.isInternal != b.isInternal {
+			if a.isInternal {
+				return -1
+			} else {
+				return 1
+			}
+		}
+		if a.Name != b.Name {
+			return cmp.Compare(a.Name, b.Name)
+		}
+		switch a.Version.Cmp(b.Version) {
+		case VersionLt:
+			return -1
+		case VersionGt:
+			return 1
+		default:
+			return 0
+		}
+	})
+
 	marshaled, err := json.MarshalIndent(ModListJson, "", "  ")
 	if err != nil {
 		return err
@@ -255,20 +276,17 @@ func (m *Manager) addRelease(release *Release, isInternal bool) {
 }
 
 func (m *Manager) parseModList() error {
-	modListJsonData, err := os.ReadFile(m.modListJsonPath)
+	m.Enable(ModIdent{Name: "base"})
+	mlj, err := ParseModListJson(m.modListJsonPath)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			m.Enable(ModIdent{Name: "base"})
-			return nil
-		}
-		return errors.Join(errors.New("error reading mod-list.json"), err)
+		return err
+	}
+	if mlj == nil {
+		m.Enable(ModIdent{Name: "base"})
+		return nil
 	}
 
-	var modListJson modListJson
-	if err = json.Unmarshal(modListJsonData, &modListJson); err != nil {
-		return errors.Join(errors.New("error parsing mod-list.json"), err)
-	}
-	for _, modEntry := range modListJson.Mods {
+	for _, modEntry := range mlj.Mods {
 		if !modEntry.Enabled {
 			continue
 		}
@@ -281,6 +299,7 @@ func (m *Manager) parseModList() error {
 			mod.Enabled = &enabled
 		}
 	}
+
 	return nil
 }
 

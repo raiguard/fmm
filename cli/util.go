@@ -40,7 +40,13 @@ func getMods(args []string) []fmm.ModIdent {
 		} else if strings.HasSuffix(input, ".log") {
 			thisMods = fmm.ParseLogFile(input)
 		} else if strings.HasSuffix(input, ".json") {
-			// TODO: mod-list.json
+			var mlj *fmm.ModListJson
+			mlj, err = fmm.ParseModListJson(input)
+			if mlj != nil {
+				for _, mod := range mlj.Mods {
+					thisMods = append(thisMods, fmm.ModIdent{Name: mod.Name, Version: mod.Version})
+				}
+			}
 		} else if strings.HasPrefix(input, "!") {
 			// TODO: Mod set
 		} else {
