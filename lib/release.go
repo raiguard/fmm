@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -38,17 +37,8 @@ func releaseFromFile(path string) (*Release, error) {
 		return nil, errors.Join(errors.New("error when parsing info.json"), err)
 	}
 
-	var filenameIsValid bool
-	versionStr := infoJson.Version.ToString(false)
-	if info.Mode().IsRegular() {
-		filenameIsValid = filename == fmt.Sprintf("%s_%s.zip", infoJson.Name, versionStr)
-	} else {
-		filenameIsValid = filename == fmt.Sprintf("%s_%s", infoJson.Name, versionStr)
-		if !filenameIsValid {
-			filenameIsValid = filename == infoJson.Name
-		}
-	}
-	if !filenameIsValid {
+	ident := NewModIdent(filename)
+	if ident.Name == infoJson.Name && infoJson.Version.Cmp(ident.Version) != VersionEq {
 		return nil, errors.New("invalid release filename")
 	}
 
