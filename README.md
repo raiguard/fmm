@@ -3,9 +3,6 @@
 A CLI mod manager for Factorio. Easily download and enable mods, sync with save
 files or log file checksums, and upload mod zip files to the portal.
 
-This project is undergoing heavy refactoring at the moment, so many features
-are broken and/or missing.
-
 ## Installation
 
 Grab the latest release from the [releases page](https://github.com/raiguard/fmm/releases).
