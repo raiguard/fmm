@@ -8,7 +8,7 @@ are broken and/or missing.
 
 ## Installation
 
-Clone the repository, and run `go install`. Requires [Go](https://go.dev) 1.20
+Clone the repository, and run `go install`. Requires [Go](https://go.dev) 1.21
 or newer.
 
 Distribution packages will be available once the project is stable.
@@ -40,3 +40,13 @@ For uploading mods, specify your API key with the `FACTORIO_API_KEY` variable.
 If you have logged in to your Factorio account, fmm will automatically pull
 your username and token from the `player-data.json` file. Alternatively, you
 can specify them with `FACTORIO_USERNAME` and `FACTORIO_TOKEN` respectively.
+
+## TODO
+
+Not necessarily in order.
+
+- Mod settings (blocked on PropertyTree)
+- Mod updating
+- Man pages
+- Mod creation and packaging
+- Automated testing CI
