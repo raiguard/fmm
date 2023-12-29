@@ -8,10 +8,24 @@ are broken and/or missing.
 
 ## Installation
 
-Clone the repository, and run `go install`. Requires [Go](https://go.dev) 1.21
-or newer.
+Grab the latest release from the [releases page](https://github.com/raiguard/fmm/releases).
 
 Distribution packages will be available once the project is stable.
+
+## Building
+
+**Requirements:**
+- [Go](https://go.dev) 1.21 or newer
+
+```
+make
+```
+
+Run tests:
+
+```
+make test
+```
 
 ## Usage
 
