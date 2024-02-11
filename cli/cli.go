@@ -49,7 +49,7 @@ func Run(args []string) {
 	}
 	args = args[1:]
 
-	manager, err := fmm.NewManager(".", "./mods")
+	manager, err := fmm.NewManager(".", filepath.Join(".", "mods"))
 	if err != nil {
 		if !errors.Is(err, fmm.ErrInvalidGameDirectory) {
 			abort(err)
