@@ -121,6 +121,7 @@ func (m *Manager) Add(mod ModIdent) (*Version, error) {
 		return nil, err
 	}
 	m.addRelease(release, false)
+	m.Enable(mod)
 	return &release.Version, nil
 }
 
