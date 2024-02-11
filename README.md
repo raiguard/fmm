@@ -46,6 +46,10 @@ fmm will check the current directory and the previous directory for a Factorio
 installation. If neither is valid, it will fall back to the directory specified
 by the `FACTORIO_PATH` environment variable.
 
+If the mods directory is not contained within the game data directory (i.e. you
+installed via Steam), specify the `FACTORIO_MODS_PATH` environment variable to
+point fmm to the correct mods directory.
+
 For uploading mods, specify your API key with the `FACTORIO_API_KEY` variable.
 
 If you have logged in to your Factorio account, fmm will automatically pull

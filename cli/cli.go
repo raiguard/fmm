@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -48,12 +49,17 @@ func Run(args []string) {
 	}
 	args = args[1:]
 
-	manager, err := fmm.NewManager(".")
+	manager, err := fmm.NewManager(".", "./mods")
 	if err != nil {
 		if !errors.Is(err, fmm.ErrInvalidGameDirectory) {
 			abort(err)
 		}
-		manager, err = fmm.NewManager(os.Getenv("FACTORIO_PATH"))
+		gamePath := os.Getenv("FACTORIO_PATH")
+		modsPath := os.Getenv("FACTORIO_MODS_PATH")
+		if modsPath == "" {
+			modsPath = filepath.Join(gamePath, "mods")
+		}
+		manager, err = fmm.NewManager(gamePath, modsPath)
 		if err != nil {
 			abort(err)
 		}

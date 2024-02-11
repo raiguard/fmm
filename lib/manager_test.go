@@ -7,7 +7,7 @@ import (
 )
 
 func TestManager(t *testing.T) {
-	manager, err := NewManager("../TEST")
+	manager, err := NewManager("../TEST", "../TEST/mods")
 	require.NoError(t, err)
 	require.Equal(t, len(manager.mods), 4)
 

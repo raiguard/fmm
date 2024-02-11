@@ -34,25 +34,23 @@ type PlayerData struct {
 // considered valid if it has either a config-path.cfg file or a
 // config/config.ini file. The player's username and token will
 // be automatically retrieved from `player-data.json` if it exists.
-func NewManager(gamePath string) (*Manager, error) {
-	if !isValidGameDir(gamePath) {
+func NewManager(gamePath string, modsPath string) (*Manager, error) {
+	if !entryExists(gamePath, "data", "base", "info.json") || !entryExists(modsPath) {
 		return nil, ErrInvalidGameDirectory
 	}
-
-	// TODO: Handle config-path.cfg and config.ini path definitions
 
 	m := Manager{
 		DoSave: true,
 		Portal: ModPortal{
-			downloadPath: filepath.Join(gamePath, "mods"),
+			downloadPath: modsPath,
 			mods:         map[string]*PortalModInfo{},
 			server:       "https://mods.factorio.com",
 		},
 
 		gamePath:         gamePath,
 		internalModsPath: filepath.Join(gamePath, "data"),
-		modListJsonPath:  filepath.Join(gamePath, "mods", "mod-list.json"),
-		modsPath:         filepath.Join(gamePath, "mods"),
+		modListJsonPath:  filepath.Join(modsPath, "mod-list.json"),
+		modsPath:         modsPath,
 		mods:             map[string]*Mod{},
 	}
 
@@ -137,8 +135,6 @@ func (m *Manager) Disable(modName string) error {
 	mod.Enabled = nil
 	return nil
 }
-
-// TODO: Handle config-path.cfg and config.ini path definitions
 
 // Requests all non-internal mods to be disabled.
 func (m *Manager) DisableAll() {
@@ -378,10 +374,6 @@ func (m *Manager) readPlayerData() error {
 func entryExists(pathParts ...string) bool {
 	_, err := os.Stat(filepath.Join(pathParts...))
 	return err == nil
-}
-
-func isValidGameDir(dir string) bool {
-	return entryExists(dir, "data", "base", "info.json")
 }
 
 func (m *Manager) ExpandDependencies(mods []ModIdent, fetchFromPortal bool) []ModIdent {
