@@ -51,9 +51,10 @@ func releaseFromFile(path string) (*Release, error) {
 }
 
 type infoJson struct {
-	Dependencies []*Dependency `json:"dependencies"`
-	Name         string        `json:"name"`
-	Version      Version       `json:"version"`
+	Dependencies    []*Dependency `json:"dependencies"`
+	Name            string        `json:"name"`
+	Version         Version       `json:"version"`
+	FactorioVersion Version       `json:"factorio_version"`
 }
 
 func isSymlink(info os.FileInfo) bool {

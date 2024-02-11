@@ -206,13 +206,16 @@ type PortalModRelease struct {
 }
 
 func (r *PortalModRelease) compatibleWithBaseVersion(baseVersion *Version) bool {
+	if r.InfoJson.FactorioVersion[0] != baseVersion[0] || r.InfoJson.FactorioVersion[1] != baseVersion[1] {
+		return false
+	}
+
 	for _, dep := range r.InfoJson.Dependencies {
 		if dep.Name == "base" {
 			if dep.Version == nil {
 				return true
 			}
-			// Ensure that the Factorio versions match up as well
-			return baseVersion[0] == dep.Version[0] && baseVersion[1] == dep.Version[1] && dep.Test(baseVersion)
+			return dep.Test(baseVersion)
 		}
 	}
 	return true
