@@ -42,6 +42,8 @@ func Run(args []string) {
 		task = list
 	case "sync", "s":
 		task = sync
+	case "update", "u":
+		task = update
 	case "upload", "ul":
 		task = upload
 	default:
@@ -168,6 +170,10 @@ func sync(manager *fmm.Manager, args []string) {
 	manager.DisableAll()
 	fmt.Println("disabled all mods")
 	add(manager, args)
+}
+
+func update(manager *fmm.Manager, args []string) {
+	manager.CheckDownloadUpdates(getMods(args))
 }
 
 func upload(manager *fmm.Manager, files []string) {

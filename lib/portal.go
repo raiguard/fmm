@@ -24,6 +24,65 @@ type ModPortal struct {
 	server       string
 }
 
+// // GetBulkModInfo fetches information for all of the given mods from the mod portal.
+// func (p *ModPortal) GetBulkModInfo(mods []ModIdent) error {
+// 	fmt.Println("fetching mod info")
+// 	modNames := []string{}
+// 	for _, mod := range mods {
+// 		modNames = append(modNames, mod.Name)
+// 	}
+// 	namelist := url.QueryEscape(strings.Join(modNames, ","))
+
+// 	path, err := url.JoinPath(p.server, "api/mods")
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	bodyContent := struct {
+// 		Namelist string `json:"namelist"`
+// 	}{namelist}
+// 	bodyBytes, err := json.Marshal(bodyContent)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	fmt.Println(path)
+// 	req, err := http.NewRequest(http.MethodGet, path, bytes.NewReader(bodyBytes))
+// 	if err != nil {
+// 		return err
+// 	}
+// 	// q := req.URL.Query()
+// 	// q.Add("page_size", "max")
+// 	// req.URL.RawQuery = q.Encode()
+// 	res, err := http.DefaultClient.Do(req)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if res.StatusCode != http.StatusOK {
+// 		return errors.New(fmt.Sprintf("error code %d", res.StatusCode))
+// 	}
+
+// 	body, err := io.ReadAll(res.Body)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	res.Body.Close()
+
+// 	fmt.Println(string(body))
+
+// 	var modInfos PortalBulkModInfo
+// 	err = json.Unmarshal(body, &modInfos)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	for _, result := range modInfos.Results {
+// 		p.mods[result.Name] = &result
+// 	}
+
+// 	return nil
+// }
+
 // GetModInfo fetches information for the given mod from the mod portal.
 func (p *ModPortal) GetModInfo(name string) (*PortalModInfo, error) {
 	if mod := p.mods[name]; mod != nil {
@@ -190,6 +249,10 @@ func (p *ModPortal) UploadMod(filepath string) error {
 type ModInitUploadRes struct {
 	UploadUrl *string `json:"upload_url"`
 	Message   *string // When an error occurs
+}
+
+type PortalBulkModInfo struct {
+	Results []PortalModInfo `json:"results"`
 }
 
 type PortalModInfo struct {
