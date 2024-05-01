@@ -198,6 +198,15 @@ func (m *Manager) GetMods() []ModIdent {
 	return mods
 }
 
+// GetLatestMods gets a list of the newest mods managed by this Manager.
+func (m *Manager) GetLatestMods() []ModIdent {
+	mods := []ModIdent{}
+	for _, mod := range m.mods {
+		mods = append(mods, ModIdent{mod.Name, &mod.releases[len(mod.releases)-1].Version})
+	}
+	return mods
+}
+
 // Applies the requested modifications and saves to mod-list.json.
 func (m *Manager) Save() error {
 	if !m.DoSave {
@@ -499,4 +508,23 @@ func (m *Manager) MergeStartupModSettings(input PropertyTree) error {
 	m.DoSave = true
 
 	return nil
+}
+
+func (m *Manager) CheckDownloadUpdates(mods []ModIdent) {
+	if len(mods) == 0 {
+		mods = m.GetLatestMods()
+	}
+	for _, mod := range mods {
+		info, err := m.Portal.GetModInfo(mod.Name)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		if len(info.Releases) == 0 {
+			continue // WTF?
+		}
+		if info.Releases[len(info.Releases)-1].Version.Cmp(mod.Version) == VersionGt {
+			m.Portal.DownloadLatestRelease(mod.Name)
+		}
+	}
 }

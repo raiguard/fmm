@@ -36,6 +36,7 @@ commands:
   list    [files...]  List all mods in the mods directory, or in the given save files.
   sync    [args...]   Disable all mods, then download and enable the given mods and their dependencies.
                       If a save file is provided, merge startup mod settings with the settings contained in that save.
+  update  [args...]   Update the given mods, or all mods if none are given.
   upload  [files...]  Upload the given mod zip files to the mod portal.
 ```
 
@@ -61,7 +62,6 @@ can specify them with `FACTORIO_USERNAME` and `FACTORIO_TOKEN` respectively.
 
 Not necessarily in order.
 
-- Mod updating
 - Man pages
 - Mod creation and packaging
 - Automated testing CI

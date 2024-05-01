@@ -22,6 +22,7 @@ commands:
   list    [files...]  List all mods in the mods directory, or in the given save files.
   sync    [args...]   Disable all mods, then download and enable the given mods and their dependencies.
                       If a save file is provided, merge startup mod settings with the settings contained in that save.
+  update  [args...]   Update the given mods, or all mods if none are given.
   upload  [files...]  Upload the given mod zip files to the mod portal.`
 
 func Run(args []string) {
@@ -43,6 +44,8 @@ func Run(args []string) {
 		task = list
 	case "sync", "s":
 		task = sync
+	case "update", "u":
+		task = update
 	case "upload", "ul":
 		task = upload
 	default:
@@ -185,6 +188,11 @@ func sync(manager *fmm.Manager, args []string) {
 		manager.MergeStartupModSettings(settings)
 		fmt.Println("synced startup mod settings")
 	}
+}
+
+func update(manager *fmm.Manager, args []string) {
+	mods, _ := getMods(args)
+	manager.CheckDownloadUpdates(mods)
 }
 
 func upload(manager *fmm.Manager, files []string) {
