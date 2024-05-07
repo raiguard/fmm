@@ -51,11 +51,9 @@ func readPropertyTree(r DatReader) (PropertyTree, error) {
 		return ptr(PropertyTreeList(res)), nil
 	case 5:
 		length := r.ReadUint32()
-		fmt.Println("len: ", length)
 		res := map[string]PropertyTree{}
 		for i := uint32(0); i < length; i++ {
 			key := r.ReadOptionalString()
-			fmt.Println("key: ", key)
 			val, err := readPropertyTree(r)
 			if err != nil {
 				return nil, err
