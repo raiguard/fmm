@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"compress/zlib"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -75,7 +76,12 @@ func ParseSaveFile(filepath string) ([]ModIdent, error) {
 	}
 
 	datReader.ReadUint32() // startupModSettingsCrc
-	// TODO: Startup mod settings PropertyTree
+
+	pt, err := readPropertyTree(datReader)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("%+v\n", pt)
 
 	return mods, nil
 }
