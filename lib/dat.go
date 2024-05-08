@@ -225,10 +225,14 @@ func (w *DatWriter) WriteDouble(value float64) {
 
 func (w *DatWriter) WriteString(value string) {
 	length := len(value)
-	if length > math.MaxUint16 {
-		panic("")
+	if length > math.MaxUint32 {
+		panic("PropertyTree string is too long")
 	}
 	w.WriteUint32Optimized(uint32(length))
+	_, err := w.writer.WriteString(value)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (w *DatWriter) WriteStringOptional(value string) {
