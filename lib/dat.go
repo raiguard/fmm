@@ -3,9 +3,30 @@ package fmm
 import (
 	"bufio"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"math"
 )
+
+type PropertyTree interface {
+	ptree()
+}
+
+type (
+	PropertyTreeNone   struct{}
+	PropertyTreeBool   bool
+	PropertyTreeNumber float64
+	PropertyTreeString string
+	PropertyTreeList   []PropertyTree
+	PropertyTreeDict   map[string]PropertyTree
+)
+
+func (self *PropertyTreeNone) ptree()   {}
+func (self *PropertyTreeBool) ptree()   {}
+func (self *PropertyTreeNumber) ptree() {}
+func (self *PropertyTreeString) ptree() {}
+func (self *PropertyTreeList) ptree()   {}
+func (self *PropertyTreeDict) ptree()   {}
 
 type DatReader struct {
 	reader *bufio.Reader
@@ -55,18 +76,18 @@ func (d *DatReader) ReadUint16() uint16 {
 	return binary.LittleEndian.Uint16(buf)
 }
 
-func (d *DatReader) ReadUint32() uint32 {
-	buf := make([]byte, 4)
-	io.ReadFull(d.reader, buf)
-	return binary.LittleEndian.Uint32(buf)
-}
-
 func (d *DatReader) ReadUint16Optimized() uint16 {
 	first, _ := d.reader.ReadByte()
 	if first < 255 {
 		return uint16(first)
 	}
 	return d.ReadUint16()
+}
+
+func (d *DatReader) ReadUint32() uint32 {
+	buf := make([]byte, 4)
+	io.ReadFull(d.reader, buf)
+	return binary.LittleEndian.Uint32(buf)
 }
 
 func (d *DatReader) ReadDouble() float64 {
@@ -95,4 +116,37 @@ func (d *DatReader) ReadUnoptimizedVersion() Version {
 		d.ReadUint16(),
 		d.ReadUint16(),
 	}
+}
+
+func (d *DatReader) ReadPropertyTree() PropertyTree {
+	kind := d.ReadUint8()
+	d.ReadBool() // Internal flag that we do not care about
+	switch kind {
+	case 0:
+		return &PropertyTreeNone{}
+	case 1:
+		return ptr(PropertyTreeBool(d.ReadBool()))
+	case 2:
+		return ptr(PropertyTreeNumber(d.ReadDouble()))
+	case 3:
+		return ptr(PropertyTreeString(d.ReadOptionalString()))
+	case 4:
+		length := d.ReadUint32()
+		res := []PropertyTree{}
+		for i := uint32(0); i < length; i++ {
+			d.ReadOptionalString()
+			res = append(res, d.ReadPropertyTree())
+		}
+		return ptr(PropertyTreeList(res))
+	case 5:
+		length := d.ReadUint32()
+		res := map[string]PropertyTree{}
+		for i := uint32(0); i < length; i++ {
+			res[d.ReadOptionalString()] = d.ReadPropertyTree()
+		}
+		return ptr(PropertyTreeDict(res))
+	}
+
+	fmt.Printf("Unknown property tree kind: %d\n", kind)
+	return nil
 }

@@ -38,43 +38,40 @@ func ParseSaveFile(filepath string) ([]ModIdent, error) {
 	}
 	if compressed {
 		rawReader, err = zlib.NewReader(rawReader)
-	}
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 	defer rawReader.Close()
 
-	datReader := newDatReader(rawReader)
+	r := newDatReader(rawReader)
 
-	datReader.ReadUnoptimizedVersion()   // mapVersion
-	datReader.ReadUint8()                // branchVersion
-	datReader.ReadString()               // campaignName
-	datReader.ReadString()               // levelName
-	datReader.ReadString()               // modName
-	datReader.ReadUint8()                // difficulty
-	datReader.ReadBool()                 // finished
-	datReader.ReadBool()                 // playerWon
-	datReader.ReadString()               // nextLevel
-	datReader.ReadBool()                 // canContinue
-	datReader.ReadBool()                 // finishedButContinuing
-	datReader.ReadBool()                 // savingReplay
-	datReader.ReadBool()                 // allowNonAdminDebugOptions
-	datReader.ReadOptimizedVersion(true) // scenarioVersion
-	datReader.ReadUint8()                // scenarioBranchVersion
-	datReader.ReadUint8()                // allowedCommands
+	r.ReadUnoptimizedVersion()   // mapVersion
+	r.ReadUint8()                // branchVersion
+	r.ReadString()               // campaignName
+	r.ReadString()               // levelName
+	r.ReadString()               // modName
+	r.ReadUint8()                // difficulty
+	r.ReadBool()                 // finished
+	r.ReadBool()                 // playerWon
+	r.ReadString()               // nextLevel
+	r.ReadBool()                 // canContinue
+	r.ReadBool()                 // finishedButContinuing
+	r.ReadBool()                 // savingReplay
+	r.ReadBool()                 // allowNonAdminDebugOptions
+	r.ReadOptimizedVersion(true) // scenarioVersion
+	r.ReadUint8()                // scenarioBranchVersion
+	r.ReadUint8()                // allowedCommands
 
-	numMods := datReader.ReadUint16Optimized()
+	numMods := r.ReadUint16Optimized()
 	mods := make([]ModIdent, numMods)
 	for i := uint16(0); i < numMods; i += 1 {
-		mods[i] = datReader.ReadModWithCRC()
+		mods[i] = r.ReadModWithCRC()
 	}
 
-	datReader.ReadUint32() // startupModSettingsCrc
+	r.ReadUint32() // startupModSettingsCrc
 
-	pt, err := readPropertyTree(datReader)
-	if err != nil {
-		return nil, err
-	}
+	pt := r.ReadPropertyTree()
 	fmt.Printf("%+v\n", pt)
 
 	return mods, nil
