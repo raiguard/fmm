@@ -5,7 +5,6 @@ import (
 	"compress/zlib"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 )
 
@@ -45,12 +44,7 @@ func ParseSaveFile(filepath string) ([]ModIdent, error) {
 	}
 	defer rawReader.Close()
 
-	bytes, err := io.ReadAll(rawReader)
-	if err != nil {
-		return nil, err
-	}
-
-	datReader := newDatReader(bytes)
+	datReader := newDatReader(rawReader)
 
 	datReader.ReadUnoptimizedVersion()   // mapVersion
 	datReader.ReadUint8()                // branchVersion

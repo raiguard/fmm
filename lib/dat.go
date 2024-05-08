@@ -1,24 +1,20 @@
 package fmm
 
 import (
-	"bytes"
+	"bufio"
 	"encoding/binary"
 	"io"
 	"math"
 )
 
 type DatReader struct {
-	reader *bytes.Reader
+	reader *bufio.Reader
 }
 
-func newDatReader(source []byte) DatReader {
+func newDatReader(reader io.Reader) DatReader {
 	return DatReader{
-		reader: bytes.NewReader(source),
+		reader: bufio.NewReader(reader),
 	}
-}
-
-func (d *DatReader) Advance(offset int64) {
-	d.reader.Seek(offset, io.SeekCurrent)
 }
 
 func (d *DatReader) ReadBool() bool {
