@@ -46,7 +46,7 @@ func ParseSaveFile(filepath string) ([]ModIdent, error) {
 
 	r := newDatReader(rawReader)
 
-	r.ReadUnoptimizedVersion()   // mapVersion
+	r.ReadVersionUnoptimized()   // mapVersion
 	r.ReadUint8()                // branchVersion
 	r.ReadString()               // campaignName
 	r.ReadString()               // levelName
@@ -59,7 +59,7 @@ func ParseSaveFile(filepath string) ([]ModIdent, error) {
 	r.ReadBool()                 // finishedButContinuing
 	r.ReadBool()                 // savingReplay
 	r.ReadBool()                 // allowNonAdminDebugOptions
-	r.ReadOptimizedVersion(true) // scenarioVersion
+	r.ReadVersionOptimized(true) // scenarioVersion
 	r.ReadUint8()                // scenarioBranchVersion
 	r.ReadUint8()                // allowedCommands
 

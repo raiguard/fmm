@@ -20,9 +20,12 @@ type Manager struct {
 	gamePath         string
 	internalModsPath string
 	modListJsonPath  string
+	modSettingsPath  string
 	modsPath         string
 
 	mods map[string]*Mod
+
+	modSettings *PropertyTree
 }
 
 type PlayerData struct {
@@ -51,6 +54,7 @@ func NewManager(gamePath string, modsPath string) (*Manager, error) {
 		internalModsPath: filepath.Join(gamePath, "data"),
 		modListJsonPath:  filepath.Join(modsPath, "mod-list.json"),
 		modsPath:         modsPath,
+		modSettingsPath:  filepath.Join(modsPath, "mod-settings.dat"),
 		mods:             map[string]*Mod{},
 	}
 
@@ -432,4 +436,20 @@ func (m *Manager) ExpandDependencies(mods []ModIdent, fetchFromPortal bool) []Mo
 	}
 
 	return output
+}
+
+func (m *Manager) readModSettings() error {
+	r, err := os.Open(m.modSettingsPath)
+	if err != nil {
+		return errors.Join(errors.New("error parsing mod settings"), err)
+	}
+	defer r.Close()
+	dr := newDatReader(r)
+
+	dr.ReadVersionUnoptimized()
+	dr.ReadBool() // Internal flag, always false
+
+	m.modSettings = ptr(dr.ReadPropertyTree())
+
+	return nil
 }
