@@ -39,7 +39,10 @@ func newDatReader(reader io.Reader) DatReader {
 }
 
 func (d *DatReader) ReadBool() bool {
-	num, _ := d.reader.ReadByte()
+	num, err := d.reader.ReadByte()
+	if err != nil {
+		panic(err)
+	}
 	return num == 1
 }
 
@@ -66,7 +69,10 @@ func (d *DatReader) ReadOptionalString() string {
 }
 
 func (d *DatReader) ReadUint8() uint8 {
-	byte, _ := d.reader.ReadByte()
+	byte, err := d.reader.ReadByte()
+	if err != nil {
+		panic(err)
+	}
 	return uint8(byte)
 }
 
@@ -77,7 +83,10 @@ func (d *DatReader) ReadUint16() uint16 {
 }
 
 func (d *DatReader) ReadUint16Optimized() uint16 {
-	first, _ := d.reader.ReadByte()
+	first, err := d.reader.ReadByte()
+	if err != nil {
+		panic(err)
+	}
 	if first < 255 {
 		return uint16(first)
 	}
