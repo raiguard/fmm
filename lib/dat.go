@@ -47,130 +47,130 @@ func (r *DatReader) Read(buf []byte) (int, error) {
 	return r.reader.Read(buf)
 }
 
-func (d *DatReader) ReadBool() bool {
+func (r *DatReader) ReadBool() bool {
 	var value bool
-	if err := binary.Read(d, binary.LittleEndian, &value); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &value); err != nil {
 		panic(err)
 	}
 	return value
 }
 
-func (d *DatReader) ReadUint8() uint8 {
-	value, err := d.reader.ReadByte()
+func (r *DatReader) ReadUint8() uint8 {
+	value, err := r.reader.ReadByte()
 	if err != nil {
 		panic(err)
 	}
 	return uint8(value)
 }
 
-func (d *DatReader) ReadUint16() uint16 {
+func (r *DatReader) ReadUint16() uint16 {
 	var value uint16
-	if err := binary.Read(d, binary.LittleEndian, &value); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &value); err != nil {
 		panic(err)
 	}
 	return value
 }
 
-func (d *DatReader) ReadUint16Optimized() uint16 {
-	first := d.ReadUint8()
+func (r *DatReader) ReadUint16Optimized() uint16 {
+	first := r.ReadUint8()
 	if first < math.MaxUint8 {
 		return uint16(first)
 	}
-	return d.ReadUint16()
+	return r.ReadUint16()
 }
 
-func (d *DatReader) ReadUint32() uint32 {
+func (r *DatReader) ReadUint32() uint32 {
 	var val uint32
-	if err := binary.Read(d, binary.LittleEndian, &val); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &val); err != nil {
 		panic(err)
 	}
 	return val
 }
 
-func (d *DatReader) ReadUint32Optimized() uint32 {
-	first := d.ReadUint8()
+func (r *DatReader) ReadUint32Optimized() uint32 {
+	first := r.ReadUint8()
 	if first < math.MaxUint8 {
 		return uint32(first)
 	}
-	return d.ReadUint32()
+	return r.ReadUint32()
 }
 
-func (d *DatReader) ReadDouble() float64 {
+func (r *DatReader) ReadDouble() float64 {
 	var val float64
-	if err := binary.Read(d, binary.LittleEndian, &val); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &val); err != nil {
 		panic(err)
 	}
 	return val
 }
 
-func (d *DatReader) ReadString() string {
-	length := d.ReadUint32Optimized()
+func (r *DatReader) ReadString() string {
+	length := r.ReadUint32Optimized()
 	stringBuf := make([]byte, length)
-	io.ReadFull(d.reader, stringBuf)
+	io.ReadFull(r.reader, stringBuf)
 	return string(stringBuf)
 }
 
-func (d *DatReader) ReadStringOptional() string {
-	empty := d.ReadBool()
+func (r *DatReader) ReadStringOptional() string {
+	empty := r.ReadBool()
 	if empty {
 		return ""
 	}
-	return d.ReadString()
+	return r.ReadString()
 }
 
-func (d *DatReader) ReadVersionOptimized(withBuild bool) Version {
+func (r *DatReader) ReadVersionOptimized(withBuild bool) Version {
 	ver := Version{
-		d.ReadUint16Optimized(),
-		d.ReadUint16Optimized(),
-		d.ReadUint16Optimized(),
+		r.ReadUint16Optimized(),
+		r.ReadUint16Optimized(),
+		r.ReadUint16Optimized(),
 	}
 	if withBuild {
-		ver[3] = d.ReadUint16Optimized()
+		ver[3] = r.ReadUint16Optimized()
 	}
 	return ver
 }
 
-func (d *DatReader) ReadVersionUnoptimized() Version {
+func (r *DatReader) ReadVersionUnoptimized() Version {
 	return Version{
-		d.ReadUint16(),
-		d.ReadUint16(),
-		d.ReadUint16(),
-		d.ReadUint16(),
+		r.ReadUint16(),
+		r.ReadUint16(),
+		r.ReadUint16(),
+		r.ReadUint16(),
 	}
 }
 
-func (d *DatReader) ReadModWithCRC() ModIdent {
-	name := d.ReadString()
-	version := d.ReadVersionOptimized(false)
-	d.ReadUint32() // CRC
+func (r *DatReader) ReadModWithCRC() ModIdent {
+	name := r.ReadString()
+	version := r.ReadVersionOptimized(false)
+	r.ReadUint32() // CRC
 	return ModIdent{name, &version}
 }
 
-func (d *DatReader) ReadPropertyTree() PropertyTree {
-	kind := d.ReadUint8()
-	d.ReadBool() // Internal flag that we do not care about
+func (r *DatReader) ReadPropertyTree() PropertyTree {
+	kind := r.ReadUint8()
+	r.ReadBool() // Internal flag that we do not care about
 	switch kind {
 	case 0:
 		return &PropertyTreeNone{}
 	case 1:
-		return ptr(PropertyTreeBool(d.ReadBool()))
+		return ptr(PropertyTreeBool(r.ReadBool()))
 	case 2:
-		return ptr(PropertyTreeNumber(d.ReadDouble()))
+		return ptr(PropertyTreeNumber(r.ReadDouble()))
 	case 3:
-		return ptr(PropertyTreeString(d.ReadStringOptional()))
+		return ptr(PropertyTreeString(r.ReadStringOptional()))
 	case 4:
-		length := d.ReadUint32()
+		length := r.ReadUint32()
 		res := []PropertyTree{}
 		for i := uint32(0); i < length; i++ {
-			d.ReadStringOptional()
-			res = append(res, d.ReadPropertyTree())
+			r.ReadStringOptional()
+			res = append(res, r.ReadPropertyTree())
 		}
 		return ptr(PropertyTreeList(res))
 	case 5:
-		length := d.ReadUint32()
+		length := r.ReadUint32()
 		res := map[string]PropertyTree{}
 		for i := uint32(0); i < length; i++ {
-			res[d.ReadStringOptional()] = d.ReadPropertyTree()
+			res[r.ReadStringOptional()] = r.ReadPropertyTree()
 		}
 		return ptr(PropertyTreeDict(res))
 	}
@@ -178,10 +178,10 @@ func (d *DatReader) ReadPropertyTree() PropertyTree {
 	panic(fmt.Sprintf("unknown property tree kind: %d\n", kind))
 }
 
-func (d *DatReader) ReadModSettings() ModSettings {
-	mapVersion := d.ReadVersionUnoptimized()
-	d.ReadBool() // Internal flag, always false
-	settings := d.ReadPropertyTree()
+func (r *DatReader) ReadModSettings() ModSettings {
+	mapVersion := r.ReadVersionUnoptimized()
+	r.ReadBool() // Internal flag, always false
+	settings := r.ReadPropertyTree()
 	return ModSettings{mapVersion, settings}
 }
 
