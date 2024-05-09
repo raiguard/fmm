@@ -136,11 +136,11 @@ func list(manager *fmm.Manager, args []string) {
 		mods = manager.GetMods()
 	} else {
 		for _, filepath := range args {
-			fileMods, err := fmm.ParseSaveFile(filepath)
+			fileInfo, err := fmm.ParseSaveFile(filepath)
 			if err != nil {
 				fmt.Println(err)
 			}
-			mods = append(mods, fileMods...)
+			mods = append(mods, fileInfo.Mods...)
 		}
 	}
 	slices.SortFunc(mods, func(a fmm.ModIdent, b fmm.ModIdent) int {

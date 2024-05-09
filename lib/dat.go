@@ -28,6 +28,11 @@ func (self *PropertyTreeString) ptree() {}
 func (self *PropertyTreeList) ptree()   {}
 func (self *PropertyTreeDict) ptree()   {}
 
+type ModSettings struct {
+	MapVersion Version
+	Settings   PropertyTree
+}
+
 type DatReader struct {
 	reader *bufio.Reader
 }
@@ -173,6 +178,13 @@ func (d *DatReader) ReadPropertyTree() PropertyTree {
 	panic(fmt.Sprintf("unknown property tree kind: %d\n", kind))
 }
 
+func (d *DatReader) ReadModSettings() ModSettings {
+	mapVersion := d.ReadVersionUnoptimized()
+	d.ReadBool() // Internal flag, always false
+	settings := d.ReadPropertyTree()
+	return ModSettings{mapVersion, settings}
+}
+
 type DatWriter struct {
 	writer *bufio.Writer
 }
@@ -287,4 +299,10 @@ func (w *DatWriter) WritePropertyTree(pt PropertyTree) {
 			w.WritePropertyTree(child)
 		}
 	}
+}
+
+func (w *DatWriter) WriteModSettings(input *ModSettings) {
+	w.WriteVersionUnoptimized(input.MapVersion)
+	w.WriteBool(false) // Internal flag, always false
+	w.WritePropertyTree(input.Settings)
 }

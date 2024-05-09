@@ -4,16 +4,20 @@ import (
 	"archive/zip"
 	"compress/zlib"
 	"errors"
-	"fmt"
 	"strings"
 )
 
+type SaveFileInfo struct {
+	Mods        []ModIdent
+	ModSettings PropertyTree
+}
+
 // Returns a slice of mod names and versions extracted from the given save
 // file.
-func ParseSaveFile(filepath string) ([]ModIdent, error) {
+func ParseSaveFile(filepath string) (SaveFileInfo, error) {
 	zipReader, err := zip.OpenReader(filepath)
 	if err != nil {
-		return nil, err
+		return SaveFileInfo{}, err
 	}
 	defer zipReader.Close()
 
@@ -29,17 +33,17 @@ func ParseSaveFile(filepath string) ([]ModIdent, error) {
 		}
 	}
 	if dat == nil {
-		return nil, errors.New("invalid save file: could not locate level data")
+		return SaveFileInfo{}, errors.New("invalid save file: could not locate level data")
 	}
 
 	rawReader, err := dat.Open()
 	if err != nil {
-		return nil, err
+		return SaveFileInfo{}, err
 	}
 	if compressed {
 		rawReader, err = zlib.NewReader(rawReader)
 		if err != nil {
-			return nil, err
+			return SaveFileInfo{}, err
 		}
 	}
 	defer rawReader.Close()
@@ -71,8 +75,10 @@ func ParseSaveFile(filepath string) ([]ModIdent, error) {
 
 	r.ReadUint32() // startupModSettingsCrc
 
-	pt := r.ReadPropertyTree()
-	fmt.Printf("%+v\n", pt)
+	settings := r.ReadPropertyTree()
 
-	return mods, nil
+	return SaveFileInfo{
+		Mods:        mods,
+		ModSettings: settings,
+	}, nil
 }

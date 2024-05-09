@@ -36,7 +36,9 @@ func getMods(args []string) []fmm.ModIdent {
 		var thisMods []fmm.ModIdent
 		var err error
 		if strings.HasSuffix(input, ".zip") {
-			thisMods, err = fmm.ParseSaveFile(input)
+			var fileInfo fmm.SaveFileInfo
+			fileInfo, err = fmm.ParseSaveFile(input)
+			thisMods = fileInfo.Mods
 		} else if strings.HasSuffix(input, ".log") {
 			thisMods = fmm.ParseLogFile(input)
 		} else if strings.HasSuffix(input, ".json") {

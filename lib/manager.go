@@ -437,19 +437,3 @@ func (m *Manager) ExpandDependencies(mods []ModIdent, fetchFromPortal bool) []Mo
 
 	return output
 }
-
-func (m *Manager) readModSettings() error {
-	r, err := os.Open(m.modSettingsPath)
-	if err != nil {
-		return errors.Join(errors.New("error parsing mod settings"), err)
-	}
-	defer r.Close()
-	dr := newDatReader(r)
-
-	dr.ReadVersionUnoptimized()
-	dr.ReadBool() // Internal flag, always false
-
-	m.modSettings = ptr(dr.ReadPropertyTree())
-
-	return nil
-}
