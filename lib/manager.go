@@ -20,9 +20,12 @@ type Manager struct {
 	gamePath         string
 	internalModsPath string
 	modListJsonPath  string
+	modSettingsPath  string
 	modsPath         string
 
 	mods map[string]*Mod
+
+	modSettings *ModSettings
 }
 
 type PlayerData struct {
@@ -51,6 +54,7 @@ func NewManager(gamePath string, modsPath string) (*Manager, error) {
 		internalModsPath: filepath.Join(gamePath, "data"),
 		modListJsonPath:  filepath.Join(modsPath, "mod-list.json"),
 		modsPath:         modsPath,
+		modSettingsPath:  filepath.Join(modsPath, "mod-settings.dat"),
 		mods:             map[string]*Mod{},
 	}
 
@@ -94,6 +98,15 @@ func NewManager(gamePath string, modsPath string) (*Manager, error) {
 
 	if base, _ := m.GetMod("base"); base != nil {
 		m.Portal.baseVersion = &base.GetLatestRelease().Version
+	}
+
+	if entryExists(m.modSettingsPath) {
+		file, err := os.Open(m.modSettingsPath)
+		if err != nil {
+			return nil, errors.Join(errors.New("error parsing mod-settings.dat"), err)
+		}
+		r := newDatReader(file)
+		m.modSettings = ptr(r.ReadModSettings())
 	}
 
 	return &m, nil
@@ -225,7 +238,21 @@ func (m *Manager) Save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(m.modListJsonPath, marshaled, 0666)
+	err = os.WriteFile(m.modListJsonPath, marshaled, 0666)
+	if err != nil {
+		return errors.Join(errors.New("failed to write mod-list.json"), err)
+	}
+	if m.modSettings != nil {
+		file, err := os.Create(m.modSettingsPath)
+		if err != nil {
+			return errors.Join(errors.New("failed to open mod-settings.dat"), err)
+		}
+		w := newDatWriter(file)
+		w.WriteModSettings(m.modSettings)
+		w.writer.Flush()
+		file.Close()
+	}
+	return nil
 }
 
 // Returns the current upload API key.
@@ -432,4 +459,44 @@ func (m *Manager) ExpandDependencies(mods []ModIdent, fetchFromPortal bool) []Mo
 	}
 
 	return output
+}
+
+func (m *Manager) MergeStartupModSettings(input PropertyTree) error {
+	if input == nil {
+		return nil
+	}
+	inputSettings, ok := input.(*PropertyTreeDict)
+	if !ok {
+		panic("input mod settings have invalid structure")
+	}
+	if m.modSettings == nil {
+		base, err := m.GetMod("base")
+		if err != nil {
+			return err
+		}
+		m.modSettings = &ModSettings{
+			MapVersion: base.GetLatestRelease().Version,
+			Settings: &PropertyTreeDict{
+				"startup":          &PropertyTreeDict{},
+				"runtime-global":   &PropertyTreeDict{},
+				"runtime-per-user": &PropertyTreeDict{},
+			},
+		}
+	}
+
+	modSettings, ok := m.modSettings.Settings.(*PropertyTreeDict)
+	if !ok {
+		panic("mod settings have invalid structure")
+	}
+	startupSettings, ok := (*modSettings)["startup"].(*PropertyTreeDict)
+	if !ok {
+		panic("mod startup settings have invalid structure")
+	}
+	for key, value := range *inputSettings {
+		(*startupSettings)[key] = value
+	}
+
+	m.DoSave = true
+
+	return nil
 }

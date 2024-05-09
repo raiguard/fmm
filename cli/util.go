@@ -29,14 +29,20 @@ func printUsage(msg ...any) {
 	os.Exit(1)
 }
 
-func getMods(args []string) []fmm.ModIdent {
+func getMods(args []string) ([]fmm.ModIdent, fmm.PropertyTree) {
 	var mods []fmm.ModIdent
+	var settings fmm.PropertyTree
 
 	for _, input := range args {
 		var thisMods []fmm.ModIdent
 		var err error
 		if strings.HasSuffix(input, ".zip") {
-			thisMods, err = fmm.ParseSaveFile(input)
+			var fileInfo fmm.SaveFileInfo
+			fileInfo, err = fmm.ParseSaveFile(input)
+			if settings == nil {
+				settings = fileInfo.ModSettings
+			}
+			thisMods = fileInfo.Mods
 		} else if strings.HasSuffix(input, ".log") {
 			thisMods = fmm.ParseLogFile(input)
 		} else if strings.HasSuffix(input, ".json") {
@@ -59,5 +65,5 @@ func getMods(args []string) []fmm.ModIdent {
 		mods = append(mods, thisMods...)
 	}
 
-	return mods
+	return mods, settings
 }

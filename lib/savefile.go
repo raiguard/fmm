@@ -4,16 +4,20 @@ import (
 	"archive/zip"
 	"compress/zlib"
 	"errors"
-	"io"
 	"strings"
 )
 
+type SaveFileInfo struct {
+	Mods        []ModIdent
+	ModSettings PropertyTree
+}
+
 // Returns a slice of mod names and versions extracted from the given save
 // file.
-func ParseSaveFile(filepath string) ([]ModIdent, error) {
+func ParseSaveFile(filepath string) (SaveFileInfo, error) {
 	zipReader, err := zip.OpenReader(filepath)
 	if err != nil {
-		return nil, err
+		return SaveFileInfo{}, err
 	}
 	defer zipReader.Close()
 
@@ -29,53 +33,52 @@ func ParseSaveFile(filepath string) ([]ModIdent, error) {
 		}
 	}
 	if dat == nil {
-		return nil, errors.New("invalid save file: could not locate level data")
+		return SaveFileInfo{}, errors.New("invalid save file: could not locate level data")
 	}
 
 	rawReader, err := dat.Open()
 	if err != nil {
-		return nil, err
+		return SaveFileInfo{}, err
 	}
 	if compressed {
 		rawReader, err = zlib.NewReader(rawReader)
-	}
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return SaveFileInfo{}, err
+		}
 	}
 	defer rawReader.Close()
 
-	bytes, err := io.ReadAll(rawReader)
-	if err != nil {
-		return nil, err
-	}
+	r := newDatReader(rawReader)
 
-	datReader := newDatReader(bytes)
+	r.ReadVersionUnoptimized()   // mapVersion
+	r.ReadUint8()                // branchVersion
+	r.ReadString()               // campaignName
+	r.ReadString()               // levelName
+	r.ReadString()               // modName
+	r.ReadUint8()                // difficulty
+	r.ReadBool()                 // finished
+	r.ReadBool()                 // playerWon
+	r.ReadString()               // nextLevel
+	r.ReadBool()                 // canContinue
+	r.ReadBool()                 // finishedButContinuing
+	r.ReadBool()                 // savingReplay
+	r.ReadBool()                 // allowNonAdminDebugOptions
+	r.ReadVersionOptimized(true) // scenarioVersion
+	r.ReadUint8()                // scenarioBranchVersion
+	r.ReadUint8()                // allowedCommands
 
-	datReader.ReadUnoptimizedVersion()   // mapVersion
-	datReader.ReadUint8()                // branchVersion
-	datReader.ReadString()               // campaignName
-	datReader.ReadString()               // levelName
-	datReader.ReadString()               // modName
-	datReader.ReadUint8()                // difficulty
-	datReader.ReadBool()                 // finished
-	datReader.ReadBool()                 // playerWon
-	datReader.ReadString()               // nextLevel
-	datReader.ReadBool()                 // canContinue
-	datReader.ReadBool()                 // finishedButContinuing
-	datReader.ReadBool()                 // savingReplay
-	datReader.ReadBool()                 // allowNonAdminDebugOptions
-	datReader.ReadOptimizedVersion(true) // scenarioVersion
-	datReader.ReadUint8()                // scenarioBranchVersion
-	datReader.ReadUint8()                // allowedCommands
-
-	numMods := datReader.ReadUint16Optimized()
+	numMods := r.ReadUint16Optimized()
 	mods := make([]ModIdent, numMods)
 	for i := uint16(0); i < numMods; i += 1 {
-		mods[i] = datReader.ReadModWithCRC()
+		mods[i] = r.ReadModWithCRC()
 	}
 
-	datReader.ReadUint32() // startupModSettingsCrc
-	// TODO: Startup mod settings PropertyTree
+	r.ReadUint32() // startupModSettingsCrc
 
-	return mods, nil
+	settings := r.ReadPropertyTree()
+
+	return SaveFileInfo{
+		Mods:        mods,
+		ModSettings: settings,
+	}, nil
 }
