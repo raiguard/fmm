@@ -13,20 +13,24 @@ type PropertyTree interface {
 }
 
 type (
-	PropertyTreeNone   struct{}
-	PropertyTreeBool   bool
-	PropertyTreeNumber float64
-	PropertyTreeString string
-	PropertyTreeList   []PropertyTree
-	PropertyTreeDict   map[string]PropertyTree
+	PropertyTreeNone            struct{}
+	PropertyTreeBool            bool
+	PropertyTreeNumber          float64
+	PropertyTreeString          string
+	PropertyTreeList            []PropertyTree
+	PropertyTreeDict            map[string]PropertyTree
+	PropertyTreeSignedInteger   int64
+	PropertyTreeUnsignedInteger uint64
 )
 
-func (self *PropertyTreeNone) ptree()   {}
-func (self *PropertyTreeBool) ptree()   {}
-func (self *PropertyTreeNumber) ptree() {}
-func (self *PropertyTreeString) ptree() {}
-func (self *PropertyTreeList) ptree()   {}
-func (self *PropertyTreeDict) ptree()   {}
+func (self *PropertyTreeNone) ptree()            {}
+func (self *PropertyTreeBool) ptree()            {}
+func (self *PropertyTreeNumber) ptree()          {}
+func (self *PropertyTreeString) ptree()          {}
+func (self *PropertyTreeList) ptree()            {}
+func (self *PropertyTreeDict) ptree()            {}
+func (self *PropertyTreeSignedInteger) ptree()   {}
+func (self *PropertyTreeUnsignedInteger) ptree() {}
 
 type ModSettings struct {
 	MapVersion Version
@@ -93,6 +97,22 @@ func (r *DatReader) ReadUint32Optimized() uint32 {
 		return uint32(first)
 	}
 	return r.ReadUint32()
+}
+
+func (r *DatReader) ReadUint64() uint64 {
+	var val uint64
+	if err := binary.Read(r, binary.LittleEndian, &val); err != nil {
+		panic(err)
+	}
+	return val
+}
+
+func (r *DatReader) ReadInt64() int64 {
+	var val int64
+	if err := binary.Read(r, binary.LittleEndian, &val); err != nil {
+		panic(err)
+	}
+	return val
 }
 
 func (r *DatReader) ReadDouble() float64 {
@@ -173,6 +193,10 @@ func (r *DatReader) ReadPropertyTree() PropertyTree {
 			res[r.ReadStringOptional()] = r.ReadPropertyTree()
 		}
 		return ptr(PropertyTreeDict(res))
+	case 6:
+		return ptr(PropertyTreeSignedInteger(r.ReadInt64()))
+	case 7:
+		return ptr(PropertyTreeSignedInteger(r.ReadUint64()))
 	}
 
 	panic(fmt.Sprintf("unknown property tree kind: %d\n", kind))
@@ -229,6 +253,14 @@ func (w *DatWriter) WriteUint32Optimized(value uint32) {
 	} else {
 		w.WriteUint32(value)
 	}
+}
+
+func (w *DatWriter) WriteUint64(value uint64) {
+	binary.Write(w, binary.LittleEndian, value)
+}
+
+func (w *DatWriter) WriteInt64(value int64) {
+	binary.Write(w, binary.LittleEndian, value)
 }
 
 func (w *DatWriter) WriteDouble(value float64) {
@@ -298,6 +330,14 @@ func (w *DatWriter) WritePropertyTree(pt PropertyTree) {
 			w.WriteStringOptional(key)
 			w.WritePropertyTree(child)
 		}
+	case *PropertyTreeSignedInteger:
+		w.WriteUint8(6) // Type
+		w.WriteUint8(0) // Unused internal flag
+		w.WriteInt64(int64(*val))
+	case *PropertyTreeUnsignedInteger:
+		w.WriteUint8(7) // Type
+		w.WriteUint8(0) // Unused internal flag
+		w.WriteUint64(uint64(*val))
 	}
 }
 
