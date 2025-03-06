@@ -50,7 +50,9 @@ func getMods(args []string) ([]fmm.ModIdent, fmm.PropertyTree) {
 			mlj, err = fmm.ParseModListJson(input)
 			if mlj != nil {
 				for _, mod := range mlj.Mods {
-					thisMods = append(thisMods, fmm.ModIdent{Name: mod.Name, Version: mod.Version})
+					if mod.Enabled {
+						thisMods = append(thisMods, fmm.ModIdent{Name: mod.Name, Version: mod.Version})
+					}
 				}
 			}
 		} else if strings.HasPrefix(input, "!") {
