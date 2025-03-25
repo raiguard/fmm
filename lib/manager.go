@@ -474,6 +474,9 @@ func (m *Manager) MergeStartupModSettings(input PropertyTree) error {
 	if input == nil {
 		return nil
 	}
+	if _, ok := input.(*PropertyTreeNone); ok {
+		return nil
+	}
 	inputSettings, ok := input.(*PropertyTreeDict)
 	if !ok {
 		panic("input mod settings have invalid structure")
