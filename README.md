@@ -1,3 +1,5 @@
+# ⚠️ This project has migrated to [Codeberg](https://codeberg.org/raiguard/fmm).
+
 # fmm
 
 A CLI mod manager for Factorio. Easily download and enable mods, sync with save
